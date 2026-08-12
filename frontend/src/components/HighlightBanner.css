@@ -1,0 +1,32 @@
+.banner-container {
+    max-width: 1200px;
+    margin: 0 auto 20px auto;
+    padding: 0 20px;
+}
+
+.banner-content {
+    background: linear-gradient(135deg, #ff4757, #ff6b81);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(255, 71, 87, 0.2);
+}
+
+.banner-tag {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.banner-content h2 {
+    margin: 15px 0 8px 0;
+    font-size: 24px;
+}
+
+.banner-content p {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
