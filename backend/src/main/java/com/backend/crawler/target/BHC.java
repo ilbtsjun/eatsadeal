@@ -2,8 +2,6 @@ package com.backend.crawler.target;
 
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.common.EventCreateDto;
-import com.backend.entity.Brand;
-import com.backend.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -26,8 +24,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class BHC implements Crawler {
-
-    private final BrandRepository brandRepository;
 
     @Override
     public String getName() {

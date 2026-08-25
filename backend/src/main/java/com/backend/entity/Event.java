@@ -1,7 +1,6 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,18 +20,15 @@ public class Event {
     private Long id;
 
     @Column(nullable = false, length = 500)
-    @NotBlank
     private String title;
 
     @Column
     private String description;
 
     @Column(nullable = false, length = 1000, unique = true)
-    @NotBlank
     private String url;
 
     @Column(nullable = false, length = 1000)
-    @NotBlank
     private String img;
 
     @Column(nullable = false)
@@ -63,7 +59,8 @@ public class Event {
     @Builder
     public Event(String title, String description, String url,
                  String img, LocalDateTime startDate, LocalDateTime endDate,
-                 Brand brand, Set<EventCode> eventCodes) {
+//                 Brand brand,
+                 Set<EventCode> eventCodes) {
         this.title = title;
         this.description = description;
         this.url = url;

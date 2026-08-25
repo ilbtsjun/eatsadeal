@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 //@EnableScheduling
 @SpringBootApplication
-//@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties(JwtProperties.class)
 public class BackendApplication {
 
 	public static void main(String[] args) {
