@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Category", description = "카테고리 API")
@@ -82,8 +84,8 @@ public class CategoryController {
             description = "카테고리를 수정합니다.",
             responses = {
                     @ApiResponse(
-                            responseCode = "201",
-                            description = "카테고리 생성 성공"
+                            responseCode = "200",
+                            description = "카테고리 수정 성공"
                     ),
                     @ApiResponse(
                             responseCode = "400",
@@ -100,7 +102,7 @@ public class CategoryController {
     public MsgResponse updateCategory(@PathVariable Long categoryID,
                                       @Valid @RequestBody UpdateCategory request) {
         categoryService.updateCategory(categoryID, request);
-        return new MsgResponse("새 카테고리가 생성되었습니다.", "201");
+        return new MsgResponse("카테고리가 수정되었습니다.", "200");
     }
 
     @Operation(
@@ -126,5 +128,35 @@ public class CategoryController {
     public MsgResponse deleteCategory(@PathVariable Long categoryID) {
         categoryService.deleteCategory(categoryID);
         return new MsgResponse("카테고리가 삭제되었습니다", "200");
+    }
+
+    @Operation(
+            summary = "카테고리 리스트 조회",
+            description = "카테고리의 리스트를 조회합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "카테고리 조회 성공"
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "토큰이 없거나 유효하지 않음"
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "인증 실패"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "조회되는 데이터 없음"
+                    )
+
+            }
+    )
+    @GetMapping("/list")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<GetCategoryResponse> getCategoryList() {
+        return categoryService.getCategoryList();
     }
 }
