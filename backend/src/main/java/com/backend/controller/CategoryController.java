@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Category", description = "카테고리 API")
@@ -126,5 +128,35 @@ public class CategoryController {
     public MsgResponse deleteCategory(@PathVariable Long categoryID) {
         categoryService.deleteCategory(categoryID);
         return new MsgResponse("카테고리가 삭제되었습니다", "200");
+    }
+
+    @Operation(
+            summary = "카테고리 조회",
+            description = "카테고리의 정보를 조회합니다.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "카테고리 조회 성공"
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "토큰이 없거나 유효하지 않음"
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "인증 실패"
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "조회되는 데이터 없음"
+                    )
+
+            }
+    )
+    @GetMapping("/list")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<GetCategoryResponse> getCategoryList() {
+        return categoryService.getCategoryList();
     }
 }

@@ -10,6 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,7 +42,7 @@ public class CategoryService {
     public void updateCategory(Long categoryID, UpdateCategory request){
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리가 없습니다."));
-        if(request.img().isBlank()){
+        if(request.img() == null && request.img().isBlank()){
             throw new IllegalArgumentException("이미지가 비어있을 수 없습니다.");
         }
         category.updateCategory(request.img());
@@ -50,5 +53,15 @@ public class CategoryService {
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리가 없습니다."));
         categoryRepository.delete(category);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GetCategoryResponse> getCategoryList(){
+        List<Category> categories = categoryRepository.findAll();
+        List<GetCategoryResponse> categoryList = new ArrayList<>();
+        for(Category category : categories){
+            categoryList.add(new GetCategoryResponse(category.getName(), category.getImg()));
+        }
+        return categoryList;
     }
 }
