@@ -74,7 +74,6 @@ public class CategoryController {
     )
     @GetMapping("/{categoryID}")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasRole('ADMIN')")
     public GetCategoryResponse getCategory(@PathVariable Long categoryID) {
         return categoryService.getCategory(categoryID);
     }

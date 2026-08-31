@@ -6,8 +6,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-@Schema(description = "이벤트 리스트 조회 요청")
-public record EventListResponse(
+@Schema(description = "이벤트 조회 요청")
+public record GetEventResponse(
+        @Schema(description = "이벤트 ID", example = "1")
+        Long id,
+
         @Schema(description = "이벤트 제목", example = "별 하나 페스티벌 라인업 안내")
         String title,
 
@@ -31,6 +34,16 @@ public record EventListResponse(
 
         @Schema(description = "종료 여부", example = "false")
         Boolean isActive,
+
+        @Schema(description = "브랜드 ID")
+        Long brandId,
+
+        @Schema(description = "브랜드 이름")
+        String brandName,
+
+        @Schema(description = "브랜드 이미지")
+        String brandImg,
+
 
         @Schema(description = "이벤트 코드", example = "GIFT_PROMO")
         Set<EventCode> eventCodes) {
