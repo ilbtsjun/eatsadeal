@@ -17,6 +17,8 @@
     overflow: hidden;
     transition: transform 0.2s, box-shadow 0.2s;
     cursor: pointer;
+    text-decoration: none;
+    color: inherit;
 }
 
 .event-card:hover {
@@ -32,6 +34,13 @@
     justify-content: center;
     position: relative;
     font-size: 50px;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .card-dday {
@@ -69,4 +78,120 @@
     font-size: 16px;
     font-weight: bold;
     color: #ff4757;
+}
+.event-result-count {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #57606f;
+}
+
+.event-result-count strong {
+    color: #ff4757;
+}
+
+.empty-events {
+    padding: 60px 20px;
+    border: 1px dashed #dfe4ea;
+    border-radius: 10px;
+    color: #747d8c;
+    text-align: center;
+}
+
+.event-list-heading {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    margin-bottom: 16px;
+}
+
+.event-list-heading .event-result-count {
+    margin-bottom: 0;
+}
+
+.event-card-wrapper {
+    position: relative;
+}
+
+.event-admin-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ffd1d5;
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+    background: #fff4f5;
+}
+
+.event-admin-actions button {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid #ff4757;
+    border-radius: 6px;
+    color: #ff4757;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.event-admin-actions button:hover {
+    color: #ffffff;
+    background: #ff4757;
+}
+
+@media (max-width: 520px) {
+    .event-list-heading {
+        align-items: stretch;
+        gap: 10px;
+        flex-direction: column;
+    }
+
+    .admin-tools {
+        margin-left: 0;
+    }
+}
+
+/* 관리 버튼 표시 여부와 관계없이 카드 크기와 정렬을 일정하게 유지합니다. */
+.card-grid {
+    align-items: start;
+}
+
+.event-card-wrapper {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.event-card-wrapper:hover .event-card {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.event-card-wrapper .event-card {
+    display: flex;
+    min-width: 0;
+    height: 100%;
+    flex-direction: column;
+    box-sizing: border-box;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.event-card-wrapper .card-info {
+    flex: 1;
+}
+
+.event-card-wrapper.is-managing .event-card {
+    border-radius: 10px 10px 0 0;
+}
+
+.event-admin-actions {
+    flex-shrink: 0;
+}
+
+.event-card-wrapper .event-card {
+    width: 100%;
+    padding: 0;
+    border: 1px solid #eaeaea;
+    font: inherit;
+    text-align: left;
 }

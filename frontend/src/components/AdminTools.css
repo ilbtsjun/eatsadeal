@@ -1,0 +1,33 @@
+.admin-tools {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.admin-action-button {
+  min-width: 58px;
+  padding: 8px 14px;
+  border: 1px solid #ff4757;
+  border-radius: 7px;
+  color: #ff4757;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-action-button:hover,
+.admin-action-button.active {
+  color: #ffffff;
+  background: #ff4757;
+}
+
+.create-button {
+  color: #ffffff;
+  background: #2f3542;
+  border-color: #2f3542;
+}
+
+.create-button:hover {
+  background: #57606f;
+}
