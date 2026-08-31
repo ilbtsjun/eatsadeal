@@ -36,7 +36,7 @@ public class BrandService {
 
     @Transactional
     public void createBrand(CreateBrand request){
-        if(brandRepository.existsByUrl(request.url())){
+        if(brandRepository.existsByName(request.name()) || brandRepository.existsByUrl(request.url())){
             throw new IllegalArgumentException("이미 존재하는 브랜드 입니다.");
         }
         Brand brand = Brand.builder()
@@ -44,12 +44,12 @@ public class BrandService {
                 .url(request.url())
                 .img(request.img())
                 .build();
+        brandRepository.save(brand);
         for(Long categoryId : request.categoryIds()){
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new IllegalArgumentException("카테고리가 없습니다."));
             brandCategoryService.addCategory(brand, category);
         }
-        brandRepository.save(brand);
     }
 
     @Transactional(readOnly = true)
@@ -59,9 +59,9 @@ public class BrandService {
         List<BrandCategory> categories = brandCategoryRepository.findByBrand(brand);
         List<Long> categoryIds = new ArrayList<>();
         for(BrandCategory brandCategory : categories){
-            categoryIds.add(brandCategory.getId());
+            categoryIds.add(brandCategory.getCategory().getId());
         }
-        return new GetBrandResponse(brand.getName(), brand.getUrl(), brand.getUrl(), categoryIds, brand.getLastCrawl());
+        return new GetBrandResponse(brand.getName(), brand.getUrl(), brand.getImg(), categoryIds, brand.getLastCrawl());
     }
 
     @Transactional
@@ -73,11 +73,11 @@ public class BrandService {
             name = brand.getName();
         }
         String url = request.url();
-        if(!request.url().isBlank()){
+        if(request.url().isBlank()){
             url = brand.getUrl();
         }
         String img = request.img();
-        if(!request.img().isBlank()){
+        if(request.img().isBlank()){
             img = brand.getImg();
         }
         brand.updateBrand(name, url, img);
