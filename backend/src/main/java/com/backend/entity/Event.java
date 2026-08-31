@@ -43,9 +43,9 @@ public class Event {
     @Column
     private Boolean isActive;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "brand_id", nullable = false)
-//    private Brand brand;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "brand", nullable = false)
+    private Brand brand;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
@@ -59,7 +59,7 @@ public class Event {
     @Builder
     public Event(String title, String description, String url,
                  String img, LocalDateTime startDate, LocalDateTime endDate,
-//                 Brand brand,
+                 Brand brand,
                  Set<EventCode> eventCodes) {
         this.title = title;
         this.description = description;
@@ -69,7 +69,7 @@ public class Event {
         this.endDate = endDate;
         this.viewCount = 0L;
         this.isActive = true;
-//        this.brand = brand;
+        this.brand = brand;
         if(eventCodes != null){
             this.eventCodes=eventCodes;
         }

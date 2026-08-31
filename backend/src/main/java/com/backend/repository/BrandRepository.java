@@ -1,14 +1,11 @@
 package com.backend.repository;
 
 import com.backend.entity.Brand;
-import com.backend.entity.Event;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public interface EventRepository extends JpaRepository<Event, Long> {
+public interface BrandRepository extends JpaRepository<Brand, Long> {
     boolean existsByUrl(String url);
-    List<Event> findByBrand(Brand brand);
+    Brand findByName(String name);
 }
