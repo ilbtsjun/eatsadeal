@@ -1,4 +1,4 @@
-package com.backend.crawler.common;
+package com.backend.dto;
 
 import com.backend.entity.EventCode;
 

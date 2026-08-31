@@ -1,6 +1,6 @@
 package com.backend.controller;
 
-import com.backend.crawler.common.EventCreateDto;
+import com.backend.dto.EventCreateDto;
 import com.backend.crawler.target.BHC;
 import com.backend.service.EventService;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.backend.service;
 
-import com.backend.crawler.common.EventCreateDto;
+import com.backend.dto.EventCreateDto;
 import com.backend.entity.Brand;
 import com.backend.entity.Event;
 import com.backend.repository.BrandRepository;
