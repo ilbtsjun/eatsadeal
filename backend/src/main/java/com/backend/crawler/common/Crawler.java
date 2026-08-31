@@ -1,5 +1,7 @@
 package com.backend.crawler.common;
 
+import com.backend.dto.EventCreateDto;
+
 import java.util.List;
 
 public interface Crawler {

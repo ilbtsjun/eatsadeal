@@ -1,7 +1,7 @@
 package com.backend.crawler.target;
 
 import com.backend.crawler.common.Crawler;
-import com.backend.crawler.common.EventCreateDto;
+import com.backend.dto.EventCreateDto;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
