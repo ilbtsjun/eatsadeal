@@ -1,6 +1,6 @@
 package com.backend.controller;
 
-import com.backend.dto.EventCreateDto;
+import com.backend.dto.CreateEvent;
 import com.backend.crawler.target.BHC;
 import com.backend.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +16,10 @@ public class CrawlerController {
     private final EventService eventService;
 
     @GetMapping("/api/crawl/bhc")
-    public List<EventCreateDto> testBhcCrawler() {
-        List<EventCreateDto> list = bhcCrawler.crawl();
-        for(EventCreateDto eventCreateDto : list){
-            eventService.createEvent(eventCreateDto);
+    public List<CreateEvent> testBhcCrawler() {
+        List<CreateEvent> list = bhcCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.createEvent(createEvent);
         }
         return list;
     }

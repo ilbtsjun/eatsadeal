@@ -1,7 +1,7 @@
 package com.backend.crawler.target;
 
 import com.backend.crawler.common.Crawler;
-import com.backend.dto.EventCreateDto;
+import com.backend.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -31,8 +31,8 @@ public class BHC implements Crawler {
     }
 
     @Override
-    public List<EventCreateDto> crawl() {
-        List<EventCreateDto> eventList = new ArrayList<>();
+    public List<CreateEvent> crawl() {
+        List<CreateEvent> eventList = new ArrayList<>();
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
@@ -77,7 +77,7 @@ public class BHC implements Crawler {
                     String linkUrl = element.getAttribute("href");
                     String imgUrl = element.findElement(By.tagName("img")).getAttribute("src");
 
-                    EventCreateDto eventDto = new EventCreateDto(
+                    CreateEvent eventDto = new CreateEvent(
                             title,
                             null,
                             linkUrl,
