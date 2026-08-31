@@ -7,7 +7,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table
+@Table(uniqueConstraints = {@UniqueConstraint(
+                name = "uk_brand_category",
+                columnNames = {"brand_id", "category_id"}
+        )
+    }
+)
 @NoArgsConstructor
 public class BrandCategory {
     @Id
@@ -15,11 +20,11 @@ public class BrandCategory {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "brand_id", nullable = false)
+    @JoinColumn(name = "brand", nullable = false)
     private Brand brand;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category", nullable = false)
     private Category category;
 
     @Builder
