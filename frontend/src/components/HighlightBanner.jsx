@@ -1,4 +1,3 @@
-import React from 'react';
 import './HighlightBanner.css';
 
 export default function HighlightBanner() {

@@ -1,59 +1,58 @@
-import React, { useState } from 'react';
 import './CategoryFilter.css';
 
-export default function CategoryFilter() {
-    // 선택된 카테고리 상태 관리 (기본값: 'all')
-    const [activeCategory, setActiveCategory] = useState('all');
-    // 선택된 정렬 기준 상태 관리 (기본값: 'latest')
-    const [activeSort, setActiveSort] = useState('latest');
+const categories = [
+    { id: 'all', name: '전체' },
+    { id: 'chicken', name: '치킨' },
+    { id: 'pizza', name: '피자' },
+    { id: 'bunsik', name: '분식' },
+    { id: 'western', name: '양식' },
+    { id: 'chinese', name: '중식' },
+    { id: 'korean', name: '한식' },
+    { id: 'japanese', name: '일식' },
+    { id: 'fastfood', name: '패스트푸드' },
+    { id: 'cafe', name: '카페/디저트' },
+];
 
-    const categories = [
-        { id: 'all', name: '전체' },
-        { id: 'chicken', name: '치킨' },
-        { id: 'fastfood', name: '패스트푸드' },
-        { id: 'pizza', name: '피자/양식' },
-        { id: 'cafe', name: '카페/디저트' },
-    ];
-
+export default function CategoryFilter({
+    activeCategory,
+    onCategoryChange,
+    activeSort,
+    onSortChange,
+}) {
     return (
         <div className="category-filter-container">
-            {/* 1. 카테고리 버튼 목록 */}
-            <div className="category-list">
-                {categories.map((cat) => (
+            <div className="category-list" aria-label="음식 카테고리">
+                {categories.map((category) => (
                     <button
-                        key={cat.id}
-                        className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                        onClick={() => setActiveCategory(cat.id)}
+                        key={category.id}
+                        type="button"
+                        className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
+                        onClick={() => onCategoryChange(category.id)}
                     >
-                        {cat.name}
+                        {category.name}
                     </button>
                 ))}
             </div>
 
-            {/* 2. 정렬 필터바 */}
             <div className="filter-bar">
-                <span className="result-count">총 <b>12</b>개의 할인 정보</span>
-                <div className="sort-buttons">
-                    <button
-                        className={activeSort === 'latest' ? 'active-sort' : ''}
-                        onClick={() => setActiveSort('latest')}
-                    >
-                        최신순
-                    </button>
-                    <span className="divider">|</span>
-                    <button
-                        className={activeSort === 'deadline' ? 'active-sort' : ''}
-                        onClick={() => setActiveSort('deadline')}
-                    >
-                        마감임박순
-                    </button>
-                    <span className="divider">|</span>
-                    <button
-                        className={activeSort === 'discount' ? 'active-sort' : ''}
-                        onClick={() => setActiveSort('discount')}
-                    >
-                        할인율높은순
-                    </button>
+                <span className="result-count">음식 테마를 선택해 할인 정보를 확인해보세요</span>
+                <div className="sort-buttons" aria-label="정렬 기준">
+                    {[
+                        ['latest', '최신순'],
+                        ['deadline', '마감임박순'],
+                        ['discount', '할인율높은순'],
+                    ].map(([sort, label], index) => (
+                        <span key={sort} className="sort-item">
+                            {index > 0 && <span className="divider">|</span>}
+                            <button
+                                type="button"
+                                className={activeSort === sort ? 'active-sort' : ''}
+                                onClick={() => onSortChange(sort)}
+                            >
+                                {label}
+                            </button>
+                        </span>
+                    ))}
                 </div>
             </div>
         </div>
