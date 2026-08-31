@@ -84,8 +84,8 @@ public class CategoryController {
             description = "카테고리를 수정합니다.",
             responses = {
                     @ApiResponse(
-                            responseCode = "201",
-                            description = "카테고리 생성 성공"
+                            responseCode = "200",
+                            description = "카테고리 수정 성공"
                     ),
                     @ApiResponse(
                             responseCode = "400",
@@ -102,7 +102,7 @@ public class CategoryController {
     public MsgResponse updateCategory(@PathVariable Long categoryID,
                                       @Valid @RequestBody UpdateCategory request) {
         categoryService.updateCategory(categoryID, request);
-        return new MsgResponse("새 카테고리가 생성되었습니다.", "201");
+        return new MsgResponse("카테고리가 수정되었습니다.", "200");
     }
 
     @Operation(
@@ -131,8 +131,8 @@ public class CategoryController {
     }
 
     @Operation(
-            summary = "카테고리 조회",
-            description = "카테고리의 정보를 조회합니다.",
+            summary = "카테고리 리스트 조회",
+            description = "카테고리의 리스트를 조회합니다.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
