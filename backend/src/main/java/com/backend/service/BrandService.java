@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -68,18 +69,15 @@ public class BrandService {
     public void updateBrand(Long brandID, @Valid UpdateBrand request) {
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new IllegalArgumentException("브랜드가 없습니다."));
-        String name = request.name();
-        if(request.name().isBlank()){
-            name = brand.getName();
-        }
-        String url = request.url();
-        if(request.url().isBlank()){
-            url = brand.getUrl();
-        }
-        String img = request.img();
-        if(request.img().isBlank()){
-            img = brand.getImg();
-        }
+        String name = StringUtils.hasText(request.name())
+                ? request.name()
+                : brand.getName();
+        String url = StringUtils.hasText(request.url())
+                ? request.url()
+                : brand.getUrl();
+        String img = StringUtils.hasText(request.img())
+                ? request.img()
+                : brand.getImg();
         brand.updateBrand(name, url, img);
         Set<Long> requestIds = new HashSet<>(request.categoryIds());
         List<BrandCategory> existingBrandCategories = brandCategoryRepository.findByBrand(brand);
