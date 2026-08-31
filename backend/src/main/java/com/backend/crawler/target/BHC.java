@@ -84,7 +84,7 @@ public class BHC implements Crawler {
                             imgUrl,
                             LocalDate.parse(startDate).atStartOfDay(),
                             LocalDate.parse(endDate).atTime(23, 59, 59),
-//                            findByName(),
+                            getName(),
                             null);
                     eventList.add(eventDto);
                 } catch (Exception e) {

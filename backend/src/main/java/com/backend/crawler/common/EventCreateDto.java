@@ -12,7 +12,7 @@ public record EventCreateDto(
         String img,
         LocalDateTime startDate,
         LocalDateTime endDate,
-//                           Brand brand,
+        String brandName,
         Set<EventCode> eventCodes
 ) {
 }
