@@ -31,7 +31,7 @@ public class UserService {
         if(userRepository.existsByEmail(request.email())){
             throw new IllegalArgumentException("이미 사용중인 이메일 입니다.");
         }
-        if(userRepository.existsByNickName(request.nickName())){
+        if(userRepository.existsByNickname(request.nickname())){
             throw new IllegalArgumentException("이미 사용중인 닉네임 입니다.");
         }
 
@@ -39,7 +39,7 @@ public class UserService {
                 .name(request.name().trim())
                 .email(request.email().trim())
                 .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickName().trim())
+                .nickname(request.nickname().trim())
                 .phoneNumber(request.phoneNumber())
                 .gender(request.userGender())
                 .birth(request.birth())
@@ -54,7 +54,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public boolean isExistNickname(String nickname){
-        return userRepository.existsByNickName(nickname);
+        return userRepository.existsByNickname(nickname);
     }
 
     @Transactional
@@ -126,7 +126,7 @@ public class UserService {
         if(!Pattern.matches("^01[016789]-?\\d{3,4}-?\\d{4}$", newPhoneNumber)){
             throw new IllegalArgumentException("전화번호 형식이 올바르지 않습니다.");
         }
-        if (!newUserNickname.equals(user.getNickname()) && userRepository.existsByNickName(newUserNickname)) {
+        if (!newUserNickname.equals(user.getNickname()) && userRepository.existsByNickname(newUserNickname)) {
             throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
         }
 

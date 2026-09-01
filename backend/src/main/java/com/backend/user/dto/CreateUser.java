@@ -22,7 +22,7 @@ public record CreateUser(
 
         @Schema(description = "유저 닉네임", example = "김삿갓")
         @NotBlank(message = "닉네임은 필수입니다.")
-        String nickName,
+        String nickname,
 
         @Schema(description = "유저 전화번호", example = "010-1234-5678")
         String phoneNumber,
