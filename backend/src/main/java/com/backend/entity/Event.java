@@ -1,5 +1,6 @@
 package com.backend.entity;
 
+import com.backend.common.EventCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

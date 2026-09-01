@@ -1,6 +1,6 @@
 package com.backend.dto;
 
-import com.backend.entity.EventCode;
+import com.backend.common.EventCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
