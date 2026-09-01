@@ -9,5 +9,5 @@ public enum UserGender {
     MALE,
     FEMALE,
     OTHER,
-    UNSPECIFIED;
+    UNSPECIFIED
 }

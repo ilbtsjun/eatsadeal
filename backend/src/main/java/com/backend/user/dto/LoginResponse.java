@@ -10,7 +10,7 @@ public record LoginResponse(
         @Schema(description = "상태 코드", example = "200")
         String status,
 
-        @Schema(description = "로그인 토큰", example = "")
+        @Schema(description = "로그인 토큰")
         String token
 ) {
 }
