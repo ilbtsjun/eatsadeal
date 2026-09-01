@@ -1,8 +1,9 @@
 package com.backend;
 
-import com.backend.entity.User;
-import com.backend.config.UserRole;
-import com.backend.repository.UserRepository;
+import com.backend.user.dto.UserGender;
+import com.backend.user.entity.User;
+import com.backend.common.UserRole;
+import com.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,7 +29,7 @@ public class AdminInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode("temp"))
                     .nickname("ADMIN")
                     .phoneNumber("010-0000-0000")
-                    .gender(true)
+                    .gender(UserGender.MALE)
                     .birth(LocalDate.of(1990, 1, 1))
                     .build();
             admin.updateRole(UserRole.ADMIN);

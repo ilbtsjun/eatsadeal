@@ -3,7 +3,7 @@ package com.backend.controller;
 import com.backend.dto.GetEventListResponse;
 import com.backend.dto.GetEventResponse;
 import com.backend.dto.GetSearch;
-import com.backend.entity.EventCode;
+import com.backend.common.EventCode;
 import com.backend.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

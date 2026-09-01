@@ -1,7 +1,7 @@
 package com.backend.repository;
 
 import com.backend.entity.Event;
-import com.backend.entity.EventCode;
+import com.backend.common.EventCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
