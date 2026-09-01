@@ -41,8 +41,21 @@ function getSavedComments(eventId) {
 }
 
 export default function EventDetailPage({ event, user, onLoginClick, onLogout, onBack }) {
+  const [detailEvent, setDetailEvent] = useState(event);
   const [comments, setComments] = useState(() => getSavedComments(event.id));
   const [commentText, setCommentText] = useState('');
+
+  useEffect(() => {
+    fetch(`/event/${event.id}`)
+      .then((response) => {
+        if (!response.ok) throw new Error('이벤트 상세 정보를 불러오지 못했습니다.');
+        return response.json();
+      })
+      .then((data) => setDetailEvent({ ...data, brand: data.brandName }))
+      .catch(() => {
+        // 목록 응답으로도 화면을 표시할 수 있으므로 상세 조회 실패 시 기존 데이터를 유지합니다.
+      });
+  }, [event.id]);
 
   useEffect(() => {
     localStorage.setItem(`eats-a-deal-comments-${event.id}`, JSON.stringify(comments));
@@ -76,24 +89,24 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
 
         <article className="event-detail-card">
           <div className="detail-image-box">
-            {event.img ? (
-              <img src={event.img} alt={event.title} className="detail-image" />
+            {detailEvent.img ? (
+              <img src={detailEvent.img} alt={detailEvent.title} className="detail-image" />
             ) : <span className="detail-emoji">🍗</span>}
-            <span className="detail-dday">{calculateDDay(event.endDate)}</span>
+            <span className="detail-dday">{calculateDDay(detailEvent.endDate)}</span>
           </div>
 
           <div className="detail-content">
-            <span className="detail-brand">{event.brand || '이츠어딜'}</span>
-            <h1>{event.title}</h1>
+            <span className="detail-brand">{detailEvent.brand || '이츠어딜'}</span>
+            <h1>{detailEvent.title}</h1>
             <div className="detail-tags">
-              <span>{getEventCodeName(event.eventCodes)}</span>
-              <span>{formatDate(event.startDate)} ~ {formatDate(event.endDate)}</span>
+              <span>{getEventCodeName(detailEvent.eventCodes)}</span>
+              <span>{formatDate(detailEvent.startDate)} ~ {formatDate(detailEvent.endDate)}</span>
             </div>
             <p className="detail-description">
-              {event.description || '이벤트에 대한 자세한 할인 내용을 확인해보세요.'}
+              {detailEvent.description || '이벤트에 대한 자세한 할인 내용을 확인해보세요.'}
             </p>
-            {event.url && (
-              <a className="original-event-link" href={event.url} target="_blank" rel="noreferrer">
+            {detailEvent.url && (
+              <a className="original-event-link" href={detailEvent.url} target="_blank" rel="noreferrer">
                 원문 이벤트 보러가기 ↗
               </a>
             )}
