@@ -4,7 +4,6 @@ import com.backend.dto.*;
 import com.backend.entity.Brand;
 import com.backend.entity.BrandCategory;
 import com.backend.entity.Category;
-import com.backend.event.service.EventService;
 import com.backend.repository.BrandCategoryRepository;
 import com.backend.repository.BrandRepository;
 import com.backend.repository.CategoryRepository;
