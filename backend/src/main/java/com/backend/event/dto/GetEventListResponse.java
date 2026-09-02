@@ -1,13 +1,12 @@
-package com.backend.dto;
+package com.backend.event.dto;
 
-import com.backend.common.EventCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 import java.util.Set;
 
-@Schema(description = "이벤트 조회 요청")
-public record GetEventResponse(
+@Schema(description = "이벤트 리스트 조회 요청")
+public record GetEventListResponse(
         @Schema(description = "이벤트 ID", example = "1")
         Long id,
 
@@ -35,17 +34,13 @@ public record GetEventResponse(
         @Schema(description = "종료 여부", example = "false")
         Boolean isActive,
 
-        @Schema(description = "브랜드 ID")
+        @Schema(description = "브랜드 ID", example = "1")
         Long brandId,
 
-        @Schema(description = "브랜드 이름")
+        @Schema(description = "브랜드 이름", example = "BHC")
         String brandName,
 
-        @Schema(description = "브랜드 이미지")
-        String brandImg,
-
-
         @Schema(description = "이벤트 코드", example = "GIFT_PROMO")
-        Set<EventCode> eventCodes) {
-
+        Set<EventCode> eventCodes
+) {
 }

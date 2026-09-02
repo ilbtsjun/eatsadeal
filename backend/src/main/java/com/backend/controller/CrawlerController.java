@@ -1,8 +1,8 @@
 package com.backend.controller;
 
-import com.backend.dto.CreateEvent;
+import com.backend.event.dto.CreateEvent;
 import com.backend.crawler.target.BHC;
-import com.backend.service.EventService;
+import com.backend.event.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,7 +19,7 @@ public class CrawlerController {
     public List<CreateEvent> testBhcCrawler() {
         List<CreateEvent> list = bhcCrawler.crawl();
         for(CreateEvent createEvent : list){
-            eventService.createEvent(createEvent);
+            eventService.upsertCrawledEvent(createEvent);
         }
         return list;
     }

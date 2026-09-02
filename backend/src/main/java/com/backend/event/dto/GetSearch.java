@@ -1,6 +1,5 @@
-package com.backend.dto;
+package com.backend.event.dto;
 
-import com.backend.common.EventCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "검색 요청")

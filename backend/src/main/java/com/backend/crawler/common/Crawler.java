@@ -1,6 +1,6 @@
 package com.backend.crawler.common;
 
-import com.backend.dto.CreateEvent;
+import com.backend.event.dto.CreateEvent;
 
 import java.util.List;
 

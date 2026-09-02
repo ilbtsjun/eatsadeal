@@ -1,6 +1,7 @@
-package com.backend.entity;
+package com.backend.event.entity;
 
-import com.backend.common.EventCode;
+import com.backend.event.dto.EventCode;
+import com.backend.entity.Brand;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -50,11 +51,17 @@ public class Event {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
-            name = "event_codes", // 매핑 매개 테이블명
-            joinColumns = @JoinColumn(name = "discount_info_id")
+            name = "event_event_codes",
+            joinColumns = @JoinColumn(name = "event_id"),
+            uniqueConstraints = {
+                    @UniqueConstraint(
+                            name = "uk_event_event_code",
+                            columnNames = {"event_id", "event_code"}
+                    )
+            }
     )
     @Enumerated(EnumType.STRING)
-    @Column(name = "event_code", nullable = false)
+    @Column(name = "event_code", nullable = false, length = 50)
     private Set<EventCode> eventCodes = new HashSet<>();
 
     @Builder
@@ -71,9 +78,9 @@ public class Event {
         this.viewCount = 0L;
         this.isActive = true;
         this.brand = brand;
-        if(eventCodes != null){
-            this.eventCodes=eventCodes;
-        }
+        this.eventCodes = eventCodes == null
+                ? new HashSet<>()
+                : new HashSet<>(eventCodes);
     }
 
     public void addEventCode(EventCode eventCode) {
@@ -82,6 +89,21 @@ public class Event {
 
     public void removeEventCode(EventCode eventCode) {
         this.eventCodes.remove(eventCode);
+    }
+
+    public void update(String title, String description, String url,
+                       String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
+        this.title = title;
+        this.description = description;
+        this.url = url;
+        this.img = img;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.isActive = isActive;
+    }
+
+    public void deactivate() {
+        this.isActive = false;
     }
 
 }
