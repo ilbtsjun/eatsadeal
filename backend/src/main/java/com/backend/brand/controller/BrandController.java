@@ -1,8 +1,11 @@
-package com.backend.controller;
+package com.backend.brand.controller;
 
+import com.backend.brand.dto.CreateBrand;
+import com.backend.brand.dto.GetBrandListResponse;
+import com.backend.brand.dto.GetBrandResponse;
+import com.backend.brand.dto.UpdateBrand;
 import com.backend.common.MsgResponse;
-import com.backend.dto.*;
-import com.backend.service.BrandService;
+import com.backend.brand.service.BrandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,7 +75,6 @@ public class BrandController {
     )
     @GetMapping("/{brandID}")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasRole('ADMIN')")
     public GetBrandResponse getBrand(@PathVariable Long brandID) {
         return brandService.getBrand(brandID);
     }

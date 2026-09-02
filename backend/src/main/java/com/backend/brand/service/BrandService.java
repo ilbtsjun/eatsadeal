@@ -1,11 +1,14 @@
-package com.backend.service;
+package com.backend.brand.service;
 
-import com.backend.dto.*;
-import com.backend.entity.Brand;
-import com.backend.entity.BrandCategory;
+import com.backend.brand.dto.CreateBrand;
+import com.backend.brand.dto.GetBrandListResponse;
+import com.backend.brand.dto.GetBrandResponse;
+import com.backend.brand.dto.UpdateBrand;
+import com.backend.brand.entity.Brand;
+import com.backend.brand.entity.BrandCategory;
 import com.backend.category.entity.Category;
-import com.backend.repository.BrandCategoryRepository;
-import com.backend.repository.BrandRepository;
+import com.backend.brand.repository.BrandCategoryRepository;
+import com.backend.brand.repository.BrandRepository;
 import com.backend.category.repository.CategoryRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +60,7 @@ public class BrandService {
         for(BrandCategory brandCategory : categories){
             categoryIds.add(brandCategory.getCategory().getId());
         }
-        return new GetBrandResponse(brand.getName(), brand.getUrl(), brand.getImg(), categoryIds, brand.getLastCrawl());
+        return new GetBrandResponse(brand.getId(), brand.getName(), brand.getUrl(), brand.getImg(), categoryIds, brand.getLastCrawl());
     }
 
     @Transactional

@@ -1,4 +1,4 @@
-package com.backend.entity;
+package com.backend.brand.entity;
 
 import com.backend.category.entity.Category;
 import jakarta.persistence.*;
