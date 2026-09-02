@@ -1,7 +1,7 @@
-package com.backend.repository;
+package com.backend.event.repository;
 
-import com.backend.entity.Event;
-import com.backend.common.EventCode;
+import com.backend.event.entity.Event;
+import com.backend.event.dto.EventCode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -73,4 +74,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           AND e.endDate < :now
     """)
     Long deactivateExpiredEvents(@Param("now") LocalDateTime now);
+
+    boolean existsByUrlAndIdNot(String url, Long id);
+
+    Optional<Event> findByUrl(String url);
 }

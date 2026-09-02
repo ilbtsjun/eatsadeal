@@ -4,10 +4,10 @@ import com.backend.dto.*;
 import com.backend.entity.Brand;
 import com.backend.entity.BrandCategory;
 import com.backend.entity.Category;
+import com.backend.event.service.EventService;
 import com.backend.repository.BrandCategoryRepository;
 import com.backend.repository.BrandRepository;
 import com.backend.repository.CategoryRepository;
-import com.backend.repository.EventRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -98,22 +98,6 @@ public class BrandService {
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new IllegalArgumentException("브랜드가 없습니다."));
         brandRepository.delete(brand);
-    }
-
-    @Transactional
-    public void createEvent(Long brandID, CreateEvent request){
-        Brand brand = brandRepository.findById(brandID)
-                .orElseThrow(() -> new IllegalArgumentException("브랜드가 없습니다."));
-        CreateEvent eventDto = new CreateEvent(
-                request.title(),
-                request.description(),
-                request.url(),
-                request.img(),
-                request.startDate(),
-                request.endDate(),
-                brand.getName(),
-                request.eventCodes());
-        eventService.createEvent(eventDto);
     }
 
     @Transactional(readOnly = true)

@@ -129,42 +129,12 @@ public class BrandController {
     }
 
     @Operation(
-            summary = "이벤트 수동 생성",
-            description = "이벤트를 수동으로 만듭니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "이벤트 생성 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
-    )
-    @PostMapping("/{brandID}/create")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse createEvent(@PathVariable Long brandID, @Valid @RequestBody CreateEvent createEvent) {
-        brandService.createEvent(brandID, createEvent);
-        return new MsgResponse("새 이벤트가 생성되었습니다.","201");
-    }
-
-    @Operation(
             summary = "브랜드 리스트 조회",
-            description = "이벤트를 수동으로 만듭니다.",
+            description = "브랜드 리스트를 조회합니다.",
             responses = {
                     @ApiResponse(
-                            responseCode = "201",
-                            description = "이벤트 생성 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
+                            responseCode = "200",
+                            description = "브랜드 리스트 조회 성공"
                     ),
                     @ApiResponse(
                             responseCode = "401",
