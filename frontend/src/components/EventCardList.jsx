@@ -74,18 +74,20 @@ export default function EventCardList({
     isManaging = false,
     onToggleManage,
     onSelectEvent,
+    onOpenAdminPage,
+    onOpenMyPage,
 }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        fetch('http://localhost:8080/api/events')
+        fetch('/event/events?size=100')
             .then((response) => {
                 if (!response.ok) throw new Error('이벤트 정보를 불러오지 못했습니다.');
                 return response.json();
             })
-            .then((data) => setEvents(data))
+            .then((data) => setEvents((data.content || []).map((event) => ({ ...event, brand: event.brandName }))))
             .catch((requestError) => setError(requestError.message))
             .finally(() => setLoading(false));
     }, []);
@@ -108,6 +110,8 @@ export default function EventCardList({
                     <AdminTools
                         isManaging={isManaging}
                         onToggleManage={onToggleManage}
+                        onOpenAdminPage={onOpenAdminPage}
+                        onOpenMyPage={onOpenMyPage}
                     />
                 )}
             </div>
