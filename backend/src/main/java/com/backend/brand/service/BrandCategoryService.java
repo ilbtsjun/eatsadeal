@@ -1,9 +1,9 @@
-package com.backend.service;
+package com.backend.brand.service;
 
-import com.backend.entity.Brand;
-import com.backend.entity.BrandCategory;
+import com.backend.brand.entity.Brand;
+import com.backend.brand.entity.BrandCategory;
 import com.backend.category.entity.Category;
-import com.backend.repository.BrandCategoryRepository;
+import com.backend.brand.repository.BrandCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

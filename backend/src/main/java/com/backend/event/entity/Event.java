@@ -1,7 +1,7 @@
 package com.backend.event.entity;
 
 import com.backend.event.dto.EventCode;
-import com.backend.entity.Brand;
+import com.backend.brand.entity.Brand;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

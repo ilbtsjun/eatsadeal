@@ -1,6 +1,6 @@
-package com.backend.repository;
+package com.backend.brand.repository;
 
-import com.backend.entity.Brand;
+import com.backend.brand.entity.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

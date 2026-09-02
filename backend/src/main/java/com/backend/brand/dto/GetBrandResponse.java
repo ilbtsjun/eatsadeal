@@ -1,14 +1,16 @@
-package com.backend.dto;
+package com.backend.brand.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
 import java.util.List;
 
-@Schema(description = "브랜드 수정 요청")
-public record UpdateBrand(
+@Schema(description = "브랜드 조회 요청")
+public record GetBrandResponse(
+        @Schema(description = "브랜드 ID", example = "1")
+        Long id,
+
         @Schema(description = "브랜드 이름", example = "BHC")
-        @Size(max = 50, message = "브랜드 이름은 50자 이하여야 합니다.")
         String name,
 
         @Schema(description = "브랜드 URL", example = "https://www.bhc.co.kr/main")
@@ -18,6 +20,9 @@ public record UpdateBrand(
         String img,
 
         @Schema(description = "카테고리 목록", example = "[]")
-        List<Long> categoryIds
+        List<Long> categoryIds,
+
+        @Schema(description = "마지막 크롤링 시각", example = "2026/08/27 18:00:00")
+        LocalDate lastCrawl
 ) {
 }
