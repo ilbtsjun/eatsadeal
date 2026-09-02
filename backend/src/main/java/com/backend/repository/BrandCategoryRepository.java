@@ -2,7 +2,7 @@ package com.backend.repository;
 
 import com.backend.entity.Brand;
 import com.backend.entity.BrandCategory;
-import com.backend.entity.Category;
+import com.backend.category.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,8 +1,11 @@
-package com.backend.dto;
+package com.backend.category.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record GetCategoryResponse(
+        @Schema(description = "카테고리 ID", example = "1")
+        Long id,
+
         @Schema(description = "카테고리 이름", example = "치킨")
         String name,
 

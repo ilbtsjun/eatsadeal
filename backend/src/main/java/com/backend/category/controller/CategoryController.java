@@ -1,10 +1,10 @@
-package com.backend.controller;
+package com.backend.category.controller;
 
+import com.backend.category.service.CategoryService;
+import com.backend.category.dto.CreateCategory;
+import com.backend.category.dto.GetCategoryResponse;
+import com.backend.category.dto.UpdateCategory;
 import com.backend.common.MsgResponse;
-import com.backend.dto.CreateCategory;
-import com.backend.dto.GetCategoryResponse;
-import com.backend.dto.UpdateCategory;
-import com.backend.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -154,7 +154,6 @@ public class CategoryController {
     )
     @GetMapping("/list")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasRole('ADMIN')")
     public List<GetCategoryResponse> getCategoryList() {
         return categoryService.getCategoryList();
     }

@@ -1,10 +1,10 @@
-package com.backend.service;
+package com.backend.category.service;
 
-import com.backend.dto.CreateCategory;
-import com.backend.dto.GetCategoryResponse;
-import com.backend.dto.UpdateCategory;
-import com.backend.entity.Category;
-import com.backend.repository.CategoryRepository;
+import com.backend.category.dto.CreateCategory;
+import com.backend.category.dto.GetCategoryResponse;
+import com.backend.category.dto.UpdateCategory;
+import com.backend.category.entity.Category;
+import com.backend.category.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,7 @@ public class CategoryService {
     public GetCategoryResponse getCategory(Long categoryID){
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리가 없습니다."));
-        return new GetCategoryResponse(category.getName(), category.getImg());
+        return new GetCategoryResponse(category.getId(), category.getName(), category.getImg());
     }
 
     @Transactional
@@ -61,7 +61,7 @@ public class CategoryService {
         List<Category> categories = categoryRepository.findAll();
         List<GetCategoryResponse> categoryList = new ArrayList<>();
         for(Category category : categories){
-            categoryList.add(new GetCategoryResponse(category.getName(), category.getImg()));
+            categoryList.add(new GetCategoryResponse(category.getId(), category.getName(), category.getImg()));
         }
         return categoryList;
     }

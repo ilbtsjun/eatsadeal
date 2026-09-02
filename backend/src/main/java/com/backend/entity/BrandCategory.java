@@ -1,5 +1,6 @@
 package com.backend.entity;
 
+import com.backend.category.entity.Category;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
