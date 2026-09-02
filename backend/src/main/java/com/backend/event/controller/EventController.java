@@ -1,6 +1,7 @@
 package com.backend.event.controller;
 
 import com.backend.common.MsgResponse;
+import com.backend.config.JwtAuthenticationFilter;
 import com.backend.event.dto.*;
 import com.backend.event.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -109,8 +110,9 @@ public class EventController {
             }
     )
     @GetMapping("/{eventId}")
-    public GetEventResponse getEvent(@PathVariable Long eventId) {
-        return eventService.getEvent(eventId);
+    public GetEventResponse getEvent(@RequestHeader(value = JwtAuthenticationFilter.TOKEN_HEADER, required = false) String token,
+            @PathVariable Long eventId) {
+        return eventService.getEvent(token, eventId);
     }
 
     @Operation(

@@ -43,8 +43,11 @@ public record GetEventResponse(
         @Schema(description = "브랜드 이미지")
         String brandImg,
 
-
         @Schema(description = "이벤트 코드", example = "GIFT_PROMO")
-        Set<EventCode> eventCodes) {
+        Set<EventCode> eventCodes,
+
+        @Schema(description = "즐겨찾기 여부", example = "false")
+        Boolean isFavorite
+) {
 
 }
