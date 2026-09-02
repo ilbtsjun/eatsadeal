@@ -2,7 +2,7 @@ package com.backend.service;
 
 import com.backend.entity.Brand;
 import com.backend.entity.BrandCategory;
-import com.backend.entity.Category;
+import com.backend.category.entity.Category;
 import com.backend.repository.BrandCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
