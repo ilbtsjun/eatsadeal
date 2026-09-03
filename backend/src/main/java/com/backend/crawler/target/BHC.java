@@ -1,7 +1,8 @@
 package com.backend.crawler.target;
 
 import com.backend.crawler.common.Crawler;
-import com.backend.dto.CreateEvent;
+import com.backend.event.dto.CreateEvent;
+import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -24,6 +25,7 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class BHC implements Crawler {
+    private final BrandRepository brandRepository;
 
     @Override
     public String getName() {
@@ -84,7 +86,7 @@ public class BHC implements Crawler {
                             imgUrl,
                             LocalDate.parse(startDate).atStartOfDay(),
                             LocalDate.parse(endDate).atTime(23, 59, 59),
-                            getName(),
+                            brandRepository.findByName(getName()).getId(),
                             null);
                     eventList.add(eventDto);
                 } catch (Exception e) {
