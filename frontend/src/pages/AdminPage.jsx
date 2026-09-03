@@ -17,7 +17,8 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [userId, setUserId] = useState('');
+  const [userNickname, setUserNickname] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [userMessage, setUserMessage] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,13 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
   useEffect(() => { loadLists(); }, []);
 
   const deleteItem = async (type, id, name) => {
-    if (!window.confirm(`'${name}'을(를) 삭제하시겠습니까?`)) return;
+    setConfirmDelete({ type, id, name });
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!confirmDelete) return;
+    const { type, id, name } = confirmDelete;
+    setConfirmDelete(null);
     try {
       await request(`/${type}/${id}/delete`, { method: 'DELETE' });
       setMessage(`${type === 'brand' ? '브랜드' : '카테고리'}가 삭제되었습니다.`);
@@ -55,7 +62,7 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     event.preventDefault();
     setUserMessage('');
     try {
-      setSelectedUser(await request(`/user/${userId.trim()}`));
+      setSelectedUser(await request(`/user/admin/nickname/${encodeURIComponent(userNickname.trim())}`));
     } catch (error) {
       setSelectedUser(null);
       setUserMessage(error.message);
@@ -105,11 +112,12 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
         </nav>
         {message && <p className="admin-message" role="status">{message}</p>}
         {loading ? <p className="admin-empty">목록을 불러오는 중입니다...</p> : tab === 'user' ? (
-          <section className="admin-panel"><h2>회원 정보 조회</h2><p className="panel-description">회원 ID를 입력하면 회원 정보를 확인하고 정지 상태를 관리할 수 있습니다.</p><form className="user-search-form" onSubmit={findUser}><input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder="회원 ID 입력" required /><button type="submit">조회</button></form>{userMessage && <p className="admin-message">{userMessage}</p>}{selectedUser && <div className="user-info-card"><div><span>회원 ID</span><strong>{selectedUser.id}</strong></div><div><span>닉네임</span><strong>{selectedUser.nickname || '-'}</strong></div><div><span>이메일</span><strong>{selectedUser.email || '-'}</strong></div><div><span>권한</span><strong>{String(selectedUser.role || 'USER')}</strong></div><div className="user-actions"><button type="button" onClick={() => changeUserStatus(false)}>회원 정지</button><button type="button" className="secondary" onClick={() => changeUserStatus(true)}>정지 해제</button></div></div>}</section>
+          <section className="admin-panel"><h2>회원 정보 조회</h2><p className="panel-description">회원 닉네임을 입력하면 회원 정보를 확인하고 정지 상태를 관리할 수 있습니다.</p><form className="user-search-form" onSubmit={findUser}><input value={userNickname} onChange={(event) => setUserNickname(event.target.value)} placeholder="닉네임 입력" required /><button type="submit">조회</button></form>{userMessage && <p className="admin-message">{userMessage}</p>}{selectedUser && <div className="user-info-card"><div><span>회원 ID</span><strong>{selectedUser.id}</strong></div><div><span>닉네임</span><strong>{selectedUser.nickname || '-'}</strong></div><div><span>이메일</span><strong>{selectedUser.email || '-'}</strong></div><div><span>권한</span><strong>{String(selectedUser.role || 'USER')}</strong></div><div className="user-actions"><button type="button" onClick={() => changeUserStatus(false)}>회원 정지</button><button type="button" className="secondary" onClick={() => changeUserStatus(true)}>정지 해제</button></div></div>}</section>
         ) : (
           <section className="admin-panel"><div className="panel-heading"><div><h2>{tab === 'brand' ? '브랜드 목록' : '카테고리 목록'}</h2><p className="panel-description">현재 등록된 {tab === 'brand' ? '브랜드' : '카테고리'} 정보입니다.</p></div><button type="button" className="create-placeholder" onClick={() => openCreate(tab)}>생성</button></div><div className="management-list">{(tab === 'brand' ? brands : categories).length === 0 ? <p className="admin-empty">등록된 정보가 없습니다.</p> : (tab === 'brand' ? brands : categories).map((item) => <div className="management-row" key={item.id}><div className="item-main">{item.img && <img src={item.img} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}<div><strong>{item.name}</strong><span>ID: {item.id}</span></div></div><div className="row-actions"><button type="button" onClick={() => openEdit(tab, item)}>수정</button><button type="button" className="delete" onClick={() => deleteItem(tab, item.id, item.name)}>삭제</button></div></div>)}</div></section>
         )}
         {form && <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setForm(null); }}><form className="admin-modal" onSubmit={submitForm}><div className="modal-heading"><h2>{form.id ? '정보 수정' : '정보 생성'}</h2><button type="button" onClick={() => setForm(null)}>×</button></div><label>이름<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>{form.type === 'brand' && <><label>브랜드 URL<input value={form.url} onChange={(event) => setForm((current) => ({ ...current, url: event.target.value }))} required={!form.id} /></label><label>카테고리 ID<input value={form.categoryIds} onChange={(event) => setForm((current) => ({ ...current, categoryIds: event.target.value }))} placeholder="예: 1, 2 (생성 시 필수)" required={!form.id} /></label></>}<label>이미지 URL<input value={form.img} onChange={(event) => setForm((current) => ({ ...current, img: event.target.value }))} required /></label><button className="modal-submit" type="submit">저장</button></form></div>}
+        {confirmDelete && <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmDelete(null); }}><div className="admin-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title"><div className="modal-heading"><h2 id="delete-title">삭제 확인</h2><button type="button" onClick={() => setConfirmDelete(null)}>×</button></div><p><strong>{confirmDelete.name}</strong>을(를) 삭제하시겠습니까?</p><span>삭제한 정보는 복구할 수 없습니다.</span><div className="confirm-actions"><button type="button" onClick={() => setConfirmDelete(null)}>취소</button><button type="button" className="danger-confirm" onClick={confirmDeleteItem}>삭제하기</button></div></div></div>}
       </main>
     </div>
   );
