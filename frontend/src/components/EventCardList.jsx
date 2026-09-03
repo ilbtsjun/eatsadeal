@@ -74,6 +74,8 @@ export default function EventCardList({
     isManaging = false,
     onToggleManage,
     onSelectEvent,
+    onOpenAdminPage,
+    onOpenMyPage,
 }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -108,6 +110,8 @@ export default function EventCardList({
                     <AdminTools
                         isManaging={isManaging}
                         onToggleManage={onToggleManage}
+                        onOpenAdminPage={onOpenAdminPage}
+                        onOpenMyPage={onOpenMyPage}
                     />
                 )}
             </div>

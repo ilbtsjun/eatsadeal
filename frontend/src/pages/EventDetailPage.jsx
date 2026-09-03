@@ -32,6 +32,19 @@ function getEventCodeName(eventCodes) {
   return eventCodes.map((code) => names[code] || '이벤트').join(' · ');
 }
 
+const token = () => localStorage.getItem('eats-a-deal-token');
+
+async function commentRequest(url, options = {}) {
+  const response = await fetch(url, { ...options, headers: { token: token() || '', ...(options.headers || {}) } });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.msg || data.message || '댓글 요청에 실패했습니다.');
+  return data;
+}
+
+function getCommentId(comment) {
+  return comment.id ?? comment.commentId;
+}
+
 function getSavedComments(eventId) {
   try {
     return JSON.parse(localStorage.getItem(`eats-a-deal-comments-${eventId}`)) || [];
@@ -44,6 +57,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
   const [detailEvent, setDetailEvent] = useState(event);
   const [comments, setComments] = useState(() => getSavedComments(event.id));
   const [commentText, setCommentText] = useState('');
+  const [commentError, setCommentError] = useState('');
 
   useEffect(() => {
     fetch(`/event/${event.id}`)
@@ -58,6 +72,14 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
   }, [event.id]);
 
   useEffect(() => {
+    commentRequest(`/comment/event/${event.id}`)
+      .then((data) => setComments(Array.isArray(data) ? data : (data.comments || data.content || [])))
+      .catch(() => {
+        // 댓글 조회 API가 일시적으로 실패하면 기존 임시 저장 댓글을 유지합니다.
+      });
+  }, [event.id]);
+
+  useEffect(() => {
     localStorage.setItem(`eats-a-deal-comments-${event.id}`, JSON.stringify(comments));
   }, [comments, event.id]);
 
@@ -68,14 +90,21 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
 
     setComments((current) => [
       ...current,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        author: user.nickname || user.id,
-        content: text,
-        createdAt: new Date().toLocaleDateString('ko-KR'),
-      },
+      { id: `${Date.now()}-${Math.random()}`, author: user.nickname || user.id, content: text, createdAt: new Date().toLocaleDateString('ko-KR') },
     ]);
     setCommentText('');
+  };
+
+  const deleteComment = async (comment) => {
+    const commentId = getCommentId(comment);
+    if (!commentId || !window.confirm('이 댓글을 삭제하시겠습니까?')) return;
+    try {
+      await commentRequest(`/comment/${commentId}`, { method: 'DELETE' });
+      setComments((current) => current.filter((item) => getCommentId(item) !== commentId));
+      setCommentError('');
+    } catch (error) {
+      setCommentError(error.message);
+    }
   };
 
   return (
@@ -140,16 +169,19 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
             </div>
           )}
 
+          {commentError && <p className="comment-error" role="alert">{commentError}</p>}
+
           <div className="comment-list">
             {comments.length === 0 ? (
               <p className="no-comments">첫 번째 댓글을 작성해보세요.</p>
             ) : comments.map((comment) => (
               <div className="comment-item" key={comment.id}>
                 <div className="comment-meta">
-                  <strong>{comment.author}</strong>
-                  <span>{comment.createdAt}</span>
+                  <strong>{comment.author || comment.nickname || comment.userNickname}</strong>
+                  <span>{comment.createdAt || comment.createdAtAt || comment.created_at}</span>
+                  {user && (comment.author === user.nickname || comment.author === user.id || comment.nickname === user.nickname || comment.userId === user.id) && <button type="button" className="comment-delete-button" onClick={() => deleteComment(comment)}>삭제</button>}
                 </div>
-                <p>{comment.content}</p>
+                <p>{comment.content || comment.comment}</p>
               </div>
             ))}
           </div>

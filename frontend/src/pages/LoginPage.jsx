@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './LoginPage.css';
 
-export default function LoginPage({ onLogin, onBack }) {
+export default function LoginPage({ onLogin, onBack, onSignupClick }) {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -47,6 +47,7 @@ export default function LoginPage({ onLogin, onBack }) {
           <button type="submit" className="login-submit">로그인</button>
         </form>
 
+        <p className="signup-guide">아직 회원이 아니신가요? <button type="button" onClick={onSignupClick}>회원가입</button></p>
       </section>
     </main>
   );
