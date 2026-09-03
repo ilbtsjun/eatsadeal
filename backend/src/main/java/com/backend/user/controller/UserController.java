@@ -245,6 +245,12 @@ public class UserController {
                     )
             }
     )
+    @GetMapping("/admin/nickname/{nickname}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public GetMyPageResponse getUserInfoByNickname(@PathVariable String nickname) {
+        return userService.getUserInfoByNickname(nickname);
+    }
+
     @GetMapping("/{userID}")
     @PreAuthorize("hasRole('ADMIN')")
     public GetMyPageResponse getUserInfo(@PathVariable Long userID) {

@@ -167,6 +167,13 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public GetMyPageResponse getUserInfoByNickname(String nickname) {
+        User user = userRepository.findByNickname(nickname.trim())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+        return GetMyPageResponse.from(user);
+    }
+
+    @Transactional(readOnly = true)
     public GetMyPageResponse getUserInfo(Long userID) {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));

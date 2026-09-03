@@ -1,8 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './Header.css';
 
-export default function Header({ user, onLoginClick, onLogout }) {
+export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onOpenAdminPage }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) setIsUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   const handleLogout = () => {
     setIsUserMenuOpen(false);
@@ -28,7 +37,7 @@ export default function Header({ user, onLoginClick, onLogout }) {
 
       <div className="header-menu">
         {user ? (
-          <div className="user-menu">
+          <div className="user-menu" ref={userMenuRef}>
             <button
               type="button"
               className={`person-button ${isUserMenuOpen ? 'active' : ''}`}
@@ -50,6 +59,10 @@ export default function Header({ user, onLoginClick, onLogout }) {
                 <button type="button" onClick={() => {}}>
                   즐겨찾기
                 </button>
+                <button type="button" onClick={() => onOpenMyPage?.()}>
+                  마이페이지
+                </button>
+                {user.role === 'ADMIN' && <button type="button" onClick={() => onOpenAdminPage?.()}>관리자 페이지</button>}
                 <button type="button" onClick={handleLogout}>
                   로그아웃
                 </button>

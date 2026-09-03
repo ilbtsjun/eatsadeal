@@ -34,3 +34,4 @@
 .comment-item p { margin: 8px 0 0; color: #57606f; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
 @media (max-width: 700px) { .event-detail-container { width: min(100% - 28px, 900px); padding-top: 20px; } .event-detail-card { grid-template-columns: 1fr; } .detail-image-box { min-height: 220px; } .detail-content { padding: 25px 20px; } .detail-content h1 { font-size: 23px; } .comments-section { padding: 20px; } }
 @media (max-width: 480px) { .comment-login-guide { align-items: stretch; flex-direction: column; } }
+.comment-delete-button{margin-left:auto;padding:4px 8px;border:1px solid #ffd1d5;border-radius:5px;color:#e84118;background:#fff;cursor:pointer;font-size:11px}.comment-delete-button:hover{background:#fff1f2}.comment-error{margin:12px 0;color:#e84118;font-size:13px}
