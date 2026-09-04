@@ -15,8 +15,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     boolean existsByNickname(String nickName);
-    Optional<User> findByEmail(String email);
-    Optional<User> findByNickname(String nickname);
+    @Query("SELECT u FROM User u WHERE u.email = :id OR u.nickname = :id")
+    Optional<User> findByEmailOrNickname(String id);
+
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
