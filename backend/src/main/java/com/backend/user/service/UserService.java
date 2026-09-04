@@ -2,6 +2,7 @@ package com.backend.user.service;
 
 import com.backend.config.JwtTokenProvider;
 import com.backend.config.TokenBlacklist;
+import com.backend.mail.service.MailService;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
@@ -25,9 +26,10 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklist tokenBlacklist;
+    private final MailService mailService;
 
     @Transactional
-    public void singUp(CreateUser request){
+    public void signUp(CreateUser request) {
         if(userRepository.existsByEmail(request.email())){
             throw new IllegalArgumentException("이미 사용중인 이메일 입니다.");
         }
@@ -45,6 +47,8 @@ public class UserService {
                 .birth(request.birth())
                 .build();
         userRepository.save(user);
+
+        mailService.sendSignUpMessage(request.email());
     }
 
     @Transactional(readOnly = true)
