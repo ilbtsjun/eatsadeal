@@ -37,7 +37,7 @@ public class UserController {
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public MsgResponse signUp(@Valid @RequestBody CreateUser request){
-        userService.singUp(request);
+        userService.signUp(request);
         return new MsgResponse("회원가입 완료","201");
     }
 
