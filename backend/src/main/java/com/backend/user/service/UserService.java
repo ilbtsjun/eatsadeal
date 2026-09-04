@@ -59,7 +59,7 @@ public class UserService {
 
     @Transactional
     public LoginResponse login(LoginRequest request){
-        User user = userRepository.findByEmail(request.email().trim())
+        User user = userRepository.findByEmailOrNickname(request.id().trim())
                 .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
@@ -164,13 +164,6 @@ public class UserService {
 
         user.withdrawn();
         tokenBlacklist.add(token, jwtTokenProvider.getExpiration(token));
-    }
-
-    @Transactional(readOnly = true)
-    public GetMyPageResponse getUserInfoByNickname(String nickname) {
-        User user = userRepository.findByNickname(nickname.trim())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
-        return GetMyPageResponse.from(user);
     }
 
     @Transactional(readOnly = true)
