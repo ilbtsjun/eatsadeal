@@ -60,6 +60,14 @@ public class SecurityConfig {
                                 ,"/api/auth/email-verification"
                                 ,"/api/auth/email-validate"
                         ).permitAll()
+
+                        //브랜드
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/brands",
+                                "/api/brands/{brandId}"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
                         .addFilterBefore(

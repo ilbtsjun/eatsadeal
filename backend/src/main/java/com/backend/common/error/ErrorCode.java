@@ -43,6 +43,36 @@ public enum ErrorCode {
             "로그인에 실패했습니다."
     ),
 
+    BRAND_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "BRAND-001",
+            "이미 존재하는 브랜드입니다."
+    ),
+
+    BRAND_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "BRAND-002",
+            "브랜드를 찾을 수 없습니다."
+    ),
+
+    BRAND_CATEGORY_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "BRAND-003",
+            "이미 추가된 카테고리입니다."
+    ),
+
+    BRAND_CATEGORY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "BRAND-004",
+            "브랜드에 해당되는 카테고리가 없습니다."
+    ),
+
+    CATEGORY_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "CATEGORY-001",
+            "카테고리를 찾을 수 없습니다."
+    ),
+
     USER_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "USER-001",
@@ -61,7 +91,8 @@ public enum ErrorCode {
             "정지된 사용자입니다."
     ),
 
-    LOGIN_NOT_ALLOWED(HttpStatus.FORBIDDEN,
+    LOGIN_NOT_ALLOWED(
+            HttpStatus.FORBIDDEN,
             "USER-004",
             "허용되지 않은 사용자입니다."
     ),
