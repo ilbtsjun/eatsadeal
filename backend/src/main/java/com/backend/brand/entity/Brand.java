@@ -2,6 +2,7 @@ package com.backend.brand.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +12,7 @@ import java.time.LocalDate;
 @Getter
 @Entity
 @Table(name = "brand")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Brand {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
