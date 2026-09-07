@@ -5,8 +5,7 @@ import com.backend.comment.dto.CreateComment;
 import com.backend.comment.dto.CommentResponse;
 import com.backend.comment.dto.UpdateComment;
 import com.backend.comment.service.CommentService;
-import com.backend.common.MsgResponse;
-import com.backend.config.JwtAuthenticationFilter;
+import com.backend.common.dto.MsgResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,10 +45,9 @@ public class CommentController {
     @PostMapping("/{eventId}")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("isAuthenticated()")
-    public CommentResponse createComment(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-                                         @PathVariable Long eventId,
+    public CommentResponse createComment(@PathVariable Long eventId,
                                          @Valid @RequestBody CreateComment request){
-        return commentService.createComment(token, eventId, request);
+        return commentService.createComment(eventId, request);
     }
 
     @Operation(
@@ -72,10 +70,9 @@ public class CommentController {
     )
     @PatchMapping("/{commentId}/update")
     @PreAuthorize("isAuthenticated()")
-    public CommentResponse updateComment(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-                                         @PathVariable Long commentId,
+    public CommentResponse updateComment(@PathVariable Long commentId,
                                          @Valid @RequestBody UpdateComment request){
-        return commentService.updateComment(token, commentId, request);
+        return commentService.updateComment(commentId, request);
     }
 
     @Operation(
@@ -97,9 +94,8 @@ public class CommentController {
             }
     )
     @GetMapping("/{eventId}/list")
-    public List<CommentResponse> getEventCommentList(@RequestHeader(value = JwtAuthenticationFilter.TOKEN_HEADER, required = false) String token,
-                                                     @PathVariable Long eventId){
-        return commentService.getEventCommentList(token, eventId);
+    public List<CommentResponse> getEventCommentList(@PathVariable Long eventId){
+        return commentService.getEventCommentList(eventId);
     }
 
     @Operation(
@@ -121,8 +117,8 @@ public class CommentController {
             }
     )
     @GetMapping("/list")
-    public List<CommentResponse> getMyCommentList(@RequestHeader(value = JwtAuthenticationFilter.TOKEN_HEADER, required = false) String token){
-        return commentService.getMyCommentList(token);
+    public List<CommentResponse> getMyCommentList(){
+        return commentService.getMyCommentList();
     }
 
     @Operation(
@@ -145,9 +141,8 @@ public class CommentController {
     )
     @PatchMapping("/{commentId}/delete")
     @PreAuthorize("isAuthenticated()")
-    public MsgResponse deleteComment(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-                                     @PathVariable Long commentId){
-        commentService.deleteComment(token, commentId);
+    public MsgResponse deleteComment(@PathVariable Long commentId){
+        commentService.deleteComment(commentId);
         return new MsgResponse("삭제에 성공했습니다.", "200");
     }
 

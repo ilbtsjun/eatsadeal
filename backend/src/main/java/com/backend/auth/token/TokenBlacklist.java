@@ -1,4 +1,4 @@
-package com.backend.config;
+package com.backend.auth.token;
 
 import java.util.Date;
 import java.util.Map;

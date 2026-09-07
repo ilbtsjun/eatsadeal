@@ -1,6 +1,5 @@
 package com.backend.favorite.controller;
 
-import com.backend.config.JwtAuthenticationFilter;
 import com.backend.favorite.service.FavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,9 +37,8 @@ public class FavoriteController {
     )
     @PostMapping("/{eventId}/favorite")
     @PreAuthorize("isAuthenticated()")
-    public Boolean toggleFavorite(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-                                  @PathVariable Long eventId) {
-        return favoriteService.toggleFavorite(token, eventId);
+    public Boolean toggleFavorite(@PathVariable Long eventId) {
+        return favoriteService.toggleFavorite(eventId);
     }
 
     @Operation(
@@ -67,7 +65,7 @@ public class FavoriteController {
     )
     @GetMapping("/list")
     @PreAuthorize("isAuthenticated()")
-    public List<Long> toggleFavorite(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token) {
-        return favoriteService.getFavoriteList(token);
+    public List<Long> toggleFavorite() {
+        return favoriteService.getFavoriteList();
     }
 }

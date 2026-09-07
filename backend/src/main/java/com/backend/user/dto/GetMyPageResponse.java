@@ -1,6 +1,6 @@
 package com.backend.user.dto;
 
-import com.backend.common.UserRole;
+import com.backend.common.dto.UserRole;
 import com.backend.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 

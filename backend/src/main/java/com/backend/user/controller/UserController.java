@@ -1,7 +1,6 @@
 package com.backend.user.controller;
 
-import com.backend.common.MsgResponse;
-import com.backend.config.JwtAuthenticationFilter;
+import com.backend.common.dto.MsgResponse;
 import com.backend.user.dto.*;
 import com.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,37 +8,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "User", description = "유저 API")
-@RequestMapping("/user")
+@RequestMapping("/users")
 public class UserController {
     private final UserService userService;
-
-    @Operation(
-            summary = "회원가입",
-            description = "새로운 유저를 등록합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "회원가입 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    )
-            }
-    )
-    @PostMapping("/signup")
-    @ResponseStatus(HttpStatus.CREATED)
-    public MsgResponse signUp(@Valid @RequestBody CreateUser request){
-        userService.signUp(request);
-        return new MsgResponse("회원가입 완료","201");
-    }
 
     @Operation(
             summary = "이메일 중복 확인",
@@ -80,50 +57,6 @@ public class UserController {
     }
 
     @Operation(
-            summary = "로그인",
-            description = "이메일과 비밀번호로 로그인하고 토큰을 발급합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "로그인 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 인증 실패"
-                    )
-            }
-    )
-    @PostMapping("/auth/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request){
-        return userService.login(request);
-    }
-
-    @Operation(
-            summary = "로그아웃",
-            description = "JWT 토큰을 무효화하여 로그아웃합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "로그아웃 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
-    )
-    @PostMapping("/auth/logout")
-    @PreAuthorize("isAuthenticated()")
-    public MsgResponse logout(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token){
-        userService.logout(token);
-        return new MsgResponse("로그아웃이 완료되었습니다.", "200");
-    }
-
-    @Operation(
             summary = "마이페이지",
             description = "JWT 토큰으로 로그인한 유저의 마이페이지 정보를 조회합니다.",
             responses = {
@@ -143,8 +76,8 @@ public class UserController {
     )
     @GetMapping("/mypage")
     @PreAuthorize("isAuthenticated()")
-    public GetMyPageResponse getMyPage(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token) {
-        return userService.getMyPage(token);
+    public GetMyPageResponse getMyPage() {
+        return userService.getMyPage();
     }
 
     @Operation(
@@ -167,10 +100,8 @@ public class UserController {
     )
     @PutMapping("/mypage/update")
     @PreAuthorize("isAuthenticated()")
-    public MsgResponse updateMyPage(
-            @RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-            @Valid @RequestBody UpdateMyPage request) {
-        userService.updateMyPage(token, request);
+    public MsgResponse updateMyPage(@Valid @RequestBody UpdateMyPage request) {
+        userService.updateMyPage(request);
         return new MsgResponse("마이페이지 수정이 완료되었습니다.", "200");
     }
 
@@ -194,38 +125,35 @@ public class UserController {
     )
     @PutMapping("/mypage/updatePassword")
     @PreAuthorize("isAuthenticated()")
-    public MsgResponse updatePassword(
-            @RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token,
-            @Valid @RequestBody UpdatePassword request) {
-        userService.updatePassword(token, request);
+    public MsgResponse updatePassword(@Valid @RequestBody UpdatePassword request) {
+        userService.updatePassword(request);
         return new MsgResponse("비밀번호 수정이 완료되었습니다.", "200");
     }
 
-    @Operation(
-            summary = "회원 탈퇴",
-            description = "JWT 토큰으로 로그인한 유저의 탈퇴를 처리합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "탈퇴 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음, 입력값 검증 실패"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
-    )
-    @DeleteMapping("/quit")
-    @PreAuthorize("isAuthenticated()")
-    public MsgResponse quit(@RequestHeader(JwtAuthenticationFilter.TOKEN_HEADER) String token
-                            ,@Valid @RequestBody QuitUser request){
-        userService.quitUser(token, request);
-        return new MsgResponse("탈퇴가 성공적으로 완료되었습니다.", "200");
-    }
+//    @Operation(
+//            summary = "회원 탈퇴",
+//            description = "JWT 토큰으로 로그인한 유저의 탈퇴를 처리합니다.",
+//            responses = {
+//                    @ApiResponse(
+//                            responseCode = "200",
+//                            description = "탈퇴 성공"
+//                    ),
+//                    @ApiResponse(
+//                            responseCode = "400",
+//                            description = "토큰이 없거나 유효하지 않음, 입력값 검증 실패"
+//                    ),
+//                    @ApiResponse(
+//                            responseCode = "401",
+//                            description = "인증 실패"
+//                    )
+//            }
+//    )
+//    @DeleteMapping("/quit")
+//    @PreAuthorize("isAuthenticated()")
+//    public MsgResponse quit(@Valid @RequestBody QuitUser request){
+//        userService.quitUser(request);
+//        return new MsgResponse("탈퇴가 성공적으로 완료되었습니다.", "200");
+//    }
 
     @Operation(
             summary = "유저 정보 조회",

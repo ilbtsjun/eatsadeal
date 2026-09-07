@@ -1,4 +1,4 @@
-package com.backend.common;
+package com.backend.common.dto;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

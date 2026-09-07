@@ -1,7 +1,12 @@
-package com.backend.config;
+package com.backend.common.config;
 
+import com.backend.auth.filter.JwtAuthenticationFilter;
+import com.backend.auth.handler.CustomAccessDeniedHandler;
+import com.backend.auth.handler.CustomAuthenticationEntryPoint;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -12,7 +17,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
@@ -20,39 +24,48 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
-                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
 
-                        // CORS Preflight
-                        .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
+                        //정적파일
+                        .requestMatchers(
+                                "/",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/error"
+                        ).permitAll()
 
-                        //관리자 페이지는 인증필요
-//                        .requestMatchers(
-//
-//                        ).authenticated()
-
-                        //개인정보 페이지는 인증필요
-//                        .requestMatchers(
-//
-//                        ).authenticated()
-//                        .requestMatchers(
-//
-//                        ).authenticated()
-
-                        //제외한 페이지는 인증X
-                        .anyRequest().permitAll()
+                        //auth
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/auth/signup",
+                                "/api/auth/login"
+                                ,"/api/auth/email-verification"
+                                ,"/api/auth/email-validate"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
-                .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class);
+                        .addFilterBefore(
+                                jwtAuthenticationFilter,
+                                UsernamePasswordAuthenticationFilter.class
+                        );
         return http.build();
     }
 
