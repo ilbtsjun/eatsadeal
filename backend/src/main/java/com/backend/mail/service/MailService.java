@@ -18,8 +18,8 @@ import java.util.Random;
 public class MailService {
     private final JavaMailSender javaMailSender;
 
-    @Value("{spring.mail.username}")
-    private static String senderEmail;
+    @Value("${spring.mail.username}")
+    private String senderEmail;
 
     @Async
     public void sendSignUpMessage(String sendEmail) {

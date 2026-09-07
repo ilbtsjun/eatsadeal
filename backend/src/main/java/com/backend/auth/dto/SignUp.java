@@ -1,5 +1,6 @@
-package com.backend.user.dto;
+package com.backend.auth.dto;
 
+import com.backend.user.dto.UserGender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -7,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
 @Schema(description = "유저 회원가입 요청")
-public record CreateUser(
+public record SignUp(
         @Schema(description = "유저 이름", example = "김철수")
         String name,
 

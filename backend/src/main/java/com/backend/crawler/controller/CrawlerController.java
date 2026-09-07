@@ -1,4 +1,4 @@
-package com.backend.controller;
+package com.backend.crawler.controller;
 
 import com.backend.event.dto.CreateEvent;
 import com.backend.crawler.target.BHC;

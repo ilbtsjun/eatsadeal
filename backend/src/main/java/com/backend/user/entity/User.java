@@ -2,7 +2,7 @@ package com.backend.user.entity;
 
 import com.backend.user.dto.UserGender;
 import com.backend.user.dto.UserStatus;
-import com.backend.common.UserRole;
+import com.backend.common.dto.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;

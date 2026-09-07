@@ -1,7 +1,6 @@
 package com.backend.event.service;
 
-import com.backend.config.JwtTokenProvider;
-import com.backend.config.TokenBlacklist;
+import com.backend.auth.service.CurrentUserService;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -9,10 +8,7 @@ import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.repository.FavoriteRepository;
 import com.backend.brand.repository.BrandRepository;
-import com.backend.user.dto.UserStatus;
 import com.backend.user.entity.User;
-import com.backend.user.repository.UserRepository;
-import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,9 +29,7 @@ public class EventService {
     private final EventRepository eventRepository;
     private final BrandRepository brandRepository;
     private final FavoriteRepository favoriteRepository;
-    private final UserRepository userRepository;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final TokenBlacklist tokenBlacklist;
+    private final CurrentUserService currentUserService;
 
     @Transactional
     public void createEvent(CreateEvent request){
@@ -116,11 +110,8 @@ public class EventService {
     }
 
     @Transactional
-    public GetEventResponse getEvent(String token, Long eventId) {
-        User user = null;
-        if (StringUtils.hasText(token)) {
-            user = findUserByToken(token);
-        }
+    public GetEventResponse getEvent(Long eventId) {
+        User user = currentUserService.getOptionalUser();
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("이벤트를 찾을 수 없습니다."));
         eventRepository.increaseViewCount(eventId);
@@ -250,30 +241,6 @@ public class EventService {
         }
         if (endDate != null && endDate.isBefore(startDate)) {
             throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
-        }
-    }
-
-    private User findUserByToken(String token) {
-        if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("토큰은 필수입니다.");
-        }
-        if (tokenBlacklist.contains(token)) {
-            throw new IllegalArgumentException("이미 로그아웃된 토큰입니다.");
-        }
-        try {
-            if (!jwtTokenProvider.validateToken(token)) {
-                throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-            }
-            Long userId = Long.valueOf(jwtTokenProvider.getSubject(token));
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-            user.releaseIfExpired(LocalDateTime.now());
-            if(user.getUserStatus().equals(UserStatus.ACTIVE)){
-                return user;
-            }
-            throw new IllegalArgumentException("정지되거나 탈퇴한 사용자입니다.");
-        } catch (JwtException | NumberFormatException ex) {
-            throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
         }
     }
 }

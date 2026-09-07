@@ -2,7 +2,7 @@ package com.backend;
 
 import com.backend.user.dto.UserGender;
 import com.backend.user.entity.User;
-import com.backend.common.UserRole;
+import com.backend.common.dto.UserRole;
 import com.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;

@@ -4,7 +4,7 @@ import com.backend.brand.dto.CreateBrand;
 import com.backend.brand.dto.GetBrandListResponse;
 import com.backend.brand.dto.GetBrandResponse;
 import com.backend.brand.dto.UpdateBrand;
-import com.backend.common.MsgResponse;
+import com.backend.common.dto.MsgResponse;
 import com.backend.brand.service.BrandService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Brand", description = "브랜드 API")
-@RequestMapping("/brand")
+@RequestMapping("/brands")
 public class BrandController {
     private final BrandService brandService;
 
@@ -42,7 +42,7 @@ public class BrandController {
                     )
             }
     )
-    @PostMapping("/create")
+    @PostMapping("/")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse createBrand(@Valid @RequestBody CreateBrand request) {

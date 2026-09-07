@@ -4,7 +4,7 @@ import com.backend.category.service.CategoryService;
 import com.backend.category.dto.CreateCategory;
 import com.backend.category.dto.GetCategoryResponse;
 import com.backend.category.dto.UpdateCategory;
-import com.backend.common.MsgResponse;
+import com.backend.common.dto.MsgResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

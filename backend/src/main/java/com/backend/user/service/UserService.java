@@ -1,12 +1,10 @@
 package com.backend.user.service;
 
-import com.backend.config.JwtTokenProvider;
-import com.backend.config.TokenBlacklist;
-import com.backend.mail.service.MailService;
+import com.backend.auth.service.AuthService;
+import com.backend.auth.service.CurrentUserService;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
-import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -24,32 +21,7 @@ import java.util.regex.Pattern;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
-    private final TokenBlacklist tokenBlacklist;
-    private final MailService mailService;
-
-    @Transactional
-    public void signUp(CreateUser request) {
-        if(userRepository.existsByEmail(request.email())){
-            throw new IllegalArgumentException("이미 사용중인 이메일 입니다.");
-        }
-        if(userRepository.existsByNickname(request.nickname())){
-            throw new IllegalArgumentException("이미 사용중인 닉네임 입니다.");
-        }
-
-        User user = User.builder()
-                .name(request.name().trim())
-                .email(request.email().trim())
-                .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname().trim())
-                .phoneNumber(request.phoneNumber())
-                .gender(request.userGender())
-                .birth(request.birth())
-                .build();
-        userRepository.save(user);
-
-        mailService.sendSignUpMessage(request.email());
-    }
+    private final CurrentUserService currentUserService;
 
     @Transactional(readOnly = true)
     public boolean isExistEmail(String email){
@@ -62,57 +34,14 @@ public class UserService {
     }
 
     @Transactional
-    public LoginResponse login(LoginRequest request){
-        User user = userRepository.findByEmailOrNickname(request.id().trim())
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다."));
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다.");
-        }
-
-        if (user.getUserStatus() == UserStatus.WITHDRAWN) {
-            String message = "탈퇴한 사용자입니다.";
-            return new LoginResponse(message,"403",null);
-        }
-
-        user.releaseIfExpired(LocalDateTime.now());
-
-        if (user.hasActiveSuspension(LocalDateTime.now())) {
-            String message = user.getSuspendedUntil() + "까지 이용이 제한되었습니다.\n" +
-                    "사유 : " +user.getSuspendingReason();
-            return new LoginResponse(message,"403",null);
-        }
-
-        String token = jwtTokenProvider.createToken(user.getId());
-        user.login();
-        return new LoginResponse("로그인 성공했습니다.","200",token);
-    }
-
-    public void logout(String token) {
-        if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("토큰은 필수입니다.");
-        }
-        if (tokenBlacklist.contains(token)) {
-            throw new IllegalArgumentException("이미 로그아웃된 토큰입니다.");
-        }
-        try {
-            if (!jwtTokenProvider.validateToken(token)) {
-                throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-            }
-            tokenBlacklist.add(token, jwtTokenProvider.getExpiration(token));
-        } catch (JwtException ex) {
-            throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-        }
-    }
-
-    @Transactional
-    public GetMyPageResponse getMyPage(String token) {
-        User user = findUserByToken(token);
+    public GetMyPageResponse getMyPage() {
+        User user = currentUserService.getRequiredUser();
         return GetMyPageResponse.from(user);
     }
 
     @Transactional
-    public void updateMyPage(String token, UpdateMyPage request) {
-        User user = findUserByToken(token);
+    public void updateMyPage(UpdateMyPage request) {
+        User user = currentUserService.getRequiredUser();
 
         String newName = StringUtils.hasText(request.name())
                 ? request.name()
@@ -138,8 +67,8 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(String token, UpdatePassword request) {
-        User user = findUserByToken(token);
+    public void updatePassword(UpdatePassword request) {
+        User user = currentUserService.getRequiredUser();
 
         if(!StringUtils.hasText(request.currentPassword())
                 || !StringUtils.hasText(request.updatePassword())
@@ -157,17 +86,6 @@ public class UserService {
         }
 
         user.updatePassword(passwordEncoder.encode(request.updatePassword()));
-    }
-
-    @Transactional
-    public void quitUser(String token, QuitUser request){
-        User user = findUserByToken(token);
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 다릅니다.");
-        }
-
-        user.withdrawn();
-        tokenBlacklist.add(token, jwtTokenProvider.getExpiration(token));
     }
 
     @Transactional(readOnly = true)
@@ -194,27 +112,14 @@ public class UserService {
         user.releaseSuspend();
     }
 
-    private User findUserByToken(String token) {
-        if (token == null || token.isBlank()) {
-            throw new IllegalArgumentException("토큰은 필수입니다.");
-        }
-        if (tokenBlacklist.contains(token)) {
-            throw new IllegalArgumentException("이미 로그아웃된 토큰입니다.");
-        }
-        try {
-            if (!jwtTokenProvider.validateToken(token)) {
-                throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-            }
-            Long userId = Long.valueOf(jwtTokenProvider.getSubject(token));
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-            user.releaseIfExpired(LocalDateTime.now());
-            if(user.getUserStatus().equals(UserStatus.ACTIVE)){
-                return user;
-            }
-            throw new IllegalArgumentException("정지되거나 탈퇴한 사용자입니다.");
-        } catch (JwtException | NumberFormatException ex) {
-            throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-        }
-    }
+//    @Transactional
+//    public void quit(QuitUser request){
+//        User user = currentUserService.getRequiredUser();
+//        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+//            throw new IllegalArgumentException("비밀번호가 다릅니다.");
+//        }
+//
+//        user.withdrawn();
+//        tokenBlacklist.add(token, jwtTokenProvider.getExpiration(token));
+//    }
 }
