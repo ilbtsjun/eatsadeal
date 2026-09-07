@@ -7,7 +7,6 @@ import com.backend.brand.dto.UpdateBrand;
 import com.backend.common.dto.MsgResponse;
 import com.backend.brand.service.BrandService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
