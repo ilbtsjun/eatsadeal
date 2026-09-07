@@ -6,6 +6,7 @@ import com.backend.brand.dto.GetBrandResponse;
 import com.backend.brand.dto.UpdateBrand;
 import com.backend.common.dto.MsgResponse;
 import com.backend.brand.service.BrandService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,20 @@ import java.util.List;
 public class BrandController {
     private final BrandService brandService;
 
+    @Operation(
+            summary = "브랜드 목록 조회",
+            description = "현재 존재하는 브랜드의 목록 조회"
+    )
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public List<GetBrandListResponse> getBrandList() {
         return brandService.getBrandList();
     }
 
+    @Operation(
+            summary = "브랜드 생성",
+            description = "새로운 브랜드 생성"
+    )
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
@@ -36,12 +45,20 @@ public class BrandController {
         return new MsgResponse("새 브랜드가 생성되었습니다.", "201");
     }
 
+    @Operation(
+            summary = "브랜드 조회",
+            description = "선택한 브랜드의 내용 조회"
+    )
     @GetMapping("/{brandID}")
     @ResponseStatus(HttpStatus.OK)
     public GetBrandResponse getBrand(@PathVariable Long brandID) {
         return brandService.getBrand(brandID);
     }
 
+    @Operation(
+            summary = "브랜드 수정",
+            description = "선택한 브랜드의 내용 수정"
+    )
     @PatchMapping("/{brandID}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse updateBrand(@PathVariable Long brandID,
@@ -50,6 +67,10 @@ public class BrandController {
         return new MsgResponse("브랜드가 수정되었습니다.", "200");
     }
 
+    @Operation(
+            summary = "브랜드 삭제",
+            description = "선택한 브랜드 삭제"
+    )
     @DeleteMapping("/{brandID}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse deleteBrand(@PathVariable Long brandID) {
