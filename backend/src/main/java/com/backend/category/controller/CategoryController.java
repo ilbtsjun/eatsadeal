@@ -6,7 +6,6 @@ import com.backend.category.dto.GetCategoryResponse;
 import com.backend.category.dto.UpdateCategory;
 import com.backend.common.dto.MsgResponse;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,29 +18,25 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Category", description = "카테고리 API")
-@RequestMapping("/category")
+@RequestMapping("/api/categories")
 public class CategoryController {
     private final CategoryService categoryService;
 
     @Operation(
-            summary = "카테고리 생성",
-            description = "새로운 카테고리를 만듭니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "카테고리 생성 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            summary = "카테고리 리스트 조회",
+            description = "카테고리의 리스트를 조회합니다."
     )
-    @PostMapping("/create")
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<GetCategoryResponse> getCategoryList() {
+        return categoryService.getCategoryList();
+    }
+
+    @Operation(
+            summary = "카테고리 생성",
+            description = "새로운 카테고리를 만듭니다."
+    )
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse createCategory(@Valid @RequestBody CreateCategory request) {
@@ -51,26 +46,7 @@ public class CategoryController {
 
     @Operation(
             summary = "카테고리 조회",
-            description = "카테고리의 정보를 조회합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "카테고리 조회 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    ),
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "조회되는 데이터 없음"
-                    )
-
-            }
+            description = "카테고리의 정보를 조회합니다."
     )
     @GetMapping("/{categoryID}")
     @ResponseStatus(HttpStatus.OK)
@@ -80,23 +56,9 @@ public class CategoryController {
 
     @Operation(
             summary = "카테고리 수정",
-            description = "카테고리를 수정합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "카테고리 수정 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음, 입력값 검증 실패"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            description = "카테고리를 수정합니다."
     )
-    @PutMapping("/{categoryID}/update")
+    @PatchMapping("/{categoryID}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse updateCategory(@PathVariable Long categoryID,
                                       @Valid @RequestBody UpdateCategory request) {
@@ -106,55 +68,12 @@ public class CategoryController {
 
     @Operation(
             summary = "카테고리 삭제",
-            description = "카테고리를 삭제합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "카테고리 삭제 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            description = "카테고리를 삭제합니다."
     )
-    @DeleteMapping("/{categoryID}/delete")
+    @DeleteMapping("/{categoryID}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse deleteCategory(@PathVariable Long categoryID) {
         categoryService.deleteCategory(categoryID);
         return new MsgResponse("카테고리가 삭제되었습니다", "200");
-    }
-
-    @Operation(
-            summary = "카테고리 리스트 조회",
-            description = "카테고리의 리스트를 조회합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "카테고리 조회 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "토큰이 없거나 유효하지 않음"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    ),
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "조회되는 데이터 없음"
-                    )
-
-            }
-    )
-    @GetMapping("/list")
-    @ResponseStatus(HttpStatus.OK)
-    public List<GetCategoryResponse> getCategoryList() {
-        return categoryService.getCategoryList();
     }
 }

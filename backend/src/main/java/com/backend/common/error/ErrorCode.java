@@ -73,6 +73,18 @@ public enum ErrorCode {
             "카테고리를 찾을 수 없습니다."
     ),
 
+    CATEGORY_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "CATEGORY-002",
+            "이미 존재하는 카테고리입니다."
+    ),
+
+    IMG_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "CATEGORY-003",
+            "이미지 링크가 없습니다."
+    ),
+
     USER_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "USER-001",
