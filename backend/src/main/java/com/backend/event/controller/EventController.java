@@ -6,6 +6,7 @@ import com.backend.comment.service.CommentService;
 import com.backend.common.dto.MsgResponse;
 import com.backend.event.dto.*;
 import com.backend.event.service.EventService;
+import com.backend.favorite.service.FavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ import java.util.List;
 public class EventController {
     private final EventService eventService;
     private final CommentService commentService;
+    private final FavoriteService favoriteService;
 
     @Operation(
             summary = "이벤트 검색",
@@ -108,5 +110,27 @@ public class EventController {
     public CommentResponse createComment(@PathVariable Long eventId,
                                          @Valid @RequestBody CreateComment request){
         return commentService.createComment(eventId, request);
+    }
+
+    @Operation(
+            summary = "즐겨찾기를 추가합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 이벤트 ID로 추가합니다."
+    )
+    @PostMapping("/{eventId}/favorite")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse addFavorite(@PathVariable Long eventId) {
+        favoriteService.addFavorite(eventId);
+        return new MsgResponse("즐겨찾기가 추가되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "즐겨찾기를 삭제합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 이벤트 ID로 삭제합니다."
+    )
+    @DeleteMapping("/{eventId}/favorite")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse deleteFavorite(@PathVariable Long eventId) {
+        favoriteService.deleteFavorite(eventId);
+        return new MsgResponse("즐겨찾기가 삭제되었습니다.", "200");
     }
 }
