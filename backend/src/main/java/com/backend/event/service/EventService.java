@@ -1,6 +1,8 @@
 package com.backend.event.service;
 
 import com.backend.auth.service.CurrentUserService;
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -35,10 +37,10 @@ public class EventService {
     public void createEvent(CreateEvent request){
         validateDateRange(request.startDate(), request.endDate());
         if(eventRepository.existsByUrl(request.url())){
-            throw new IllegalArgumentException("이미 존재하는 이벤트 URL입니다.");
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
         Brand brand = brandRepository.findById(request.brandId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 브랜드입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         Event event = Event.builder()
                 .title(request.title())
                 .description(request.description())
@@ -75,7 +77,7 @@ public class EventService {
         }
 
         Brand brand = brandRepository.findById(request.brandId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 브랜드입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         Event event = Event.builder()
                 .title(request.title())
@@ -93,7 +95,7 @@ public class EventService {
 
 
     @Transactional(readOnly = true)
-    public Page<GetEventListResponse> searchEvents(GetSearch request) {
+    public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
         Pageable pageable = createPageable(request.sort(), request.page(), request.size());
         String normalizedKeyword = StringUtils.hasText(request.keyword())
                         ? request.keyword().trim()
@@ -113,7 +115,7 @@ public class EventService {
     public GetEventResponse getEvent(Long eventId) {
         User user = currentUserService.getOptionalUser();
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("이벤트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         eventRepository.increaseViewCount(eventId);
         return toDetailResponse(user, event);
     }
@@ -121,10 +123,10 @@ public class EventService {
     @Transactional
     public void updateEvent(Long eventId, UpdateEvent request){
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("이벤트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         if (StringUtils.hasText(request.url()) && eventRepository.existsByUrlAndIdNot(request.url(), eventId)) {
-            throw new IllegalArgumentException("이미 존재하는 URL입니다.");
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
 
         String newTitle = StringUtils.hasText(request.title())
@@ -170,7 +172,7 @@ public class EventService {
     @Transactional
     public void deactivateEvent(Long eventId){
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("이벤트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         event.deactivate();
     }
 
@@ -237,10 +239,10 @@ public class EventService {
 
     private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         if (startDate == null) {
-            throw new IllegalArgumentException("시작일은 필수입니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "시작일은 필수입니다.");
         }
         if (endDate != null && endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("종료일은 시작일보다 빠를 수 없습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "종료일은 시작일보다 빠를 수 없습니다.");
         }
     }
 }

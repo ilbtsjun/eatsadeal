@@ -128,14 +128,14 @@ public class CommentService {
     @Transactional
     public CommentResponse createComment(Long eventId, CreateComment request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이벤트입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         User user = currentUserService.getRequiredUser();
 
         String content = request.content().trim();
 
         if (!StringUtils.hasText(content)) {
-            throw new IllegalArgumentException("댓글 내용은 비어 있을 수 없습니다.");
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
         Comment comment = Comment.builder()

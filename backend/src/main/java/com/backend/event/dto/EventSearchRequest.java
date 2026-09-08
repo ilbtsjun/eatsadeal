@@ -3,7 +3,7 @@ package com.backend.event.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "검색 요청")
-public record GetSearch(
+public record EventSearchRequest(
         @Schema(description = "브랜드 ID", example = "1")
         Long brandId,
 

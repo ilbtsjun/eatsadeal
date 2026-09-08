@@ -21,30 +21,26 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Event", description = "이벤트 API")
-@RequestMapping("/event")
+@RequestMapping("/events")
 public class EventController {
     private final EventService eventService;
     private final CommentService commentService;
 
     @Operation(
-            summary = "이벤트 수동 생성",
-            description = "이벤트를 수동으로 만듭니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "201",
-                            description = "이벤트 생성 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            summary = "이벤트 검색",
+            description = "이벤트를 검색합니다."
     )
-    @PostMapping("/create")
+    @GetMapping("/events")
+    @ResponseStatus(HttpStatus.OK)
+    public Page<GetEventListResponse> searchEvents(@Valid @RequestBody EventSearchRequest request) {
+        return eventService.searchEvents(request);
+    }
+
+    @Operation(
+            summary = "이벤트 수동 생성",
+            description = "이벤트를 수동으로 만듭니다."
+    )
+    @PostMapping("/evnets")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse createEvent(@Valid @RequestBody CreateEvent createEvent) {
@@ -53,64 +49,8 @@ public class EventController {
     }
 
     @Operation(
-            summary = "이벤트 검색",
-            description = "이벤트를 검색합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "검색 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-                    ,
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "데이터 없음"
-                    )
-            }
-    )
-    @GetMapping("/events")
-    @ResponseStatus(HttpStatus.OK)
-    public Page<GetEventListResponse> searchEvents(
-            @RequestParam(required = false) Long brandId,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) EventCode eventCode,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "latest") String sort,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        GetSearch request = new GetSearch(brandId, categoryId, eventCode, keyword, sort, page, size);
-        return eventService.searchEvents(request);
-    }
-
-    @Operation(
             summary = "이벤트 조회",
-            description = "이벤트를 조회합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "검색 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-                    ,
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "데이터 없음"
-                    )
-            }
+            description = "이벤트를 조회합니다."
     )
     @GetMapping("/{eventId}")
     public GetEventResponse getEvent(@PathVariable Long eventId) {
@@ -119,23 +59,9 @@ public class EventController {
 
     @Operation(
             summary = "이벤트 수정",
-            description = "이벤트를 수정합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "수정 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            description = "이벤트를 수정합니다."
     )
-    @PatchMapping("/{eventID}/update")
+    @PatchMapping("/{eventID}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse updateEvent(@PathVariable Long eventID,
                                    @Valid @RequestBody UpdateEvent request){
@@ -145,23 +71,9 @@ public class EventController {
 
     @Operation(
             summary = "이벤트 종료",
-            description = "이벤트를 종료합니다.",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "종료 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "400",
-                            description = "요청 값 검증 실패 또는 중복 데이터"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-            }
+            description = "이벤트를 종료합니다."
     )
-    @PatchMapping("/{eventId}/inactive")
+    @DeleteMapping("/{eventId}")
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse deactivateEvent(@PathVariable Long eventId) {
         eventService.deactivateEvent(eventId);
@@ -170,47 +82,32 @@ public class EventController {
 
     @Operation(
             summary = "이벤트 코드 목록 조회",
-            description = "이벤트 코드 목록을 반환합니다..",
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            description = "반환 성공"
-                    ),
-                    @ApiResponse(
-                            responseCode = "401",
-                            description = "인증 실패"
-                    )
-                    ,
-                    @ApiResponse(
-                            responseCode = "404",
-                            description = "데이터 없음"
-                    )
-            }
+            description = "이벤트 코드 목록을 반환합니다.."
     )
-    @GetMapping("/eventCodes")
+    @GetMapping("/event-codes")
     @PreAuthorize("hasRole('ADMIN')")
     public List<GetEventCodeListResponse> getEventCodes(){
         return eventService.getEventCodes();
     }
 
     @Operation(
+            summary = "댓글 목록 조회",
+            description = "이벤트의 댓글 목록을 조회합니다."
+    )
+    @GetMapping("/{eventId}/comments")
+    public List<CommentResponse> getEventCommentList(@PathVariable Long eventId){
+        return commentService.getEventCommentList(eventId);
+    }
+
+    @Operation(
             summary = "댓글 생성",
             description = "댓글을 만듭니다."
     )
-    @PostMapping("/{eventId}")
+    @PostMapping("/{eventId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("isAuthenticated()")
     public CommentResponse createComment(@PathVariable Long eventId,
                                          @Valid @RequestBody CreateComment request){
         return commentService.createComment(eventId, request);
-    }
-
-    @Operation(
-            summary = "댓글 목록 조회",
-            description = "이벤트의 댓글 목록을 조회합니다."
-    )
-    @GetMapping("/{eventId}/list")
-    public List<CommentResponse> getEventCommentList(@PathVariable Long eventId){
-        return commentService.getEventCommentList(eventId);
     }
 }
