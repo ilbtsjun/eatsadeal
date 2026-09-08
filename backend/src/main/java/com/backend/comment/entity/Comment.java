@@ -3,6 +3,7 @@ package com.backend.comment.entity;
 import com.backend.event.entity.Event;
 import com.backend.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -19,10 +19,28 @@ public enum ErrorCode {
             "서버 내부 오류가 발생했습니다."
     ),
 
+    ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "COMMON-003",
+            "이미 사용중입니다."
+    ),
+
+    NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "COMMON-004",
+            "대상을 찾을 수 없습니다."
+    ),
+
     UNAUTHORIZED(
             HttpStatus.UNAUTHORIZED,
             "AUTH-001",
             "인증이 필요합니다."
+    ),
+
+    INVALID_STATUS(
+            HttpStatus.CONFLICT,
+            "COMMON-005",
+            "상태 오류입니다."
     ),
 
     INVALID_TOKEN(
@@ -41,48 +59,6 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "AUTH-004",
             "로그인에 실패했습니다."
-    ),
-
-    BRAND_ALREADY_EXISTS(
-            HttpStatus.CONFLICT,
-            "BRAND-001",
-            "이미 존재하는 브랜드입니다."
-    ),
-
-    BRAND_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "BRAND-002",
-            "브랜드를 찾을 수 없습니다."
-    ),
-
-    BRAND_CATEGORY_ALREADY_EXISTS(
-            HttpStatus.CONFLICT,
-            "BRAND-003",
-            "이미 추가된 카테고리입니다."
-    ),
-
-    BRAND_CATEGORY_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "BRAND-004",
-            "브랜드에 해당되는 카테고리가 없습니다."
-    ),
-
-    CATEGORY_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "CATEGORY-001",
-            "카테고리를 찾을 수 없습니다."
-    ),
-
-    CATEGORY_ALREADY_EXISTS(
-            HttpStatus.CONFLICT,
-            "CATEGORY-002",
-            "이미 존재하는 카테고리입니다."
-    ),
-
-    IMG_NOT_FOUND(
-            HttpStatus.NOT_FOUND,
-            "CATEGORY-003",
-            "이미지 링크가 없습니다."
     ),
 
     USER_NOT_FOUND(
@@ -107,6 +83,12 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "USER-004",
             "허용되지 않은 사용자입니다."
+    ),
+
+    NOT_OWNED(
+            HttpStatus.FORBIDDEN,
+            "USER-005",
+            "본인의 소유가 아닙니다."
     ),
 
     EVENT_NOT_FOUND(

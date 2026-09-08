@@ -35,7 +35,7 @@ public class CategoryService {
     @Transactional
     public void createCategory(CreateCategory request){
         if(categoryRepository.existsByName(request.name())){
-            throw new BusinessException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
         Category category = Category.builder()
                 .name(request.name())
@@ -47,16 +47,16 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public GetCategoryResponse getCategory(Long categoryID){
         Category category = categoryRepository.findById(categoryID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return new GetCategoryResponse(category.getId(), category.getName(), category.getImg());
     }
 
     @Transactional
     public void updateCategory(Long categoryID, UpdateCategory request){
         Category category = categoryRepository.findById(categoryID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if(!StringUtils.hasText(request.img())){
-            throw new BusinessException(ErrorCode.IMG_NOT_FOUND);
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         category.updateCategory(request.img());
     }
@@ -64,7 +64,7 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(Long categoryID){
         Category category = categoryRepository.findById(categoryID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         categoryRepository.delete(category);
     }
 }
