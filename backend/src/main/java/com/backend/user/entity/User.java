@@ -145,12 +145,9 @@ public class User {
         this.userStatus = UserStatus.ACTIVE;
     }
 
-    public boolean releaseIfExpired(LocalDateTime now) {
+    public void releaseIfExpired(LocalDateTime now) {
         if (userStatus == UserStatus.SUSPEND && suspendedUntil != null && !suspendedUntil.isAfter(now)) {
             this.releaseSuspend();
-            return true;
         }
-
-        return false;
     }
 }

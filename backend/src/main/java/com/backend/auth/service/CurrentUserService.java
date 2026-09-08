@@ -58,8 +58,7 @@ public class CurrentUserService {
     public String getTokenByUser(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getCredentials() instanceof String) {
-            String token = (String) authentication.getCredentials();
-            return token;
+            return (String) authentication.getCredentials();
         }
         return null;
     }
@@ -68,8 +67,7 @@ public class CurrentUserService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication != null && authentication.getCredentials() instanceof String token) {
-            Date expiration = jwtTokenProvider.getExpiration(token);
-            return expiration;
+            return jwtTokenProvider.getExpiration(token);
         }
         return null;
     }
