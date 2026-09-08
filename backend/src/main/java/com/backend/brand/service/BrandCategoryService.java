@@ -19,15 +19,12 @@ public class BrandCategoryService {
 
     @Transactional
     public void addCategory(Brand brand, Category category){
-        if(brand == null){
-            throw new BusinessException(ErrorCode.BRAND_NOT_FOUND);
-        }
-        if(category == null){
-            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        if(brand == null || category == null){
+            throw new BusinessException(ErrorCode.NOT_FOUND);
         }
         if(brandCategoryRepository.findByBrandAndCategory(brand, category) != null){
             String message = brand.getName() + "에는 이미 " + category.getName() + "이(가) 있습니다.";
-            throw new BusinessException(ErrorCode.BRAND_CATEGORY_ALREADY_EXISTS, message);
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS, message);
         }
         BrandCategory brandCategory = BrandCategory.builder()
                 .brand(brand)
@@ -38,16 +35,13 @@ public class BrandCategoryService {
 
     @Transactional
     public void deleteCategory(Brand brand, Category category){
-        if(brand == null){
-            throw new BusinessException(ErrorCode.BRAND_NOT_FOUND);
-        }
-        if(category == null){
-            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        if(brand == null || category == null){
+            throw new BusinessException(ErrorCode.NOT_FOUND);
         }
         BrandCategory brandCategory = brandCategoryRepository.findByBrandAndCategory(brand, category);
         if(brandCategory == null){
             String message = brand.getName() + "에는 " + category.getName() + "이(가) 없습니다.";
-            throw new BusinessException(ErrorCode.BRAND_CATEGORY_NOT_FOUND, message);
+            throw new BusinessException(ErrorCode.NOT_FOUND, message);
         }
         brandCategoryRepository.delete(brandCategory);
     }

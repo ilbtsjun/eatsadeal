@@ -46,7 +46,7 @@ public class BrandService {
     @Transactional
     public void createBrand(CreateBrand request){
         if(brandRepository.existsByName(request.name()) || brandRepository.existsByUrl(request.url())){
-            throw new BusinessException(ErrorCode.BRAND_ALREADY_EXISTS);
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
         Brand brand = Brand.builder()
                 .name(request.name())
@@ -56,7 +56,7 @@ public class BrandService {
         brandRepository.save(brand);
         for(Long categoryId : request.categoryIds()){
             Category category = categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
             brandCategoryService.addCategory(brand, category);
         }
     }
@@ -64,7 +64,7 @@ public class BrandService {
     @Transactional(readOnly = true)
     public GetBrandResponse getBrand(Long brandID) {
         Brand brand = brandRepository.findById(brandID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BRAND_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         List<BrandCategory> categories = brandCategoryRepository.findByBrand(brand);
         List<Long> categoryIds = new ArrayList<>();
         for(BrandCategory brandCategory : categories){
@@ -76,7 +76,7 @@ public class BrandService {
     @Transactional
     public void updateBrand(Long brandID, @Valid UpdateBrand request) {
         Brand brand = brandRepository.findById(brandID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BRAND_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         String name = StringUtils.hasText(request.name())
                 ? request.name()
@@ -113,7 +113,7 @@ public class BrandService {
     @Transactional
     public void deleteBrand(Long brandID){
         Brand brand = brandRepository.findById(brandID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.BRAND_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         brandRepository.delete(brand);
     }
 }

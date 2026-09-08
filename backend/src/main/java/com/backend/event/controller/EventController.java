@@ -1,5 +1,8 @@
 package com.backend.event.controller;
 
+import com.backend.comment.dto.CommentResponse;
+import com.backend.event.dto.CreateComment;
+import com.backend.comment.service.CommentService;
 import com.backend.common.dto.MsgResponse;
 import com.backend.event.dto.*;
 import com.backend.event.service.EventService;
@@ -21,6 +24,7 @@ import java.util.List;
 @RequestMapping("/event")
 public class EventController {
     private final EventService eventService;
+    private final CommentService commentService;
 
     @Operation(
             summary = "이벤트 수동 생성",
@@ -187,5 +191,26 @@ public class EventController {
     @PreAuthorize("hasRole('ADMIN')")
     public List<GetEventCodeListResponse> getEventCodes(){
         return eventService.getEventCodes();
+    }
+
+    @Operation(
+            summary = "댓글 생성",
+            description = "댓글을 만듭니다."
+    )
+    @PostMapping("/{eventId}")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    public CommentResponse createComment(@PathVariable Long eventId,
+                                         @Valid @RequestBody CreateComment request){
+        return commentService.createComment(eventId, request);
+    }
+
+    @Operation(
+            summary = "댓글 목록 조회",
+            description = "이벤트의 댓글 목록을 조회합니다."
+    )
+    @GetMapping("/{eventId}/list")
+    public List<CommentResponse> getEventCommentList(@PathVariable Long eventId){
+        return commentService.getEventCommentList(eventId);
     }
 }
