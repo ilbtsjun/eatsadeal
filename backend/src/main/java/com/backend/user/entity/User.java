@@ -125,6 +125,12 @@ public class User {
         this.userStatus = UserStatus.SUSPEND;
     }
 
+    public void active(String suspendingReason){
+        this.suspendedUntil = null;
+        this.suspendingReason = suspendingReason.trim();
+        this.userStatus = UserStatus.ACTIVE;
+    }
+
     public boolean hasActiveSuspension(LocalDateTime now) {
         if (userStatus != UserStatus.SUSPEND) {
             return false;

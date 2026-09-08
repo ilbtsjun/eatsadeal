@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Event", description = "이벤트 API")
-@RequestMapping("/events")
+@RequestMapping("/api/events")
 public class EventController {
     private final EventService eventService;
     private final CommentService commentService;
@@ -31,7 +31,7 @@ public class EventController {
             summary = "이벤트 검색",
             description = "이벤트를 검색합니다."
     )
-    @GetMapping("/events")
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public Page<GetEventListResponse> searchEvents(@Valid @RequestBody EventSearchRequest request) {
         return eventService.searchEvents(request);
@@ -41,7 +41,7 @@ public class EventController {
             summary = "이벤트 수동 생성",
             description = "이벤트를 수동으로 만듭니다."
     )
-    @PostMapping("/evnets")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public MsgResponse createEvent(@Valid @RequestBody CreateEvent createEvent) {

@@ -52,20 +52,25 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
 
-                        //auth
+                        // 인증 없이 접근 가능한 인증 API
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/signup",
-                                "/api/auth/login"
-                                ,"/api/auth/email-verification"
-                                ,"/api/auth/email-validate"
+                                "/api/auth/login",
+                                "/api/auth/email-verifications",
+                                "/api/auth/email-verifications/confirm"
                         ).permitAll()
 
-                        //브랜드
+                        // 공개 조회 API
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/events",
+                                "/api/events/**",
                                 "/api/brands",
-                                "/api/brands/{brandId}"
+                                "/api/brands/**",
+                                "/api/categories",
+                                "/api/categories/**",
+                                "/api/events/*/comments"
                         ).permitAll()
 
                         .anyRequest().authenticated()
