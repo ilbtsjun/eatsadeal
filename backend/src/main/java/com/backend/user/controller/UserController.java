@@ -1,6 +1,7 @@
 package com.backend.user.controller;
 
 import com.backend.common.dto.MsgResponse;
+import com.backend.favorite.service.FavoriteService;
 import com.backend.user.dto.*;
 import com.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,12 +12,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "User", description = "유저 API")
 @RequestMapping("/users")
 public class UserController {
     private final UserService userService;
+    private final FavoriteService favoriteService;
 
     @Operation(
             summary = "이메일 중복 확인",
@@ -228,5 +232,15 @@ public class UserController {
     public MsgResponse suspendUser(@PathVariable Long userID){
         userService.activeUser(userID);
         return new MsgResponse("정지가 해제되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "즐겨찾기 목록을 반환합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 유저의 즐겨찾기 목록을 반환합니다."
+    )
+    @GetMapping("/me/favorites")
+    @PreAuthorize("isAuthenticated()")
+    public List<Long> toggleFavorite() {
+        return favoriteService.getFavoriteList();
     }
 }

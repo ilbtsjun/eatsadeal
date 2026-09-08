@@ -1,6 +1,8 @@
 package com.backend.favorite.service;
 
 import com.backend.auth.service.CurrentUserService;
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.entity.Favorite;
@@ -24,26 +26,39 @@ public class FavoriteService {
     private final CurrentUserService currentUserService;
 
     @Transactional
-    public boolean toggleFavorite(Long eventId) {
+    public void addFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이벤트입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         Optional<Favorite> favoriteOptional = favoriteRepository.findByUserAndEvent(user, event);
 
         if (favoriteOptional.isPresent()) {
-            favoriteRepository.delete(favoriteOptional.get());
-            return false;
-        } else {
-            Favorite favorite = Favorite.builder()
-                    .user(user)
-                    .event(event)
-                    .build();
-
-            favoriteRepository.save(favorite);
-            return true;
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
+        Favorite favorite = Favorite.builder()
+                .user(user)
+                .event(event)
+                .build();
+
+        favoriteRepository.save(favorite);
+    }
+
+    @Transactional
+    public void deleteFavorite(Long eventId) {
+        User user = currentUserService.getRequiredUser();
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        Optional<Favorite> favoriteOptional = favoriteRepository.findByUserAndEvent(user, event);
+
+        if (!favoriteOptional.isPresent()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+
+        favoriteRepository.delete(favoriteOptional.get());
     }
 
     @Transactional(readOnly = true)
