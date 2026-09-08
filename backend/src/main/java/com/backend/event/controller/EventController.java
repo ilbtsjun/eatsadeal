@@ -7,7 +7,6 @@ import com.backend.common.dto.MsgResponse;
 import com.backend.event.dto.*;
 import com.backend.event.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
