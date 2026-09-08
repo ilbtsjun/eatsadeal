@@ -45,9 +45,6 @@ public class AuthService {
         String message = "정상적으로 로그인 되었습니다.";
 
         switch(user.getUserStatus()){
-            case STANDBY :
-                message = "아직 인증되지 않은 사용자입니다.";
-                return new LoginResponse(message,"403",null);
             case SUSPEND :
                 message = user.getSuspendedUntil() + "까지 이용이 제한되었습니다.\n" +
                         "사유 : " +user.getSuspendingReason();
@@ -82,23 +79,9 @@ public class AuthService {
 
     @Transactional
     public void signUp(SignUp request) {
-        if(userRepository.existsByEmail(request.email())){
-            throw new IllegalArgumentException("이미 사용중인 이메일 입니다.");
+        if(userRepository.existsByEmail(request.email()) || userRepository.existsByNickname(request.nickname())){
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
-        if(userRepository.existsByNickname(request.nickname())){
-            throw new IllegalArgumentException("이미 사용중인 닉네임 입니다.");
-        }
-
-        User user = User.builder()
-                .name(request.name().trim())
-                .email(request.email().trim())
-                .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname().trim())
-                .phoneNumber(request.phoneNumber())
-                .gender(request.userGender())
-                .birth(request.birth())
-                .build();
-        userRepository.save(user);
 
         mailService.sendSignUpMessage(request.email());
     }

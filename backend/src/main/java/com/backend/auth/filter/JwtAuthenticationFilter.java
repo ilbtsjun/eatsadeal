@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = jwtTokenProvider.getUserId(token);
 
             User user = userRepository.findById(userId)
-                    .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                    .orElseThrow(()-> new BusinessException(ErrorCode.NOT_FOUND));
 
             AuthenticatedUser principal = AuthenticatedUser.from(user);
 

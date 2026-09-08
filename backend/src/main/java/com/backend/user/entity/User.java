@@ -125,6 +125,12 @@ public class User {
         this.userStatus = UserStatus.SUSPEND;
     }
 
+    public void active(String suspendingReason){
+        this.suspendedUntil = null;
+        this.suspendingReason = suspendingReason.trim();
+        this.userStatus = UserStatus.ACTIVE;
+    }
+
     public boolean hasActiveSuspension(LocalDateTime now) {
         if (userStatus != UserStatus.SUSPEND) {
             return false;
@@ -139,12 +145,9 @@ public class User {
         this.userStatus = UserStatus.ACTIVE;
     }
 
-    public boolean releaseIfExpired(LocalDateTime now) {
+    public void releaseIfExpired(LocalDateTime now) {
         if (userStatus == UserStatus.SUSPEND && suspendedUntil != null && !suspendedUntil.isAfter(now)) {
             this.releaseSuspend();
-            return true;
         }
-
-        return false;
     }
 }
