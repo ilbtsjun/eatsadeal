@@ -12,10 +12,4 @@ public record PasswordChange(
         @Schema(description = "인증 코드")
         String authCode
 ) {
-    public PasswordChange withAuthCode(String authCode) {
-        return new PasswordChange(
-                this.email,
-                authCode
-        );
-    }
 }
