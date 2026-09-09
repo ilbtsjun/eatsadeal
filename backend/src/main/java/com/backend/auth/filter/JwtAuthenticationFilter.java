@@ -5,10 +5,10 @@ import com.backend.auth.principal.AuthenticatedUser;
 import com.backend.auth.resolver.BearerTokenResolver;
 import com.backend.auth.token.JwtTokenProvider;
 import com.backend.auth.token.TokenBlacklist;
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.user.dto.UserStatus;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -38,24 +39,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = BearerTokenResolver.resolve(request);
 
-        if (token != null
-                && jwtTokenProvider.validateToken(token)
-                && !tokenBlacklist.contains(token)) {
+        if (token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            if (!jwtTokenProvider.validateToken(token) || tokenBlacklist.contains(token)) {
+                clearAuthentication();
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             Long userId = jwtTokenProvider.getUserId(token);
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(()-> new BusinessException(ErrorCode.NOT_FOUND));
+            Optional<User> optionalUser = userRepository.findById(userId);
 
-            AuthenticatedUser principal = AuthenticatedUser.from(user);
+            if (optionalUser.isEmpty() || optionalUser.get().getUserStatus() != UserStatus.ACTIVE) {
+                clearAuthentication();
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-            Authentication authentication = new UsernamePasswordAuthenticationToken(principal,
-                    null,
-                    principal.getAuthorities());
+            AuthenticatedUser principal = AuthenticatedUser.from(optionalUser.get());
+
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                            principal,
+                            token,
+                            principal.getAuthorities()
+            );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        } catch (JwtException | IllegalArgumentException e) {
+            clearAuthentication();
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void clearAuthentication() {
+        SecurityContextHolder.clearContext();
     }
 }

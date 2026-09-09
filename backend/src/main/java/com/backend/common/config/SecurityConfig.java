@@ -57,20 +57,24 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/api/auth/signup",
                                 "/api/auth/login",
-                                "/api/auth/email-verifications",
-                                "/api/auth/email-verifications/confirm"
+                                "/api/auth/email-verification",
+                                "/api/auth/password-change",
+                                "/api/auth/password-verification"
                         ).permitAll()
 
                         // 공개 조회 API
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/events",
+                                "/api/user/nickname-availability",
+                                "/api/user/email-availability",
                                 "/api/events/**",
                                 "/api/brands",
                                 "/api/brands/**",
                                 "/api/categories",
                                 "/api/categories/**",
-                                "/api/events/*/comments"
+                                "/api/events/*/comments",
+                                "/api/test/redis"
                         ).permitAll()
 
                         .anyRequest().authenticated()

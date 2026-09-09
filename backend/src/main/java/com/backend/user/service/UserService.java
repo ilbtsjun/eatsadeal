@@ -38,20 +38,6 @@ public class UserService {
     }
 
     @Transactional
-    public void createUser(SignUp request){
-        User user = User.builder()
-                .name(request.name().trim())
-                .email(request.email().trim())
-                .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname().trim())
-                .phoneNumber(request.phoneNumber())
-                .gender(request.userGender())
-                .birth(request.birth())
-                .build();
-        userRepository.save(user);
-    }
-
-    @Transactional
     public GetMyPageResponse getMyPage() {
         User user = currentUserService.getRequiredUser();
         return GetMyPageResponse.from(user);

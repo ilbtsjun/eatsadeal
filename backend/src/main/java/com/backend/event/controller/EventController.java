@@ -33,7 +33,7 @@ public class EventController {
     )
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public Page<GetEventListResponse> searchEvents(@Valid @RequestBody EventSearchRequest request) {
+    public Page<GetEventListResponse> searchEvents(@ModelAttribute EventSearchRequest request) {
         return eventService.searchEvents(request);
     }
 
@@ -85,8 +85,7 @@ public class EventController {
             summary = "이벤트 코드 목록 조회",
             description = "이벤트 코드 목록을 반환합니다.."
     )
-    @GetMapping("/event-codes")
-    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/event/codes")
     public List<GetEventCodeListResponse> getEventCodes(){
         return eventService.getEventCodes();
     }

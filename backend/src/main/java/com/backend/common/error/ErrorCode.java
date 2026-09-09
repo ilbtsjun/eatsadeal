@@ -56,9 +56,21 @@ public enum ErrorCode {
     ),
 
     LOGIN_FAILED(
-            HttpStatus.FORBIDDEN,
+            HttpStatus.UNAUTHORIZED,
             "AUTH-004",
             "로그인에 실패했습니다."
+    ),
+
+    TOO_MANY_REQUEST(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "AUTH-005",
+            "너무 많은 요청을 했습니다."
+    ),
+
+    AUTH_FAILED(
+            HttpStatus.FORBIDDEN,
+            "AUTH-005",
+            "인증에 실패했습니다."
     ),
 
 
