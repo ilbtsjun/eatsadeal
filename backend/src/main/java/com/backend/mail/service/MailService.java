@@ -10,8 +10,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.Random;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -23,11 +21,10 @@ public class MailService {
 
     @Async
     public void sendSignUpMessage(String sendEmail, String code) {
-        String authCode = code;
         String title = "[EatsADeal]회원가입 인증 테스트 메일입니다.";
         String body = "";
         body += "<h3>요청하신 인증 번호입니다.</h3>";
-        body += "<h1>" + authCode + "</h1>";
+        body += "<h1>" + code + "</h1>";
         body += "<h3>감사합니다.</h3>";
         body += "인증의 유효기간은 10분입니다. 10분내로 인증하지 않을 시, 다시 회원가입을 진행해주시기 바랍니다.";
 
@@ -41,11 +38,10 @@ public class MailService {
 
     @Async
     public void sendPasswordMessage(String sendEmail, String code) {
-        String authCode = code;
         String title = "[EatsADeal]패스워드 인증 테스트 메일입니다.";
         String body = "";
         body += "<h3>요청하신 인증 번호입니다.</h3>";
-        body += "<h1>" + authCode + "</h1>";
+        body += "<h1>" + code + "</h1>";
         body += "<h3>감사합니다.</h3>";
         body += "인증의 유효기간은 10분입니다. 10분내로 인증하지 않을 시, 다시 비밀번호 찾기를 진행해주시기 바랍니다.";
 

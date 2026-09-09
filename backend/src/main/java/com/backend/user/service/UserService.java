@@ -1,6 +1,5 @@
 package com.backend.user.service;
 
-import com.backend.auth.dto.SignUp;
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
