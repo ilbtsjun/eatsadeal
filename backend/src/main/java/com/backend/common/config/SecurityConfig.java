@@ -74,7 +74,8 @@ public class SecurityConfig {
                                 "/api/categories",
                                 "/api/categories/**",
                                 "/api/events/*/comments",
-                                "/api/test/redis"
+                                "/api/test/redis",
+                                "/api/crawl/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()

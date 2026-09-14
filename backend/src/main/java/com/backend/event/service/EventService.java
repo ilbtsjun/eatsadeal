@@ -49,6 +49,7 @@ public class EventService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .brand(brand)
+                .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
         eventRepository.save(event);
@@ -87,6 +88,7 @@ public class EventService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .brand(brand)
+                .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
 
