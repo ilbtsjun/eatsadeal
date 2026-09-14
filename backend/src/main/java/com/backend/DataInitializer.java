@@ -30,6 +30,10 @@ public class DataInitializer implements CommandLineRunner {
             return categoryRepository.save(newCategory);
         });
 
+        chickenInit(category);
+    }
+
+    private void chickenInit(Category category){
         saveBrandIfNotExists(1L,
                 "BHC", "https://www.bhc.co.kr",
                 "https://www.bhc.co.kr/_next/static/media/ico_logo_footer.643042c8.svg",
@@ -43,6 +47,11 @@ public class DataInitializer implements CommandLineRunner {
                 "KyoChonChicken",
                 "https://www.kyochon.com/main/index.asp",
                 "https://www.kyochon.com/images/common/h1_logo_new2023.png",
+                category);
+        saveBrandIfNotExists(4L,
+                "Pelicana",
+                "https://www.pelicana.co.kr/main",
+                "https://www.pelicana.co.kr/_nuxt/img/logo.54d3328.png",
                 category);
     }
 
