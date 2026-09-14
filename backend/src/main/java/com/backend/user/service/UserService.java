@@ -4,6 +4,7 @@ import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
@@ -43,6 +44,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("내 정보 수정")
     public void updateMyPage(UpdateMyPage request) {
         User user = currentUserService.getRequiredUser();
 
@@ -70,6 +72,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("비밀번호 수정")
     public void updatePassword(UpdatePassword request) {
         User user = currentUserService.getRequiredUser();
 
@@ -92,6 +95,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("회원 탈퇴")
     public void quit(QuitUser request){
         User user = currentUserService.getRequiredUser();
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -111,6 +115,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("유저 정지 및 해제")
     public void suspensionUser(Long userID, SuspensionUser request) {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

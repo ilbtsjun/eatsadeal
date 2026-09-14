@@ -1,5 +1,6 @@
 package com.backend.mail.service;
 
+import com.backend.common.log.CudLogging;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class MailService {
     private String senderEmail;
 
     @Async
+    @CudLogging("회원가입 메일 송신")
     public void sendSignUpMessage(String sendEmail, String code) {
         String title = "[EatsADeal]회원가입 인증 테스트 메일입니다.";
         String body = "";
@@ -37,6 +39,7 @@ public class MailService {
     }
 
     @Async
+    @CudLogging("비밀번호 변경 메일 송신")
     public void sendPasswordMessage(String sendEmail, String code) {
         String title = "[EatsADeal]패스워드 인증 테스트 메일입니다.";
         String body = "";

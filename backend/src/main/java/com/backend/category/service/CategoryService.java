@@ -7,6 +7,7 @@ import com.backend.category.entity.Category;
 import com.backend.category.repository.CategoryRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CudLogging("카테고리 생성")
     public void createCategory(CreateCategory request){
         if(categoryRepository.existsByName(request.name())){
             throw new BusinessException(ErrorCode.ALREADY_EXISTS);
@@ -52,6 +54,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CudLogging("카테고리 수정")
     public void updateCategory(Long categoryID, UpdateCategory request){
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -62,6 +65,7 @@ public class CategoryService {
     }
 
     @Transactional
+    @CudLogging("카테고리 삭제")
     public void deleteCategory(Long categoryID){
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

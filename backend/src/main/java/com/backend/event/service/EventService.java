@@ -3,6 +3,7 @@ package com.backend.event.service;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -34,6 +35,7 @@ public class EventService {
     private final CurrentUserService currentUserService;
 
     @Transactional
+    @CudLogging("이벤트 생성")
     public void createEvent(CreateEvent request){
         validateDateRange(request.startDate(), request.endDate());
         if(eventRepository.existsByUrl(request.url())){
@@ -56,6 +58,7 @@ public class EventService {
     }
 
     @Transactional
+    @CudLogging("이벤트 생성(크롤러)")
     public void upsertCrawledEvent(CreateEvent request) {
         validateDateRange(request.startDate(), request.endDate());
 
@@ -123,6 +126,7 @@ public class EventService {
     }
 
     @Transactional
+    @CudLogging("이벤트 수정")
     public void updateEvent(Long eventId, UpdateEvent request){
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -172,6 +176,7 @@ public class EventService {
     }
 
     @Transactional
+    @CudLogging("이벤트 비활성화")
     public void deactivateEvent(Long eventId){
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
