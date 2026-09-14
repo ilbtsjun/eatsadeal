@@ -114,6 +114,11 @@ public class BrandService {
     public void deleteBrand(Long brandID){
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        List<BrandCategory> brandCategories = brandCategoryRepository.findByBrand(brand);
+        brandCategories.stream()
+                .forEach(bc -> brandCategoryService.deleteCategory(brand, bc.getCategory()));
+
         brandRepository.delete(brand);
     }
 }

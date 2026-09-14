@@ -67,8 +67,7 @@ public class Event {
     @Builder
     public Event(String title, String description, String url,
                  String img, LocalDateTime startDate, LocalDateTime endDate,
-                 Brand brand,
-                 Set<EventCode> eventCodes) {
+                 Brand brand, Boolean isActive, Set<EventCode> eventCodes) {
         this.title = title;
         this.description = description;
         this.url = url;
@@ -76,7 +75,7 @@ public class Event {
         this.startDate = startDate;
         this.endDate = endDate;
         this.viewCount = 0L;
-        this.isActive = true;
+        this.isActive = isActive;
         this.brand = brand;
         this.eventCodes = eventCodes == null
                 ? new HashSet<>()
