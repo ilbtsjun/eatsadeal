@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.net.CookieManager;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -37,7 +38,6 @@ public class KyoChonChicken implements Crawler {
 
     private static final Pattern LIST_BLOCK_PATTERN =
             Pattern.compile("<ul class=\"eventList[^\"]*\">(.*?)</ul>", Pattern.DOTALL);
-
     private static final Pattern ITEM_PATTERN = Pattern.compile("<li>(.*?)</li>", Pattern.DOTALL);
     private static final Pattern HREF_PATTERN = Pattern.compile("href=\"([^\"]+)\"");
     private static final Pattern IMG_SRC_PATTERN = Pattern.compile("<img[^>]*src=\"([^\"]+)\"");
@@ -45,7 +45,7 @@ public class KyoChonChicken implements Crawler {
     private static final Pattern PERIOD_PATTERN = Pattern.compile("<dd>(.*?)</dd>", Pattern.DOTALL);
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
     @Override
     public String getName() {
@@ -64,8 +64,8 @@ public class KyoChonChicken implements Crawler {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
-        for (int page = 0; page < MAX_PAGES; page++) {
-            String url = page == 0 ? listUrl : listUrl + "?page=" + page;
+        for (int pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
+            String url = pageNum == 1 ? listUrl : listUrl + "?page=" + pageNum;
 
             String html;
             try {
@@ -130,7 +130,6 @@ public class KyoChonChicken implements Crawler {
             throw new IllegalArgumentException("필수 요소 누락");
         }
 
-        // img src는 "/uploadFiles/..." 형태의 루트 기준 절대경로
         String imgUrl = "https://www.kyochon.com" + imgMatcher.group(1);
         String title = titleMatcher.group(1).trim();
         String periodText = periodMatcher.group(1).trim();

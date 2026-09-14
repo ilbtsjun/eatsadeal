@@ -2,6 +2,7 @@ package com.backend.crawler.controller;
 
 import com.backend.crawler.target.chicken.BBQ;
 import com.backend.crawler.target.chicken.KyoChonChicken;
+import com.backend.crawler.target.chicken.Pelicana;
 import com.backend.event.dto.CreateEvent;
 import com.backend.crawler.target.chicken.BHC;
 import com.backend.event.service.EventService;
@@ -18,10 +19,19 @@ public class CrawlerController {
     private final BHC bhcCrawler;
     private final BBQ bbqCrawler;
     private final KyoChonChicken kyochonCrawler;
+    private final Pelicana pelicanaCrawler;
     private final EventService eventService;
 
-    @GetMapping("/api/crawl/bhc")
+    @GetMapping("/api/crawl")
     @Scheduled(cron = "0 0 0/6 * * *")
+    public void testCrawler(){
+        testBbqCrawler();
+        testBhcCrawler();
+        testKyochonCrawler();
+        testPelicanaCrawler();
+    }
+
+    @GetMapping("/api/crawl/bhc")
     public List<CreateEvent> testBhcCrawler() {
         List<CreateEvent> list = bhcCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -31,7 +41,6 @@ public class CrawlerController {
     }
 
     @GetMapping("/api/crawl/bbq")
-    @Scheduled(cron = "0 0 0/6 * * *")
     public List<CreateEvent> testBbqCrawler() {
         List<CreateEvent> list = bbqCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -41,9 +50,17 @@ public class CrawlerController {
     }
 
     @GetMapping("/api/crawl/kyochon")
-    @Scheduled(cron = "0 0 0/6 * * *")
-    public List<CreateEvent> testkyochonCrawler() {
+    public List<CreateEvent> testKyochonCrawler() {
         List<CreateEvent> list = kyochonCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/pelicana")
+    public List<CreateEvent> testPelicanaCrawler() {
+        List<CreateEvent> list = pelicanaCrawler.crawl();
         for(CreateEvent createEvent : list){
             eventService.upsertCrawledEvent(createEvent);
         }
