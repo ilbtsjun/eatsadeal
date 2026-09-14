@@ -12,6 +12,7 @@ import com.backend.brand.repository.BrandRepository;
 import com.backend.category.repository.CategoryRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,7 @@ public class BrandService {
     }
 
     @Transactional
+    @CudLogging("브랜드 생성")
     public void createBrand(CreateBrand request){
         if(brandRepository.existsByName(request.name()) || brandRepository.existsByUrl(request.url())){
             throw new BusinessException(ErrorCode.ALREADY_EXISTS);
@@ -74,6 +76,7 @@ public class BrandService {
     }
 
     @Transactional
+    @CudLogging("브랜드 수정")
     public void updateBrand(Long brandID, @Valid UpdateBrand request) {
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -111,6 +114,7 @@ public class BrandService {
     }
 
     @Transactional
+    @CudLogging("브랜드 삭제")
     public void deleteBrand(Long brandID){
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

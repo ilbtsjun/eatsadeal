@@ -3,6 +3,7 @@ package com.backend.favorite.service;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.entity.Favorite;
@@ -26,6 +27,7 @@ public class FavoriteService {
     private final CurrentUserService currentUserService;
 
     @Transactional
+    @CudLogging("즐겨찾기 추가")
     public void addFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
@@ -46,6 +48,7 @@ public class FavoriteService {
     }
 
     @Transactional
+    @CudLogging("즐겨찾기 삭제")
     public void deleteFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
