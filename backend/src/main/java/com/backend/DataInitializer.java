@@ -31,6 +31,16 @@ public class DataInitializer implements CommandLineRunner {
         });
 
         chickenInit(category);
+
+        category = categoryRepository.findById(2L).orElseGet(() -> {
+            Category newCategory = Category.builder()
+                    .name("피자")
+                    .img("https://www.magnific.com/kr/free-psd/delicious-pepperoni-pizza-with-mushrooms-olives_410556008.htm#fromView=search&page=1&position=2&uuid=c7d48e22-d25b-4bfb-9562-8514a9e23c39&track=ais_hybrid&query=%ED%94%BC%EC%9E%90")
+                    .build();
+            return categoryRepository.save(newCategory);
+        });
+
+        pizzaInit(category);
     }
 
     private void chickenInit(Category category){
@@ -52,6 +62,38 @@ public class DataInitializer implements CommandLineRunner {
                 "Pelicana",
                 "https://www.pelicana.co.kr/main",
                 "https://www.pelicana.co.kr/_nuxt/img/logo.54d3328.png",
+                category);
+        saveBrandIfNotExists(5L,
+                "Goobne",
+                "https://www.goobne.co.kr/main",
+                "https://www.goobne.co.kr/pc/assets/img/header-logo2.svg",
+                category);
+    }
+
+    private void pizzaInit(Category category){
+        saveBrandIfNotExists(6L,
+                "Dominos", "https://web.dominos.co.kr/main",
+                "https://i.namu.wiki/i/tMdC1Tf4vAmadRUb0hJ2th--qZwaAI5ILkjBllBFxbDEoYylggFQsx4_mm0JNEMnlqYCwCxK1C9TOx-s8isoy8uopduT1hX1jI5IB-0yKDOWSslsR7ZYah_W-ZTSLjKFc6S2H7HBfr3FVJlAF3soSQ.svg",
+                category);
+        saveBrandIfNotExists(7L,
+                "Papajohns",
+                "https://pji.co.kr//",
+                "https://imgcdn4.pji.co.kr/pc/next/images/logo_red.png",
+                category);
+        saveBrandIfNotExists(8L,
+                "Pizzamaru",
+                "https://www.pizzamaru.co.kr/",
+                "https://www.pizzamaru.co.kr/img/logo.png",
+                category);
+        saveBrandIfNotExists(9L,
+                "Pizzaetang",
+                "https://pizzaetang.com/",
+                "https://ecimg.cafe24img.com/pg2696b65764996061/etang3651/web/upload/pizza/logo_white.png",
+                category);
+        saveBrandIfNotExists(10L,
+                "Nomorepizza",
+                "https://nomorepizza.co.kr/",
+                "https://nomorepizza.co.kr/_next/image?url=%2Fimages%2Flogos%2F%EB%A1%9C%EA%B3%A04-white.png&w=640&q=75&dpl=dpl_2N1pUUSCjbbBhB5mao5kzzu5oeDQ",
                 category);
     }
 

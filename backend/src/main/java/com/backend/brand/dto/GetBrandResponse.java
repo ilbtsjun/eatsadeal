@@ -20,9 +20,6 @@ public record GetBrandResponse(
         String img,
 
         @Schema(description = "카테고리 목록", example = "[]")
-        List<Long> categoryIds,
-
-        @Schema(description = "마지막 크롤링 시각", example = "2026/08/27 18:00:00")
-        LocalDate lastCrawl
+        List<Long> categoryIds
 ) {
 }

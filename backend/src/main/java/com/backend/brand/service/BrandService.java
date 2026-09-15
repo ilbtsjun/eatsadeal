@@ -72,7 +72,7 @@ public class BrandService {
         for(BrandCategory brandCategory : categories){
             categoryIds.add(brandCategory.getCategory().getId());
         }
-        return new GetBrandResponse(brand.getId(), brand.getName(), brand.getUrl(), brand.getImg(), categoryIds, brand.getLastCrawl());
+        return new GetBrandResponse(brand.getId(), brand.getName(), brand.getUrl(), brand.getImg(), categoryIds);
     }
 
     @Transactional
