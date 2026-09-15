@@ -1,10 +1,8 @@
 package com.backend.crawler.controller;
 
-import com.backend.crawler.target.chicken.BBQ;
-import com.backend.crawler.target.chicken.KyoChonChicken;
-import com.backend.crawler.target.chicken.Pelicana;
+import com.backend.crawler.target.chicken.*;
+import com.backend.crawler.target.pizza.Dominos;
 import com.backend.event.dto.CreateEvent;
-import com.backend.crawler.target.chicken.BHC;
 import com.backend.event.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,19 +14,35 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 public class CrawlerController {
+    private final EventService eventService;
+
     private final BHC bhcCrawler;
     private final BBQ bbqCrawler;
     private final KyoChonChicken kyochonCrawler;
     private final Pelicana pelicanaCrawler;
-    private final EventService eventService;
+    private final Goobne goobneCrawler;
+
+    private final Dominos dominosCrawler;
 
     @GetMapping("/api/crawl")
     @Scheduled(cron = "0 0 0/6 * * *")
     public void testCrawler(){
+        chicken();
+        pizza();
+    }
+
+    @GetMapping("/api/crawl/chicken")
+    public void chicken(){
         testBbqCrawler();
         testBhcCrawler();
         testKyochonCrawler();
         testPelicanaCrawler();
+        testGoobneCrawler();
+    }
+
+    @GetMapping("/api/crawl/pizza")
+    public void pizza(){
+        testDominosCrawler();
     }
 
     @GetMapping("/api/crawl/bhc")
@@ -61,6 +75,24 @@ public class CrawlerController {
     @GetMapping("/api/crawl/pelicana")
     public List<CreateEvent> testPelicanaCrawler() {
         List<CreateEvent> list = pelicanaCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/goobne")
+    public List<CreateEvent> testGoobneCrawler() {
+        List<CreateEvent> list = goobneCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/dominos")
+    public List<CreateEvent> testDominosCrawler() {
+        List<CreateEvent> list = dominosCrawler.crawl();
         for(CreateEvent createEvent : list){
             eventService.upsertCrawledEvent(createEvent);
         }
