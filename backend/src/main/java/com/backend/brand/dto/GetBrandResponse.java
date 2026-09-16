@@ -2,7 +2,6 @@ package com.backend.brand.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Schema(description = "브랜드 조회 요청")
