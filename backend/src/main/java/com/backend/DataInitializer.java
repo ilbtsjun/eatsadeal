@@ -114,19 +114,19 @@ public class DataInitializer implements CommandLineRunner {
                 "https://i.namu.wiki/i/MlmEGrKa5ct7fhuL12pkUI5CVhNTjqDnyEdC_498PTh3Q2m3xKi-7lxc5VFjON5roY4wargvFQpA22km23XYKWAJKethSQvmRLGPzA1jPhRbKU05dza7x3Qu1EvwV1_h3dSSr68RNQzwPJhbJKMREA.svg",
                 category);
         saveBrandIfNotExists(12L,
-                "Lottelia",
+                "Lotteria",
                 "https://www.lotteeatz.com/brand/ria",
                 "https://i.namu.wiki/i/31assvbCDL3WwNq5AZGj4kXMwCARITBnHHXinUmWdi-Ncr9uUNBqQUQOBRuhm5aE2bOScoDTNNUnrBspgXJzerRqwNq9JZp4TfxwcFB0oUmeM4Dv5DixbqSuu5P-9j1qMplzxXnYKfa8cMzFy6o1Qw.svg",
                 category);
         saveBrandIfNotExists(13L,
-                "Mcdonalds",
-                "https://www.mcdonalds.co.kr/kor/",
-                "https://i.namu.wiki/i/KVO-ZHq9r3hF2nfUcIDhwFDrUqioqXL3-AWg9gqL5TjCVw1sAVVgr9Touj-ODoFwruJaYT0xvDWSKuN_JPz1mFd0BfzsbQp_rMfAIaGEU8RztHbKMVRTcRr6089SZwidQAr7XH90eGi_ZDno6Fe4rg.svg",
+                "KFC",
+                "https://www.kfckorea.com/",
+                "https://i.namu.wiki/i/PpSks5K2IFxn3X3UTYdL4525HOoBTba1Crw1KWnCWGl9KcitSg1DNKB_ngqR6GO7FWVRVycEGcyYXHkHND9oM_NYZaPYrTNDvY4EmnGMU-935uBMzgaWFvHC2Mj2vNOdqHoSchuKfxC6ZVWMKWbyZA.svg",
                 category);
         saveBrandIfNotExists(14L,
-                "Nobrandburger",
-                "https://www.shinsegaefood.com/nobrandburger/index.sf",
-                "https://i.namu.wiki/i/GUQfTgiZzf5ZGcP08TsRzzqiFTNP5-RXXAWzgRrYba3NVVsgDndeI6WS1n8PmgnIArHDIlUUruoTXgDi76foww.svg",
+                "Frankburger",
+                "https://frankburger.co.kr/index_brand.html",
+                "https://i.namu.wiki/i/op6IULFdxqTY7u1o7kUewjPf4omfXwt2qL7_7K0Qdn-kKqKH4bTmC073Bxv3WV0bH9a_tH4_s_E2IQnL889lGo50S3dfyWlbJDsdMWFT_8_JIQlNC2dQEQkAk_GyzOQM-xbygSHqsqzB4EoErJDv2A.svg",
                 category);
         saveBrandIfNotExists(15L,
                 "Momstouch",
