@@ -1,11 +1,8 @@
 package com.backend.crawler.controller;
 
 import com.backend.crawler.target.chicken.*;
-import com.backend.crawler.target.hamburger.Burgerking;
-import com.backend.crawler.target.pizza.Dominos;
-import com.backend.crawler.target.pizza.Papajohns;
-import com.backend.crawler.target.pizza.Pizzaetang;
-import com.backend.crawler.target.pizza.Pizzamaru;
+import com.backend.crawler.target.hamburger.*;
+import com.backend.crawler.target.pizza.*;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +27,13 @@ public class CrawlerController {
     private final Papajohns papajohnsCrawler;
     private final Pizzamaru pizzamaruCrawler;
     private final Pizzaetang pizzaetangCrawler;
+    private final Pizzaschool pizzaschoolCrawler;
 
     private final Burgerking burgerkingCrawler;
+    private final Lotteria lotteriaCrawler;
+    private final KFC kfcCrawler;
+    private final Momstouch momstouchCrawler;
+    private final Frankburger frankburgerCrawler;
 
     @GetMapping("/api/crawl")
     @Scheduled(cron = "0 0 0/6 * * *")
@@ -56,11 +58,16 @@ public class CrawlerController {
         testPapajohnsCrawler();
         testPizzamaruCrawler();
         testPizzaetangCrawler();
+        testPizzaeschoolCrawler();
     }
 
     @GetMapping("/api/crawl/hamburger")
     public void hamburger(){
         testBurgerkingCrawler();
+        testLotteriaCrawler();
+        testKfcCrawler();
+        testMomstouchCrawler();
+        testFrankburgerCrawler();
     }
 
     @GetMapping("/api/crawl/bhc")
@@ -144,9 +151,54 @@ public class CrawlerController {
         return list;
     }
 
+    @GetMapping("/api/crawl/pizzaschool")
+    public List<CreateEvent> testPizzaeschoolCrawler() {
+        List<CreateEvent> list = pizzaschoolCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
     @GetMapping("/api/crawl/burgerking")
     public List<CreateEvent> testBurgerkingCrawler() {
         List<CreateEvent> list = burgerkingCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/lotteria")
+    public List<CreateEvent> testLotteriaCrawler() {
+        List<CreateEvent> list = lotteriaCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/kfc")
+    public List<CreateEvent> testKfcCrawler() {
+        List<CreateEvent> list = kfcCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/momstouch")
+    public List<CreateEvent> testMomstouchCrawler() {
+        List<CreateEvent> list = momstouchCrawler.crawl();
+        for(CreateEvent createEvent : list){
+            eventService.upsertCrawledEvent(createEvent);
+        }
+        return list;
+    }
+
+    @GetMapping("/api/crawl/frankburger")
+    public List<CreateEvent> testFrankburgerCrawler() {
+        List<CreateEvent> list = frankburgerCrawler.crawl();
         for(CreateEvent createEvent : list){
             eventService.upsertCrawledEvent(createEvent);
         }
