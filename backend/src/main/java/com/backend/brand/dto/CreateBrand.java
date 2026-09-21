@@ -20,9 +20,8 @@ public record CreateBrand(
         @NotBlank(message = "브랜드 이미지 URL은 필수입니다.")
         String img,
 
-        @Schema(description = "카테고리 목록", example = "[]")
-        @NotNull(message = "카테고리 목록은 null일 수 없습니다.")
+        @Schema(description = "카테고리 목록", example = "[1]")
         @NotEmpty(message = "카테고리는 하나 이상 선택해야 합니다.")
-        List<Long> categoryIds
+        List<@NotNull Long> categoryIds
 ) {
 }

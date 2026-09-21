@@ -11,6 +11,9 @@ public record GetBrandListResponse(
         String name,
 
         @Schema(description = "브랜드 이미지 URL", example = "https://www.bhc.co.kr/_next/static/media/ico_logo_footer.643042c8.svg")
-        String img
+        String img,
+
+        @Schema(description = "활성 여부")
+        boolean isActive
 ) {
 }

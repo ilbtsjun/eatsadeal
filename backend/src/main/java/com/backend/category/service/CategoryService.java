@@ -1,5 +1,7 @@
 package com.backend.category.service;
 
+import com.backend.brand.entity.BrandCategory;
+import com.backend.brand.repository.BrandCategoryRepository;
 import com.backend.category.dto.CreateCategory;
 import com.backend.category.dto.GetCategoryResponse;
 import com.backend.category.dto.UpdateCategory;
@@ -16,12 +18,14 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final BrandCategoryRepository brandCategoryRepository;
 
     @Transactional(readOnly = true)
     public List<GetCategoryResponse> getCategoryList(){
@@ -40,7 +44,7 @@ public class CategoryService {
             throw new BusinessException(ErrorCode.ALREADY_EXISTS);
         }
         Category category = Category.builder()
-                .name(request.name())
+                .name(request.name().trim())
                 .img(request.img())
                 .build();
         categoryRepository.save(category);
@@ -69,6 +73,14 @@ public class CategoryService {
     public void deleteCategory(Long categoryID){
         Category category = categoryRepository.findById(categoryID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        categoryRepository.delete(category);
+        List<BrandCategory> brandCategoryList = brandCategoryRepository.findByCategory(category);
+        if(brandCategoryList.isEmpty()) {
+            categoryRepository.delete(category);
+            return;
+        }
+        String names = brandCategoryList.stream()
+                .map(bc -> bc.getBrand().getName())
+                .collect(Collectors.joining(", "));
+        throw new BusinessException(ErrorCode.CATEGORY_CANNOT_DELETE, names);
     }
 }

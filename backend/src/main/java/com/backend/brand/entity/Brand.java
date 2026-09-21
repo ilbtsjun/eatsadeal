@@ -28,6 +28,9 @@ public class Brand {
     @NotBlank
     private String img;
 
+    @Column(nullable = false)
+    private Boolean isActive = true;
+
     @Builder
     public Brand(String name, String url, String img){
         this.name = name;
@@ -39,5 +42,13 @@ public class Brand {
         this.name = name;
         this.url = url;
         this.img = img;
+    }
+
+    public void deactive(){
+        this.isActive = false;
+    }
+
+    public void active(){
+        this.isActive = true;
     }
 }

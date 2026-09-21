@@ -12,4 +12,5 @@ import java.util.List;
 public interface BrandCategoryRepository extends JpaRepository<BrandCategory, Long> {
     BrandCategory findByBrandAndCategory(Brand brand, Category category);
     List<BrandCategory> findByBrand(Brand brand);
+    List<BrandCategory> findByCategory(Category category);
 }

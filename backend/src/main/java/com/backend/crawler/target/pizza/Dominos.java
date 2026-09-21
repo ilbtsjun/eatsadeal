@@ -1,5 +1,7 @@
 package com.backend.crawler.target.pizza;
 
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -258,6 +260,10 @@ public class Dominos implements Crawler {
             isActive = true;
         }
 
+        Long brandId = brandRepository.findByName(getName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
+                .getId();
+
         return new CreateEvent(
                 title,
                 null,
@@ -265,7 +271,7 @@ public class Dominos implements Crawler {
                 imgUrl,
                 startDate,
                 endDate,
-                brandRepository.findByName(getName()).getId(),
+                brandId,
                 isActive,
                 null);
     }
