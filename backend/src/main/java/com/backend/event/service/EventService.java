@@ -74,7 +74,7 @@ public class EventService {
                     request.img(),
                     request.startDate(),
                     request.endDate(),
-                    true
+                    request.isActive()
             );
 
             return;
