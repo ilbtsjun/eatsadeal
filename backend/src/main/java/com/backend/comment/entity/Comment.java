@@ -64,7 +64,6 @@ public class Comment {
     }
 
     public void hide(){
-        this.updatedAt = LocalDateTime.now();
         this.commentStatus = CommentStatus.HIDDEN;
     }
 
@@ -72,6 +71,5 @@ public class Comment {
         this.commentStatus = updatedAt == null
                 ? CommentStatus.ACTIVE
                 : CommentStatus.MODIFIED;
-        this.updatedAt = LocalDateTime.now();
     }
 }

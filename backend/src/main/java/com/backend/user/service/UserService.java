@@ -37,7 +37,7 @@ public class UserService {
         return userRepository.existsByNickname(nickname);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public GetMyPageResponse getMyPage() {
         User user = currentUserService.getRequiredUser();
         return GetMyPageResponse.from(user);
@@ -61,7 +61,7 @@ public class UserService {
                 ? user.getBirth()
                 : request.birth();
 
-        if(!Pattern.matches("^01[016789]-?\\d{3,4}-?\\d{4}$", newPhoneNumber)){
+        if (newPhoneNumber != null && !Pattern.matches("^01[016789]-?\\d{3,4}-?\\d{4}$", newPhoneNumber)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "전화번호 형식이 올바르지 않습니다.");
         }
         if (!newUserNickname.equals(user.getNickname()) && userRepository.existsByNickname(newUserNickname)) {
