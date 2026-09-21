@@ -62,7 +62,7 @@ public class FavoriteService {
 
         Optional<Favorite> favoriteOptional = favoriteRepository.findByUserAndEvent(user, event);
 
-        if (!favoriteOptional.isPresent()) {
+        if (favoriteOptional.isEmpty()) {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
 
