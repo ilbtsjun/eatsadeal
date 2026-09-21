@@ -69,7 +69,7 @@ public enum ErrorCode {
 
     AUTH_FAILED(
             HttpStatus.FORBIDDEN,
-            "AUTH-005",
+            "AUTH-006",
             "인증에 실패했습니다."
     ),
 
@@ -84,6 +84,12 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "USER-002",
                     "비밀번호가 일치하지 않습니다."
+    ),
+
+    CATEGORY_CANNOT_DELETE(
+            HttpStatus.FORBIDDEN,
+            "CATEGORY-001",
+            "브랜드에 카테고리가 있어 삭제할 수 없습니다."
     );
 
     private final HttpStatus status;
