@@ -1,6 +1,5 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.brand.entity.Brand;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
