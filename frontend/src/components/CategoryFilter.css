@@ -7,9 +7,14 @@
 /* 카테고리 버튼 스타일 */
 .category-list {
     display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 10px;
+    width: 100%;
     overflow-x: auto;
-    padding-bottom: 10px;
+    overflow-y: hidden;
+    padding: 2px 2px 10px;
+    scrollbar-width: thin;
 }
 
 .category-btn {

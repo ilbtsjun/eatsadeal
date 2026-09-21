@@ -12,10 +12,23 @@ const INITIAL_FORM = {
   birth: '',
 };
 
-async function checkDuplicate(path, value) {
-  const response = await fetch(`${path}/${encodeURIComponent(value)}`);
-  if (!response.ok) throw new Error('중복확인에 실패했습니다.');
-  return response.json();
+async function checkDuplicate(url) {
+  const response = await fetch(url);
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`중복확인에 실패했습니다. (HTTP ${response.status})`);
+  }
+
+  if (!text.trim()) {
+    throw new Error('중복확인 응답이 비어 있습니다.');
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('중복확인 API 응답이 JSON 형식이 아닙니다.');
+  }
 }
 
 export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
@@ -28,6 +41,7 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
   const [nicknameMessage, setNicknameMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authCode, setAuthCode] = useState('');
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -50,7 +64,7 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
       return;
     }
     try {
-      const exists = await checkDuplicate('/user/email', form.email.trim());
+      const exists = await checkDuplicate(`/api/user/email-availability?emailID=${encodeURIComponent(form.email.trim())}`);
       setEmailChecked(!exists);
       setShowLoginPrompt(exists);
       setEmailMessage(exists ? '이미 가입된 이메일입니다.' : '사용 가능한 이메일입니다.');
@@ -67,7 +81,7 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
       return;
     }
     try {
-      const exists = await checkDuplicate('/user/nickname', form.nickname.trim());
+      const exists = await checkDuplicate(`/api/user/nickname-availability?nickname=${encodeURIComponent(form.nickname.trim())}`);
       setNicknameChecked(!exists);
       setNicknameMessage(exists ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.');
     } catch (requestError) {
@@ -95,11 +109,11 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch('/user/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name.trim() || null,
+          name: form.name.trim(),
           email: form.email.trim(),
           password: form.password,
           nickname: form.nickname.trim(),
@@ -120,9 +134,30 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
         }
         throw new Error(result.msg || result.message || '회원가입에 실패했습니다.');
       }
-      onSignupSuccess();
+      setStep(3);
+      setError('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
     } catch (requestError) {
       setError(requestError.message || '회원가입에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/email-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email.trim(), inputCode: authCode.trim() }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.msg || result.message || '이메일 인증에 실패했습니다.');
+      onSignupSuccess();
+    } catch (requestError) {
+      setError(requestError.message || '이메일 인증에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -140,6 +175,8 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
           <span className={step >= 1 ? 'active' : ''}>1 기본정보</span>
           <i />
           <span className={step >= 2 ? 'active' : ''}>2 선택정보</span>
+          <i />
+          <span className={step >= 3 ? 'active' : ''}>3 이메일 인증</span>
         </div>
 
         {step === 1 ? (
@@ -172,7 +209,7 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
             {error && <p className="signup-error" role="alert">{error}</p>}
             <button type="submit" className="signup-submit">다음</button>
           </form>
-        ) : (
+        ) : step === 2 ? (
           <form className="signup-form" onSubmit={handleSubmit}>
             <label htmlFor="signup-name">이름 <em>선택</em></label>
             <input id="signup-name" name="name" value={form.name} onChange={updateField} placeholder="이름을 입력하세요" />
@@ -194,6 +231,16 @@ export default function SignupPage({ onLoginClick, onBack, onSignupSuccess }) {
             <div className="signup-step-buttons">
               <button type="button" className="signup-previous" onClick={() => setStep(1)}>이전</button>
               <button type="submit" className="signup-submit" disabled={loading}>{loading ? '가입 중...' : '회원가입'}</button>
+            </div>
+          </form>
+        ) : (
+          <form className="signup-form" onSubmit={handleVerify}>
+            <label htmlFor="signup-auth-code">이메일 인증번호</label>
+            <input id="signup-auth-code" value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="이메일로 받은 인증번호를 입력하세요" required />
+            {error && <p className="signup-error" role="alert">{error}</p>}
+            <div className="signup-step-buttons">
+              <button type="button" className="signup-previous" onClick={() => setStep(2)}>이전</button>
+              <button type="submit" className="signup-submit" disabled={loading}>{loading ? '인증 중...' : '인증하고 가입 완료'}</button>
             </div>
           </form>
         )}
