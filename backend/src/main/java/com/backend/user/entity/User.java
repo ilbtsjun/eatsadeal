@@ -113,7 +113,7 @@ public class User {
     public void withdrawn(){
         this.userStatus = UserStatus.WITHDRAWN;
         this.email = "withdrawn_" + this.id + "@deleted.local";
-        this.nickname = "탈퇴한 사용자";
+        this.nickname = "탈퇴한 사용자_" + this.id;
         this.phoneNumber = null;
         this.password = null;
     }

@@ -11,6 +11,7 @@ import com.backend.favorite.repository.FavoriteRepository;
 import com.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +45,11 @@ public class FavoriteService {
                 .event(event)
                 .build();
 
-        favoriteRepository.save(favorite);
+        try {
+            favoriteRepository.save(favorite);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
     }
 
     @Transactional
