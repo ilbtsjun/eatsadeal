@@ -18,10 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -33,6 +35,7 @@ public class EventService {
     private final BrandRepository brandRepository;
     private final FavoriteRepository favoriteRepository;
     private final CurrentUserService currentUserService;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
     @CudLogging("이벤트 생성")
@@ -121,7 +124,7 @@ public class EventService {
         User user = currentUserService.getOptionalUser();
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        eventRepository.increaseViewCount(eventId);
+        increaseViewCount(eventId);
         return toDetailResponse(user, event);
     }
 
@@ -188,6 +191,22 @@ public class EventService {
         return Arrays.stream(EventCode.values())
                 .map(GetEventCodeListResponse::from)
                 .toList();
+    }
+
+    public boolean isFirstView(Long eventId, String ip) {
+        String key = "event:view:" + eventId + ":" + ip;
+
+        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(3));
+
+        return Boolean.TRUE.equals(result);
+    }
+
+
+    private void increaseViewCount(Long eventId){
+        String ip = currentUserService.getClientIp();
+        if (isFirstView(eventId, ip)) {
+            eventRepository.increaseViewCount(eventId);
+        }
     }
 
     private Pageable createPageable(String sort, int page, int size) {
