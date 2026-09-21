@@ -1,5 +1,7 @@
 package com.backend.crawler.target.hamburger;
 
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -84,7 +86,9 @@ public class Frankburger implements Crawler {
     @Override
     public List<CreateEvent> crawl() {
         List<CreateEvent> eventList = new ArrayList<>();
-        Long brandId = brandRepository.findByName(getName()).getId();
+        Long brandId = brandRepository.findByName(getName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
+                .getId();
 
         Set<String> seenIds = new HashSet<>();
 
