@@ -1,6 +1,8 @@
 package com.backend.crawler.target.chicken;
 
 import com.backend.brand.entity.Brand;
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -54,7 +56,9 @@ public class Goobne implements Crawler {
 
     private List<CreateEvent> fetchAll(String eventGb, boolean isOngoing) {
         List<CreateEvent> result = new ArrayList<>();
-        Brand brand = brandRepository.findByName(getName());
+        Long brandId = brandRepository.findByName(getName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
+                .getId();
         int pageNum = 1;
         int totalCnt = Integer.MAX_VALUE;
 
@@ -92,7 +96,7 @@ public class Goobne implements Crawler {
 
                 for (JsonNode node : brdList) {
                     try {
-                        result.add(toCreateEvent(node, isOngoing, brand));
+                        result.add(toCreateEvent(node, isOngoing, brandId));
                     } catch (Exception e) {
                         log.error("[굽네] 개별 항목 파싱 오류: {}", e.getMessage());
                     }
@@ -109,7 +113,7 @@ public class Goobne implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(JsonNode node, boolean isOngoing, Brand brand) {
+    private CreateEvent toCreateEvent(JsonNode node, boolean isOngoing, Long brandId) {
         String seq = node.get("seq").asText();
         String title = node.get("title").asText().trim();
         String linkUrl = DETAIL_URL_PREFIX + seq;
@@ -127,7 +131,7 @@ public class Goobne implements Crawler {
                 imgUrl,
                 startDate,
                 endDate,
-                brand.getId(),
+                brandId,
                 isOngoing,
                 null);
     }

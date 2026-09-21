@@ -1,5 +1,7 @@
 package com.backend.crawler.target.chicken;
 
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -145,6 +147,10 @@ public class KyoChonChicken implements Crawler {
         LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
         LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
 
+        Long brandId = brandRepository.findByName(getName())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
+                .getId();
+
         return new CreateEvent(
                 title,
                 null,
@@ -152,7 +158,7 @@ public class KyoChonChicken implements Crawler {
                 imgUrl,
                 startDate,
                 endDate,
-                brandRepository.findByName(getName()).getId(),
+                brandId,
                 isOngoing,
                 null);
     }

@@ -13,7 +13,6 @@ import com.backend.category.repository.CategoryRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -40,7 +39,7 @@ public class BrandService {
     public List<GetBrandListResponse> getBrandList() {
         return brandRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
                 .stream()
-                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getImg()))
+                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getImg(), brand.getIsActive()))
                 .toList();
     }
 
@@ -55,12 +54,16 @@ public class BrandService {
                 .url(request.url())
                 .img(request.img())
                 .build();
-        brandRepository.save(brand);
-        for(Long categoryId : request.categoryIds()){
-            Category category = categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-            brandCategoryService.addCategory(brand, category);
+        List<Category> categories = request.categoryIds().stream()
+                .distinct()
+                .map(id -> categoryRepository.findById(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND)))
+                .toList();
+        if(categories == null || categories.isEmpty()){
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "카테고리는 비어있을 수 없습니다.");
         }
+        brandRepository.save(brand);
+        categories.forEach(category -> brandCategoryService.addCategory(brand, category));
     }
 
     @Transactional(readOnly = true)
@@ -77,9 +80,15 @@ public class BrandService {
 
     @Transactional
     @CudLogging("브랜드 수정")
-    public void updateBrand(Long brandID, @Valid UpdateBrand request) {
+    public void updateBrand(Long brandID, UpdateBrand request) {
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (StringUtils.hasText(request.name()) && brandRepository.existsByNameAndIdNot(request.name(), brandID)) {
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
+        if (StringUtils.hasText(request.url()) && brandRepository.existsByUrlAndIdNot(request.url(), brandID)) {
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
 
         String name = StringUtils.hasText(request.name())
                 ? request.name()
@@ -91,26 +100,33 @@ public class BrandService {
                 ? request.img()
                 : brand.getImg();
 
-        brand.updateBrand(name, url, img);
+        List<Long> categoryIds = request.categoryIds();
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            Set<Long> requestIds = new HashSet<>(request.categoryIds());
+            List<BrandCategory> existingBrandCategories = brandCategoryRepository.findByBrand(brand);
 
-        Set<Long> requestIds = new HashSet<>(request.categoryIds());
-        List<BrandCategory> existingBrandCategories = brandCategoryRepository.findByBrand(brand);
+            Set<Long> existingIds = existingBrandCategories.stream()
+                    .map(bc -> bc.getCategory().getId())
+                    .collect(Collectors.toSet());
 
-        Set<Long> existingIds = existingBrandCategories.stream()
-                .map(bc -> bc.getCategory().getId())
-                .collect(Collectors.toSet());
+            existingBrandCategories.stream()
+                    .filter(bc -> !requestIds.contains(bc.getCategory().getId()))
+                    .forEach(bc -> brandCategoryService.deleteCategory(brand, bc.getCategory()));
 
-        existingBrandCategories.stream()
-                .filter(bc -> !requestIds.contains(bc.getCategory().getId()))
-                .forEach(bc -> brandCategoryService.deleteCategory(brand, bc.getCategory()));
-        List<Long> idsToAdd = requestIds.stream()
-                .filter(id -> !existingIds.contains(id))
-                .toList();
+            List<Long> idsToAdd = requestIds.stream()
+                    .filter(id -> !existingIds.contains(id))
+                    .toList();
 
-        if (!idsToAdd.isEmpty()) {
-            List<Category> categoriesToAdd = categoryRepository.findAllById(idsToAdd);
-            categoriesToAdd.forEach(category -> brandCategoryService.addCategory(brand, category));
+            if (!idsToAdd.isEmpty()) {
+                List<Category> categoriesToAdd = categoryRepository.findAllById(idsToAdd);
+                if (categoriesToAdd.size() != idsToAdd.size()) {
+                    throw new BusinessException(ErrorCode.NOT_FOUND);
+                }
+                categoriesToAdd.forEach(category -> brandCategoryService.addCategory(brand, category));
+            }
         }
+
+        brand.updateBrand(name, url, img);
     }
 
     @Transactional
@@ -118,11 +134,14 @@ public class BrandService {
     public void deleteBrand(Long brandID){
         Brand brand = brandRepository.findById(brandID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        brand.deactive();
+    }
 
-        List<BrandCategory> brandCategories = brandCategoryRepository.findByBrand(brand);
-        brandCategories.stream()
-                .forEach(bc -> brandCategoryService.deleteCategory(brand, bc.getCategory()));
-
-        brandRepository.delete(brand);
+    @Transactional
+    @CudLogging("브랜드 활성화")
+    public void activeBrand(Long brandID){
+        Brand brand = brandRepository.findById(brandID)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        brand.active();
     }
 }
