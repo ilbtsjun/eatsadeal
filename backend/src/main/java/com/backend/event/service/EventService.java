@@ -196,7 +196,13 @@ public class EventService {
     public boolean isFirstView(Long eventId, String ip) {
         String key = "event:view:" + eventId + ":" + ip;
 
-        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(3));
+        Boolean result = false;
+
+        try {
+            result = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(3));
+        } catch (Exception e) {
+            log.warn("Redis 장애 발생으로 조회수 증가를 처리하지 못했습니다: {}", e.getMessage());
+        }
 
         return Boolean.TRUE.equals(result);
     }
