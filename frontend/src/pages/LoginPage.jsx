@@ -1,6 +1,21 @@
 import { useState } from 'react';
 import './LoginPage.css';
 
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text.trim()) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      response.ok
+        ? '서버 응답을 읽을 수 없습니다.'
+        : `서버 요청에 실패했습니다. (HTTP ${response.status})`,
+    );
+  }
+}
+
 export default function LoginPage({ onLogin, onBack, onSignupClick }) {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
@@ -9,24 +24,36 @@ export default function LoginPage({ onLogin, onBack, onSignupClick }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
+
     try {
-      const response = await fetch('/user/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: id.trim(), password }),
+        body: JSON.stringify({ id: id.trim(), password }),
       });
-      const result = await response.json();
-      if (!response.ok || result.status !== '200' || !result.token) {
-        throw new Error(result.msg || '이메일 또는 비밀번호를 확인해주세요.');
+
+      const result = await readJsonResponse(response);
+
+      if (!response.ok || String(result.status) !== '200' || !result.token) {
+        throw new Error(
+          result.message || result.msg || '이메일 또는 비밀번호를 확인해주세요.',
+        );
       }
 
-      const userResponse = await fetch('/user/mypage', {
-        headers: { token: result.token },
+      const userResponse = await fetch('/api/user/me', {
+        headers: { Authorization: `Bearer ${result.token}` },
       });
-      if (!userResponse.ok) throw new Error('사용자 정보를 불러오지 못했습니다.');
-      const user = await userResponse.json();
+      const user = await readJsonResponse(userResponse);
+
+      if (!userResponse.ok) {
+        throw new Error(
+          user.message || user.msg || '사용자 정보를 불러오지 못했습니다.',
+        );
+      }
+
       onLogin({ ...user, token: result.token });
     } catch (requestError) {
+      console.error('로그인 요청 실패:', requestError);
       setError(requestError.message || '로그인에 실패했습니다.');
     }
   };

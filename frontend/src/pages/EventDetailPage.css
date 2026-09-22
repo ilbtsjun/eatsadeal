@@ -6,7 +6,12 @@
 .detail-image-box { position: relative; min-height: 310px; display: grid; place-items: center; overflow: hidden; background: #f1f2f6; font-size: 80px; }
 .detail-image { width: 100%; height: 100%; object-fit: cover; }
 .detail-emoji { display: block; }
-.detail-dday { position: absolute; top: 16px; right: 16px; padding: 6px 10px; border-radius: 6px; color: #fff; background: #ff4757; font-size: 12px; font-weight: 700; }
+.detail-dday { position: absolute; top: 16px; left: 16px; padding: 6px 10px; border-radius: 6px; color: #fff; background: #ff4757; font-size: 12px; font-weight: 700; }
+.detail-favorite { display: inline-flex; align-items: center; gap: 6px; position: absolute; top: 12px; right: 16px; z-index: 2; padding: 7px 11px; border: 0; border-radius: 18px; color: #ff4757; background: rgba(255,255,255,.94); cursor: pointer; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,.14); }
+.detail-favorite:hover, .detail-favorite.is-favorite { color: #fff; background: #ff4757; }
+.detail-favorite .favorite-icon { width: 18px; height: 18px; fill: transparent; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.detail-favorite.is-favorite .favorite-icon { fill: currentColor; }
+.favorite-error { margin: 12px 0 0; color: #e84118; font-size: 13px; }
 .detail-content { padding: 34px; }
 .detail-brand { color: #747d8c; font-size: 14px; font-weight: 700; }
 .detail-content h1 { margin: 10px 0 18px; color: #2f3542; font-size: 28px; line-height: 1.35; }

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import './Header.css';
 
-export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onOpenAdminPage }) {
+export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onOpenFavorites, onOpenAdminPage, searchKeyword = '', onSearch }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [searchText, setSearchText] = useState(searchKeyword);
   const userMenuRef = useRef(null);
 
   useEffect(() => {
@@ -12,6 +13,13 @@ export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onO
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
+
+  useEffect(() => setSearchText(searchKeyword), [searchKeyword]);
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    onSearch?.(searchText.trim());
+  };
 
   const handleLogout = () => {
     setIsUserMenuOpen(false);
@@ -26,10 +34,12 @@ export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onO
 
       <form
         className="header-search"
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={handleSearchSubmit}
       >
         <input
           type="search"
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
           placeholder="브랜드나 메뉴명을 검색해보세요 (예: 버거킹, 치킨)"
         />
         <button type="submit">검색</button>
@@ -56,8 +66,8 @@ export default function Header({ user, onLoginClick, onLogout, onOpenMyPage, onO
                 <div className="user-dropdown-name">
                   {user.role === 'ADMIN' ? '관리자' : user.nickname}
                 </div>
-                <button type="button" onClick={() => {}}>
-                  즐겨찾기
+                <button type="button" onClick={() => { setIsUserMenuOpen(false); onOpenFavorites?.(); }}>
+                  찜한 목록
                 </button>
                 <button type="button" onClick={() => onOpenMyPage?.()}>
                   마이페이지
