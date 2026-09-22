@@ -1,0 +1,274 @@
+package com.backend.event.service;
+
+import com.backend.auth.service.CurrentUserService;
+import com.backend.common.error.BusinessException;
+import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
+import com.backend.event.dto.EventCode;
+import com.backend.event.dto.*;
+import com.backend.brand.entity.Brand;
+import com.backend.event.entity.Event;
+import com.backend.event.repository.EventRepository;
+import com.backend.favorite.repository.FavoriteRepository;
+import com.backend.brand.repository.BrandRepository;
+import com.backend.user.entity.User;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EventService {
+    private final EventRepository eventRepository;
+    private final BrandRepository brandRepository;
+    private final FavoriteRepository favoriteRepository;
+    private final CurrentUserService currentUserService;
+    private final StringRedisTemplate redisTemplate;
+
+    @Transactional
+    @CudLogging("이벤트 생성")
+    public void createEvent(CreateEvent request){
+        validateDateRange(request.startDate(), request.endDate());
+        if(eventRepository.existsByUrl(request.url())){
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
+        Brand brand = brandRepository.findById(request.brandId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        Event event = Event.builder()
+                .title(request.title())
+                .description(request.description())
+                .url(request.url())
+                .img(request.img())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
+                .brand(brand)
+                .isActive(request.isActive())
+                .eventCodes(request.eventCodes())
+                .build();
+        eventRepository.save(event);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 생성(크롤러)")
+    public void upsertCrawledEvent(CreateEvent request) {
+        validateDateRange(request.startDate(), request.endDate());
+
+        Optional<Event> optionalEvent = eventRepository.findByUrl(request.url());
+
+        if (optionalEvent.isPresent()) {
+            Event event = optionalEvent.get();
+
+            event.update(
+                    request.title(),
+                    request.description(),
+                    request.url(),
+                    request.img(),
+                    request.startDate(),
+                    request.endDate(),
+                    request.isActive()
+            );
+
+            return;
+        }
+
+        Brand brand = brandRepository.findById(request.brandId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        Event event = Event.builder()
+                .title(request.title())
+                .description(request.description())
+                .url(request.url())
+                .img(request.img())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
+                .brand(brand)
+                .isActive(request.isActive())
+                .eventCodes(request.eventCodes())
+                .build();
+
+        eventRepository.save(event);
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
+        Pageable pageable = createPageable(request.sort(), request.page(), request.size());
+        String normalizedKeyword = StringUtils.hasText(request.keyword())
+                        ? request.keyword().trim()
+                        : null;
+        Page<Event> events = eventRepository.searchEvents(
+                request.brandId(),
+                request.categoryId(),
+                request.eventCode(),
+                normalizedKeyword,
+                LocalDateTime.now(),
+                pageable
+        );
+        return events.map(this::toListResponse);
+    }
+
+    @Transactional
+    public GetEventResponse getEvent(Long eventId) {
+        User user = currentUserService.getOptionalUser();
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        increaseViewCount(eventId);
+        return toDetailResponse(user, event);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 수정")
+    public void updateEvent(Long eventId, UpdateEvent request){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        if (StringUtils.hasText(request.url()) && eventRepository.existsByUrlAndIdNot(request.url(), eventId)) {
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
+
+        String newTitle = StringUtils.hasText(request.title())
+                ? request.title()
+                : event.getTitle();
+        String newDescription = StringUtils.hasText(request.description())
+                ? request.description()
+                : event.getDescription();
+        String newUrl = StringUtils.hasText(request.url())
+                ? request.url()
+                : event.getUrl();
+        String newImg = StringUtils.hasText(request.img())
+                ? request.img()
+                : event.getImg();
+        LocalDateTime newStartDate = request.startDate() == null
+                ? event.getStartDate()
+                : request.startDate();
+        LocalDateTime newEndDate = request.endDate() == null
+                ? event.getEndDate()
+                : request.endDate();
+        Boolean newIsActive = request.isActive() == null
+                ? event.getIsActive()
+                : request.isActive();
+
+        validateDateRange(newStartDate, newEndDate);
+
+        event.update(newTitle, newDescription, newUrl, newImg, newStartDate, newEndDate, newIsActive);
+
+        if (request.eventCodes() != null) {
+            Set<EventCode> requestedCodes = request.eventCodes();
+
+            Set<EventCode> codesToAdd = new HashSet<>(requestedCodes);
+            codesToAdd.removeAll(event.getEventCodes());
+
+            Set<EventCode> codesToRemove = new HashSet<>(event.getEventCodes());
+            codesToRemove.removeAll(requestedCodes);
+
+            codesToAdd.forEach(event::addEventCode);
+            codesToRemove.forEach(event::removeEventCode);
+        }
+    }
+
+    @Transactional
+    @CudLogging("이벤트 비활성화")
+    public void deactivateEvent(Long eventId){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        event.deactivate();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GetEventCodeListResponse> getEventCodes(){
+        return Arrays.stream(EventCode.values())
+                .map(GetEventCodeListResponse::from)
+                .toList();
+    }
+
+    public boolean isFirstView(Long eventId, String ip) {
+        String key = "event:view:" + eventId + ":" + ip;
+
+        Boolean result = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(3));
+
+        return Boolean.TRUE.equals(result);
+    }
+
+
+    private void increaseViewCount(Long eventId){
+        String ip = currentUserService.getClientIp();
+        if (isFirstView(eventId, ip)) {
+            eventRepository.increaseViewCount(eventId);
+        }
+    }
+
+    private Pageable createPageable(String sort, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        Sort sortCondition = switch (sort == null ? "latest" : sort) {
+            case "popular" -> Sort.by(Sort.Order.desc("viewCount"), Sort.Order.desc("id"));
+            case "endingSoon" -> Sort.by(Sort.Order.asc("endDate"), Sort.Order.desc("id"));
+            case "oldest" -> Sort.by(Sort.Order.asc("startDate"), Sort.Order.asc("id"));
+            default -> Sort.by(Sort.Order.desc("startDate"), Sort.Order.desc("id"));
+        };
+        return PageRequest.of(safePage, safeSize, sortCondition);
+    }
+
+    private GetEventListResponse toListResponse(Event event) {
+        Brand brand = event.getBrand();
+        return new GetEventListResponse(
+                event.getId(),
+                event.getTitle(),
+                event.getDescription(),
+                event.getUrl(),
+                event.getImg(),
+                event.getStartDate(),
+                event.getEndDate(),
+                event.getViewCount(),
+                event.getIsActive(),
+                brand.getId(),
+                brand.getName(),
+                event.getEventCodes()
+        );
+    }
+
+    private GetEventResponse toDetailResponse(User user, Event event) {
+        Brand brand = event.getBrand();
+        boolean isFavorite = false;
+        if (user != null) {
+            isFavorite = favoriteRepository.findByUserAndEvent(user, event).isPresent();
+        }
+        return new GetEventResponse(
+                event.getId(),
+                event.getTitle(),
+                event.getDescription(),
+                event.getUrl(),
+                event.getImg(),
+                event.getStartDate(),
+                event.getEndDate(),
+                event.getViewCount(),
+                event.getIsActive(),
+                brand.getId(),
+                brand.getName(),
+                brand.getImg(),
+                event.getEventCodes(),
+                isFavorite
+        );
+    }
+
+    private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        if (startDate == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "시작일은 필수입니다.");
+        }
+        if (endDate != null && endDate.isBefore(startDate)) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "종료일은 시작일보다 빠를 수 없습니다.");
+        }
+    }
+}

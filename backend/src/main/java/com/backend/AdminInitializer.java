@@ -1,16 +1,19 @@
 package com.backend;
 
-import com.backend.entity.User;
-import com.backend.config.UserRole;
-import com.backend.repository.UserRepository;
+import com.backend.common.dto.UserRole;
+import com.backend.user.dto.UserGender;
+import com.backend.user.entity.User;
+import com.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
 @Component
+@Order(1)
 @RequiredArgsConstructor
 public class AdminInitializer implements CommandLineRunner {
 
@@ -18,7 +21,7 @@ public class AdminInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         String adminEmail = "admin@example.com";
 
         if (!userRepository.existsByEmail(adminEmail)) {
@@ -28,7 +31,7 @@ public class AdminInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode("temp"))
                     .nickname("ADMIN")
                     .phoneNumber("010-0000-0000")
-                    .gender(true)
+                    .gender(UserGender.MALE)
                     .birth(LocalDate.of(1990, 1, 1))
                     .build();
             admin.updateRole(UserRole.ADMIN);

@@ -1,0 +1,54 @@
+package com.backend.brand.entity;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Entity
+@Table(name = "brand")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Brand {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    @NotBlank
+    private String name;
+
+    @Column(unique = true)
+    @NotBlank
+    private String url;
+
+    @Column
+    @NotBlank
+    private String img;
+
+    @Column(nullable = false)
+    private Boolean isActive = true;
+
+    @Builder
+    public Brand(String name, String url, String img){
+        this.name = name;
+        this.url = url;
+        this.img = img;
+    }
+
+    public void updateBrand(String name, String url, String img){
+        this.name = name;
+        this.url = url;
+        this.img = img;
+    }
+
+    public void deactive(){
+        this.isActive = false;
+    }
+
+    public void active(){
+        this.isActive = true;
+    }
+}

@@ -109,6 +109,18 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
     }
   };
 
+  const deleteComment = async (comment) => {
+    const commentId = getCommentId(comment);
+    if (!commentId || !window.confirm('이 댓글을 삭제하시겠습니까?')) return;
+    try {
+      await commentRequest(`/comment/${commentId}`, { method: 'DELETE' });
+      setComments((current) => current.filter((item) => getCommentId(item) !== commentId));
+      setCommentError('');
+    } catch (error) {
+      setCommentError(error.message);
+    }
+  };
+
   return (
     <div className="event-detail-page">
       <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} />

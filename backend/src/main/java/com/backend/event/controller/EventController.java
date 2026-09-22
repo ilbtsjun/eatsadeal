@@ -1,0 +1,135 @@
+package com.backend.event.controller;
+
+import com.backend.comment.dto.CommentResponse;
+import com.backend.event.dto.CreateComment;
+import com.backend.comment.service.CommentService;
+import com.backend.common.dto.MsgResponse;
+import com.backend.event.dto.*;
+import com.backend.event.service.EventService;
+import com.backend.favorite.service.FavoriteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequiredArgsConstructor
+@Tag(name = "Event", description = "이벤트 API")
+@RequestMapping("/api/events")
+public class EventController {
+    private final EventService eventService;
+    private final CommentService commentService;
+    private final FavoriteService favoriteService;
+
+    @Operation(
+            summary = "이벤트 검색",
+            description = "이벤트를 검색합니다."
+    )
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public Page<GetEventListResponse> searchEvents(@ModelAttribute EventSearchRequest request) {
+        return eventService.searchEvents(request);
+    }
+
+    @Operation(
+            summary = "이벤트 수동 생성",
+            description = "이벤트를 수동으로 만듭니다."
+    )
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse createEvent(@Valid @RequestBody CreateEvent createEvent) {
+        eventService.createEvent(createEvent);
+        return new MsgResponse("새 이벤트가 생성되었습니다.","201");
+    }
+
+    @Operation(
+            summary = "이벤트 조회",
+            description = "이벤트를 조회합니다."
+    )
+    @GetMapping("/{eventId}")
+    public GetEventResponse getEvent(@PathVariable Long eventId) {
+        return eventService.getEvent(eventId);
+    }
+
+    @Operation(
+            summary = "이벤트 수정",
+            description = "이벤트를 수정합니다."
+    )
+    @PatchMapping("/{eventID}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse updateEvent(@PathVariable Long eventID,
+                                   @Valid @RequestBody UpdateEvent request){
+        eventService.updateEvent(eventID, request);
+        return new MsgResponse("수정이 성공적으로 완료되었습니다.","200");
+    }
+
+    @Operation(
+            summary = "이벤트 종료",
+            description = "이벤트를 종료합니다."
+    )
+    @DeleteMapping("/{eventId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse deactivateEvent(@PathVariable Long eventId) {
+        eventService.deactivateEvent(eventId);
+        return new MsgResponse("이벤트가 비활성화되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "이벤트 코드 목록 조회",
+            description = "이벤트 코드 목록을 반환합니다.."
+    )
+    @GetMapping("/event/codes")
+    public List<GetEventCodeListResponse> getEventCodes(){
+        return eventService.getEventCodes();
+    }
+
+    @Operation(
+            summary = "댓글 목록 조회",
+            description = "이벤트의 댓글 목록을 조회합니다."
+    )
+    @GetMapping("/{eventId}/comments")
+    public List<CommentResponse> getEventCommentList(@PathVariable Long eventId){
+        return commentService.getEventCommentList(eventId);
+    }
+
+    @Operation(
+            summary = "댓글 생성",
+            description = "댓글을 만듭니다."
+    )
+    @PostMapping("/{eventId}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    public CommentResponse createComment(@PathVariable Long eventId,
+                                         @Valid @RequestBody CreateComment request){
+        return commentService.createComment(eventId, request);
+    }
+
+    @Operation(
+            summary = "즐겨찾기를 추가합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 이벤트 ID로 추가합니다."
+    )
+    @PostMapping("/{eventId}/favorite")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse addFavorite(@PathVariable Long eventId) {
+        favoriteService.addFavorite(eventId);
+        return new MsgResponse("즐겨찾기가 추가되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "즐겨찾기를 삭제합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 이벤트 ID로 삭제합니다."
+    )
+    @DeleteMapping("/{eventId}/favorite")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse deleteFavorite(@PathVariable Long eventId) {
+        favoriteService.deleteFavorite(eventId);
+        return new MsgResponse("즐겨찾기가 삭제되었습니다.", "200");
+    }
+}
