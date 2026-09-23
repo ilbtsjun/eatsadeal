@@ -7,13 +7,15 @@ import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class CrawlerController {
     private final EventService eventService;
 
@@ -35,7 +37,7 @@ public class CrawlerController {
     private final Momstouch momstouchCrawler;
     private final Frankburger frankburgerCrawler;
 
-    @GetMapping("/api/crawl")
+    @PostMapping("/api/crawl")
     @Scheduled(cron = "0 0 0/6 * * *")
     public void testCrawler(){
         chicken();
@@ -43,7 +45,8 @@ public class CrawlerController {
         hamburger();
     }
 
-    @GetMapping("/api/crawl/chicken")
+    @PostMapping("/api/crawl/chicken")
+
     public void chicken(){
         testBbqCrawler();
         testBhcCrawler();
@@ -52,7 +55,7 @@ public class CrawlerController {
         testGoobneCrawler();
     }
 
-    @GetMapping("/api/crawl/pizza")
+    @PostMapping("/api/crawl/pizza")
     public void pizza(){
         testDominosCrawler();
         testPapajohnsCrawler();
@@ -61,7 +64,7 @@ public class CrawlerController {
         testPizzaeschoolCrawler();
     }
 
-    @GetMapping("/api/crawl/hamburger")
+    @PostMapping("/api/crawl/hamburger")
     public void hamburger(){
         testBurgerkingCrawler();
         testLotteriaCrawler();
@@ -70,7 +73,7 @@ public class CrawlerController {
         testFrankburgerCrawler();
     }
 
-    @GetMapping("/api/crawl/bhc")
+    @PostMapping("/api/crawl/bhc")
     public List<CreateEvent> testBhcCrawler() {
         List<CreateEvent> list = bhcCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -79,7 +82,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/bbq")
+    @PostMapping("/api/crawl/bbq")
     public List<CreateEvent> testBbqCrawler() {
         List<CreateEvent> list = bbqCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -88,7 +91,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/kyochon")
+    @PostMapping("/api/crawl/kyochon")
     public List<CreateEvent> testKyochonCrawler() {
         List<CreateEvent> list = kyochonCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -97,7 +100,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/pelicana")
+    @PostMapping("/api/crawl/pelicana")
     public List<CreateEvent> testPelicanaCrawler() {
         List<CreateEvent> list = pelicanaCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -106,7 +109,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/goobne")
+    @PostMapping("/api/crawl/goobne")
     public List<CreateEvent> testGoobneCrawler() {
         List<CreateEvent> list = goobneCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -115,7 +118,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/dominos")
+    @PostMapping("/api/crawl/dominos")
     public List<CreateEvent> testDominosCrawler() {
         List<CreateEvent> list = dominosCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -124,7 +127,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/papajohns")
+    @PostMapping("/api/crawl/papajohns")
     public List<CreateEvent> testPapajohnsCrawler() {
         List<CreateEvent> list = papajohnsCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -133,7 +136,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/pizzamaru")
+    @PostMapping("/api/crawl/pizzamaru")
     public List<CreateEvent> testPizzamaruCrawler() {
         List<CreateEvent> list = pizzamaruCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -142,7 +145,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/pizzaetang")
+    @PostMapping("/api/crawl/pizzaetang")
     public List<CreateEvent> testPizzaetangCrawler() {
         List<CreateEvent> list = pizzaetangCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -151,7 +154,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/pizzaschool")
+    @PostMapping("/api/crawl/pizzaschool")
     public List<CreateEvent> testPizzaeschoolCrawler() {
         List<CreateEvent> list = pizzaschoolCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -160,7 +163,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/burgerking")
+    @PostMapping("/api/crawl/burgerking")
     public List<CreateEvent> testBurgerkingCrawler() {
         List<CreateEvent> list = burgerkingCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -169,7 +172,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/lotteria")
+    @PostMapping("/api/crawl/lotteria")
     public List<CreateEvent> testLotteriaCrawler() {
         List<CreateEvent> list = lotteriaCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -178,7 +181,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/kfc")
+    @PostMapping("/api/crawl/kfc")
     public List<CreateEvent> testKfcCrawler() {
         List<CreateEvent> list = kfcCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -187,7 +190,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/momstouch")
+    @PostMapping("/api/crawl/momstouch")
     public List<CreateEvent> testMomstouchCrawler() {
         List<CreateEvent> list = momstouchCrawler.crawl();
         for(CreateEvent createEvent : list){
@@ -196,7 +199,7 @@ public class CrawlerController {
         return list;
     }
 
-    @GetMapping("/api/crawl/frankburger")
+    @PostMapping("/api/crawl/frankburger")
     public List<CreateEvent> testFrankburgerCrawler() {
         List<CreateEvent> list = frankburgerCrawler.crawl();
         for(CreateEvent createEvent : list){
