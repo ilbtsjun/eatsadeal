@@ -4,42 +4,46 @@ import CategoryFilter from '../components/CategoryFilter';
 import HighlightBanner from '../components/HighlightBanner';
 import EventCardList from '../components/EventCardList';
 import FloatingButton from '../components/FloatingButton';
+import SiteFooter from '../components/SiteFooter';
 
-export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, onOpenAdminPage, onOpenMyPage, onOpenFavorites, searchKeyword = '', onSearch }) {
+export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, onOpenAdminPage,
+                                     onOpenMyPage, onOpenFavorites, onOpenTerms, onOpenPrivacy,
+                                     searchKeyword = '', onSearch }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSort, setActiveSort] = useState('latest');
 
   return (
-    <div className="main-page">
-      <Header
-        user={user}
-        onLoginClick={onLoginClick}
-        onLogout={onLogout}
-        onOpenMyPage={onOpenMyPage}
-        onOpenFavorites={onOpenFavorites}
-        onOpenAdminPage={onOpenAdminPage}
-        searchKeyword={searchKeyword}
-        onSearch={onSearch}
-      />
+      <div className="main-page">
+          <Header
+              user={user}
+              onLoginClick={onLoginClick}
+              onLogout={onLogout}
+              onOpenMyPage={onOpenMyPage}
+              onOpenFavorites={onOpenFavorites}
+              onOpenAdminPage={onOpenAdminPage}
+              searchKeyword={searchKeyword}
+              onSearch={onSearch}
+          />
 
-      <CategoryFilter
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
-        activeSort={activeSort}
-        onSortChange={setActiveSort}
-      />
+          <CategoryFilter
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            activeSort={activeSort}
+            onSortChange={setActiveSort}
+          />
 
-      <HighlightBanner />
+          <HighlightBanner />
 
-      <EventCardList
-        activeCategory={activeCategory}
-        activeSort={activeSort}
-        searchKeyword={searchKeyword}
-        onSelectEvent={onSelectEvent}
-        user={user}
-      />
+          <EventCardList
+            activeCategory={activeCategory}
+            activeSort={activeSort}
+            searchKeyword={searchKeyword}
+            onSelectEvent={onSelectEvent}
+            user={user}
+          />
 
-      <FloatingButton />
-    </div>
+          <FloatingButton />
+          <SiteFooter onOpenTerms={onOpenTerms} onOpenPrivacy={onOpenPrivacy} />
+        </div>
   );
 }

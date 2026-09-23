@@ -7,6 +7,8 @@ import SignupPage from './pages/SignupPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import MyPage from './pages/MyPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
+import TermsPage from './pages/TermsPage.jsx';
+import PrivacyPage from './pages/PrivacyPage.jsx';
 
 const SAVED_USER_KEY = 'eats-a-deal-user';
 const TOKEN_KEY = 'eats-a-deal-token';
@@ -25,6 +27,7 @@ function App() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [myPageTarget, setMyPageTarget] = useState('profile');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [legalPage, setLegalPage] = useState(null);
 
   const applyView = (view, event = null, nextSearchKeyword = '') => {
     setShowLogin(view === 'login');
@@ -35,6 +38,15 @@ function App() {
     if (view === 'home') setSearchKeyword(nextSearchKeyword || '');
     if (view === 'event' && event) setSelectedEvent(event);
     if (view !== 'event') setSelectedEvent(null);
+    if (view !== 'terms' && view !== 'privacy') setLegalPage(null);
+  };
+  const openLegalPage = (page) => {
+    window.history.pushState({ view: page }, '', window.location.href);
+    setLegalPage(page);
+  };
+  const closeLegalPage = () => {
+    window.history.pushState({ view: 'home' }, '', window.location.href);
+    setLegalPage(null);
   };
   const navigateTo = (view, action) => {
     window.history.pushState({ view }, '', window.location.href);
@@ -42,7 +54,11 @@ function App() {
   };
   useEffect(() => {
     window.history.replaceState({ view: 'home', searchKeyword: '' }, '', window.location.href);
-    const handlePopState = (event) => applyView(event.state?.view || 'home', event.state?.event || null, event.state?.searchKeyword || '');
+    const handlePopState = (event) => {
+      const view = event.state?.view || 'home';
+      if (view === 'terms' || view === 'privacy') setLegalPage(view);
+      else applyView(view, event.state?.event || null, event.state?.searchKeyword || '');
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -79,15 +95,17 @@ function App() {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   };
+  if (legalPage === 'terms') return <TermsPage onBack={closeLegalPage} onPrivacy={() => openLegalPage('privacy')} />;
+  if (legalPage === 'privacy') return <PrivacyPage onBack={closeLegalPage} onTerms={() => openLegalPage('terms')} />;
   if (showLogin) return <LoginPage onLogin={handleLogin} onBack={() => navigateTo('home', () => setShowLogin(false))} onSignupClick={() => navigateTo('signup', () => { setShowLogin(false); setShowSignup(true); })} />;
 
   if (showSignup) {
     return (
-      <SignupPage
-        onBack={() => navigateTo('home', () => setShowSignup(false))}
-        onLoginClick={() => navigateTo('login', () => { setShowSignup(false); setShowLogin(true); })}
-        onSignupSuccess={() => { setShowSignup(false); setShowLogin(true); }}
-      />
+        <SignupPage
+            onBack={() => navigateTo('home', () => setShowSignup(false))}
+            onLoginClick={() => navigateTo('login', () => { setShowSignup(false); setShowLogin(true); })}
+            onSignupSuccess={() => { setShowSignup(false); setShowLogin(true); }}
+        />
     );
   }
 
@@ -105,31 +123,33 @@ function App() {
 
   if (selectedEvent) {
     return (
-      <EventDetailPage
-        event={selectedEvent}
-        user={user}
-        onLoginClick={() => navigateTo('login', () => setShowLogin(true))}
-        onLogout={handleLogout}
-        onBack={() => navigateTo('home', () => setSelectedEvent(null))}
-        onOpenMyPage={() => openMyPage('profile')}
-        onOpenFavorites={openFavorites}
-        onOpenAdminPage={() => navigateTo('admin', () => { setSelectedEvent(null); setShowAdminPage(true); })}
-      />
+        <EventDetailPage
+            event={selectedEvent}
+            user={user}
+            onLoginClick={() => navigateTo('login', () => setShowLogin(true))}
+            onLogout={handleLogout}
+            onBack={() => navigateTo('home', () => setSelectedEvent(null))}
+            onOpenMyPage={() => openMyPage('profile')}
+            onOpenFavorites={openFavorites}
+            onOpenAdminPage={() => navigateTo('admin', () => { setSelectedEvent(null); setShowAdminPage(true); })}
+        />
     );
   }
 
   return (
-    <MainPage
-      user={user}
-      onLoginClick={() => navigateTo('login', () => setShowLogin(true))}
-      onLogout={handleLogout}
-      onSelectEvent={(event) => { window.history.pushState({ view: 'event', event }, '', window.location.href); setSelectedEvent(event); }}
-      onOpenAdminPage={() => navigateTo('admin', () => setShowAdminPage(true))}
-      onOpenMyPage={() => openMyPage('profile')}
-      searchKeyword={searchKeyword}
-      onSearch={handleSearch}
-      onOpenFavorites={openFavorites}
-    />
+      <MainPage
+          user={user}
+          onLoginClick={() => navigateTo('login', () => setShowLogin(true))}
+          onLogout={handleLogout}
+          onSelectEvent={(event) => { window.history.pushState({ view: 'event', event }, '', window.location.href); setSelectedEvent(event); }}
+          onOpenAdminPage={() => navigateTo('admin', () => setShowAdminPage(true))}
+          onOpenMyPage={() => openMyPage('profile')}
+          searchKeyword={searchKeyword}
+          onSearch={handleSearch}
+          onOpenFavorites={openFavorites}
+          onOpenTerms={() => openLegalPage('terms')}
+          onOpenPrivacy={() => openLegalPage('privacy')}
+      />
   );
 }
 export default App;
