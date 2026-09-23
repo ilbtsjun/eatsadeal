@@ -3,6 +3,7 @@ package com.backend.favorite.service;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.entity.Favorite;
@@ -10,6 +11,7 @@ import com.backend.favorite.repository.FavoriteRepository;
 import com.backend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class FavoriteService {
     private final CurrentUserService currentUserService;
 
     @Transactional
+    @CudLogging("즐겨찾기 추가")
     public void addFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
@@ -42,10 +45,15 @@ public class FavoriteService {
                 .event(event)
                 .build();
 
-        favoriteRepository.save(favorite);
+        try {
+            favoriteRepository.save(favorite);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.ALREADY_EXISTS);
+        }
     }
 
     @Transactional
+    @CudLogging("즐겨찾기 삭제")
     public void deleteFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
@@ -54,7 +62,7 @@ public class FavoriteService {
 
         Optional<Favorite> favoriteOptional = favoriteRepository.findByUserAndEvent(user, event);
 
-        if (!favoriteOptional.isPresent()) {
+        if (favoriteOptional.isEmpty()) {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
 

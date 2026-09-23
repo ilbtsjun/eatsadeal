@@ -46,7 +46,7 @@
 .card-dday {
     position: absolute;
     top: 10px;
-    right: 10px;
+    left: 10px;
     background-color: #ff4757;
     color: white;
     padding: 3px 8px;
@@ -57,6 +57,61 @@
 
 .card-info {
     padding: 15px;
+}
+
+.card-favorite {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #ff4757;
+    background: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.card-favorite:hover,
+.card-favorite.is-favorite {
+    color: #e84118;
+    background: #fff;
+}
+
+.favorite-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+    margin: auto;
+    fill: transparent;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+}
+
+.card-favorite.is-favorite .favorite-icon,
+.card-favorite.is-favorite .favorite-icon {
+    fill: currentColor;
+}
+
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.card-views {
+    flex-shrink: 0;
+    color: #747d8c;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .card-brand {
@@ -75,6 +130,10 @@
 }
 
 .card-discount {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 16px;
     font-weight: bold;
     color: #ff4757;
@@ -176,7 +235,7 @@
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.event-card-wrapper .card-info {
+.event-card-wrapper.card-info {
     flex: 1;
 }
 
@@ -194,4 +253,90 @@
     border: 1px solid #eaeaea;
     font: inherit;
     text-align: left;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 28px;
+}
+.pagination button {
+    min-width: 72px;
+    padding: 9px 14px;
+    border: 1px solid #dfe4ea;
+    border-radius: 7px;
+    color: #2f3542;
+    background: #fff;
+    cursor: pointer;
+}
+.pagination button:hover:not(:disabled) {
+    border-color: #ff4757;
+    color: #ff4757;
+}
+.pagination button:disabled {
+    color: #b2bec3;
+    background: #f1f2f6;
+    cursor: not-allowed;
+}
+.pagination span {
+    color: #57606f;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.page-jump-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #57606f;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.page-jump-form input {
+    width: 54px;
+    height: 34px;
+    padding: 0 6px;
+    border: 1px solid #dfe4ea;
+    border-radius: 7px;
+    color: #2f3542;
+    background: #fff;
+    font: inherit;
+    text-align: center;
+}
+
+.page-jump-form input:focus {
+    outline: 2px solid rgba(255, 71, 87, 0.25);
+    border-color: #ff4757;
+}
+
+.page-jump-form button {
+    min-width: 48px;
+    padding: 8px 10px;
+    border: 1px solid #ff4757;
+    border-radius: 7px;
+    color: #fff;
+    background: #ff4757;
+    cursor: pointer;
+    font: inherit;
+}
+
+.page-jump-form button:disabled {
+    border-color: #dfe4ea;
+    color: #b2bec3;
+    background: #f1f2f6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+    .pagination {
+        gap: 8px;
+    }
+
+        .page-jump-form {
+        gap: 4px;
+        font-size: 13px;
+    }
 }

@@ -1,10 +1,10 @@
 package com.backend.user.service;
 
-import com.backend.auth.dto.SignUp;
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
@@ -37,27 +37,14 @@ public class UserService {
         return userRepository.existsByNickname(nickname);
     }
 
-    @Transactional
-    public void createUser(SignUp request){
-        User user = User.builder()
-                .name(request.name().trim())
-                .email(request.email().trim())
-                .password(passwordEncoder.encode(request.password()))
-                .nickname(request.nickname().trim())
-                .phoneNumber(request.phoneNumber())
-                .gender(request.userGender())
-                .birth(request.birth())
-                .build();
-        userRepository.save(user);
-    }
-
-    @Transactional
+    @Transactional(readOnly = true)
     public GetMyPageResponse getMyPage() {
         User user = currentUserService.getRequiredUser();
         return GetMyPageResponse.from(user);
     }
 
     @Transactional
+    @CudLogging("내 정보 수정")
     public void updateMyPage(UpdateMyPage request) {
         User user = currentUserService.getRequiredUser();
 
@@ -74,7 +61,7 @@ public class UserService {
                 ? user.getBirth()
                 : request.birth();
 
-        if(!Pattern.matches("^01[016789]-?\\d{3,4}-?\\d{4}$", newPhoneNumber)){
+        if (newPhoneNumber != null && !Pattern.matches("^01[016789]-?\\d{3,4}-?\\d{4}$", newPhoneNumber)) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST, "전화번호 형식이 올바르지 않습니다.");
         }
         if (!newUserNickname.equals(user.getNickname()) && userRepository.existsByNickname(newUserNickname)) {
@@ -85,6 +72,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("비밀번호 수정")
     public void updatePassword(UpdatePassword request) {
         User user = currentUserService.getRequiredUser();
 
@@ -107,6 +95,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("회원 탈퇴")
     public void quit(QuitUser request){
         User user = currentUserService.getRequiredUser();
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -126,6 +115,7 @@ public class UserService {
     }
 
     @Transactional
+    @CudLogging("유저 정지 및 해제")
     public void suspensionUser(Long userID, SuspensionUser request) {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

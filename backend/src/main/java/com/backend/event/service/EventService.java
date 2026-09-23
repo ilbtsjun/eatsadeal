@@ -3,6 +3,7 @@ package com.backend.event.service;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -17,10 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -32,8 +35,10 @@ public class EventService {
     private final BrandRepository brandRepository;
     private final FavoriteRepository favoriteRepository;
     private final CurrentUserService currentUserService;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
+    @CudLogging("이벤트 생성")
     public void createEvent(CreateEvent request){
         validateDateRange(request.startDate(), request.endDate());
         if(eventRepository.existsByUrl(request.url())){
@@ -49,12 +54,14 @@ public class EventService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .brand(brand)
+                .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
         eventRepository.save(event);
     }
 
     @Transactional
+    @CudLogging("이벤트 생성(크롤러)")
     public void upsertCrawledEvent(CreateEvent request) {
         validateDateRange(request.startDate(), request.endDate());
 
@@ -70,7 +77,7 @@ public class EventService {
                     request.img(),
                     request.startDate(),
                     request.endDate(),
-                    true
+                    request.isActive()
             );
 
             return;
@@ -87,6 +94,7 @@ public class EventService {
                 .startDate(request.startDate())
                 .endDate(request.endDate())
                 .brand(brand)
+                .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
 
@@ -116,11 +124,12 @@ public class EventService {
         User user = currentUserService.getOptionalUser();
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        eventRepository.increaseViewCount(eventId);
+        increaseViewCount(eventId);
         return toDetailResponse(user, event);
     }
 
     @Transactional
+    @CudLogging("이벤트 수정")
     public void updateEvent(Long eventId, UpdateEvent request){
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -170,6 +179,7 @@ public class EventService {
     }
 
     @Transactional
+    @CudLogging("이벤트 비활성화")
     public void deactivateEvent(Long eventId){
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -181,6 +191,28 @@ public class EventService {
         return Arrays.stream(EventCode.values())
                 .map(GetEventCodeListResponse::from)
                 .toList();
+    }
+
+    public boolean isFirstView(Long eventId, String ip) {
+        String key = "event:view:" + eventId + ":" + ip;
+
+        Boolean result = false;
+
+        try {
+            result = redisTemplate.opsForValue().setIfAbsent(key, "1", Duration.ofHours(3));
+        } catch (Exception e) {
+            log.warn("Redis 장애 발생으로 조회수 증가를 처리하지 못했습니다: {}", e.getMessage());
+        }
+
+        return Boolean.TRUE.equals(result);
+    }
+
+
+    private void increaseViewCount(Long eventId){
+        String ip = currentUserService.getClientIp();
+        if (isFirstView(eventId, ip)) {
+            eventRepository.increaseViewCount(eventId);
+        }
     }
 
     private Pageable createPageable(String sort, int page, int size) {

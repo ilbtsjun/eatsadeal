@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-
 @Getter
 @Entity
 @Table(name = "brand")
@@ -30,20 +28,27 @@ public class Brand {
     @NotBlank
     private String img;
 
-    @Column
-    private LocalDate lastCrawl;
+    @Column(nullable = false)
+    private Boolean isActive = true;
 
     @Builder
     public Brand(String name, String url, String img){
         this.name = name;
         this.url = url;
         this.img = img;
-        this.lastCrawl = null;
     }
 
     public void updateBrand(String name, String url, String img){
         this.name = name;
         this.url = url;
         this.img = img;
+    }
+
+    public void deactive(){
+        this.isActive = false;
+    }
+
+    public void active(){
+        this.isActive = true;
     }
 }

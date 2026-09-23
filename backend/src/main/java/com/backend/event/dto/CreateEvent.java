@@ -1,7 +1,6 @@
 package com.backend.event.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -36,15 +35,10 @@ public record CreateEvent(
         @NotNull(message = "브랜드 ID는 필수입니다.")
         Long brandId,
 
+        @Schema(description = "현재 진행중", example = "true")
+        boolean isActive,
+
         @Schema(description = "이벤트 코드", example = "null")
         Set<EventCode> eventCodes
 ) {
-        @AssertTrue(message = "종료일은 시작일보다 빠를 수 없습니다.")
-        public boolean isDateRangeValid() {
-                if (startDate == null || endDate == null) {
-                        return true;
-                }
-
-                return !endDate.isBefore(startDate);
-        }
 }

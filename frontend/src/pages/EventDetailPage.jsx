@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiRequest } from '../api/client';
 import Header from '../components/Header';
 import './EventDetailPage.css';
 
@@ -32,74 +33,75 @@ function getEventCodeName(eventCodes) {
   return eventCodes.map((code) => names[code] || '이벤트').join(' · ');
 }
 
-const token = () => localStorage.getItem('eats-a-deal-token');
+async function commentRequest(url, options = {}) { return apiRequest(url, options); }
 
-async function commentRequest(url, options = {}) {
-  const response = await fetch(url, { ...options, headers: { token: token() || '', ...(options.headers || {}) } });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.msg || data.message || '댓글 요청에 실패했습니다.');
-  return data;
-}
+function getCommentId(comment) { return comment.commentId ?? comment.id; }
 
-function getCommentId(comment) {
-  return comment.id ?? comment.commentId;
-}
-
-function getSavedComments(eventId) {
-  try {
-    return JSON.parse(localStorage.getItem(`eats-a-deal-comments-${eventId}`)) || [];
-  } catch {
-    return [];
-  }
-}
-
-export default function EventDetailPage({ event, user, onLoginClick, onLogout, onBack }) {
+export default function EventDetailPage({ event, user, onLoginClick, onLogout, onBack, onOpenMyPage, onOpenFavorites, onOpenAdminPage }) {
   const [detailEvent, setDetailEvent] = useState(event);
-  const [comments, setComments] = useState(() => getSavedComments(event.id));
+  const [comments, setComments] = useState([]);
+  const [commentLoading, setCommentLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [commentError, setCommentError] = useState('');
+  const [isFavorite, setIsFavorite] = useState(Boolean(event.isFavorite));
+  const [favoriteError, setFavoriteError] = useState('');
 
   useEffect(() => {
-    fetch(`/event/${event.id}`)
-      .then((response) => {
-        if (!response.ok) throw new Error('이벤트 상세 정보를 불러오지 못했습니다.');
-        return response.json();
+    apiRequest(`/api/events/${event.id}`)
+      .then((data) => {
+        setDetailEvent({ ...data, brand: data.brandName });
+        setIsFavorite(Boolean(data.isFavorite));
       })
-      .then((data) => setDetailEvent({ ...data, brand: data.brandName }))
-      .catch(() => {
-        // 목록 응답으로도 화면을 표시할 수 있으므로 상세 조회 실패 시 기존 데이터를 유지합니다.
-      });
+      .catch((error) => setFavoriteError(error.message));
   }, [event.id]);
 
-  useEffect(() => {
-    commentRequest(`/comment/event/${event.id}`)
-      .then((data) => setComments(Array.isArray(data) ? data : (data.comments || data.content || [])))
-      .catch(() => {
-        // 댓글 조회 API가 일시적으로 실패하면 기존 임시 저장 댓글을 유지합니다.
+  const toggleFavorite = async () => {
+    if (!user) {
+      onLoginClick?.();
+      return;
+    }
+    const nextFavorite = !isFavorite;
+    try {
+      await apiRequest(`/api/events/${event.id}/favorite`, {
+        method: nextFavorite ? 'POST' : 'DELETE',
       });
+      setIsFavorite(nextFavorite);
+      setFavoriteError('');
+    } catch (error) {
+      setFavoriteError(error.message);
+    }
+  };
+
+  useEffect(() => {
+    setCommentLoading(true);
+    commentRequest(`/api/events/${event.id}/comments`)
+      .then((data) => setComments(Array.isArray(data) ? data : []))
+      .catch((error) => setCommentError(error.message))
+      .finally(() => setCommentLoading(false));
   }, [event.id]);
 
-  useEffect(() => {
-    localStorage.setItem(`eats-a-deal-comments-${event.id}`, JSON.stringify(comments));
-  }, [comments, event.id]);
-
-  const handleCommentSubmit = (submitEvent) => {
+  const handleCommentSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
     const text = commentText.trim();
     if (!user || !text) return;
-
-    setComments((current) => [
-      ...current,
-      { id: `${Date.now()}-${Math.random()}`, author: user.nickname || user.id, content: text, createdAt: new Date().toLocaleDateString('ko-KR') },
-    ]);
-    setCommentText('');
+    try {
+      const created = await commentRequest(`/api/events/${event.id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ content: text }),
+      });
+      setComments((current) => [...current, created]);
+      setCommentText('');
+      setCommentError('');
+    } catch (error) {
+      setCommentError(error.message);
+    }
   };
 
   const deleteComment = async (comment) => {
     const commentId = getCommentId(comment);
     if (!commentId || !window.confirm('이 댓글을 삭제하시겠습니까?')) return;
     try {
-      await commentRequest(`/comment/${commentId}`, { method: 'DELETE' });
+      await commentRequest(`/api/comments/${commentId}`, { method: 'DELETE' });
       setComments((current) => current.filter((item) => getCommentId(item) !== commentId));
       setCommentError('');
     } catch (error) {
@@ -109,7 +111,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
 
   return (
     <div className="event-detail-page">
-      <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} />
+      <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} />
 
       <main className="event-detail-container">
         <button type="button" className="detail-back-button" onClick={onBack}>
@@ -122,6 +124,15 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
               <img src={detailEvent.img} alt={detailEvent.title} className="detail-image" />
             ) : <span className="detail-emoji">🍗</span>}
             <span className="detail-dday">{calculateDDay(detailEvent.endDate)}</span>
+            <button
+              type="button"
+              className={`detail-favorite ${isFavorite ? 'is-favorite' : ''}`}
+              aria-label={isFavorite ? '찜 취소' : '찜하기'}
+              aria-pressed={isFavorite}
+              onClick={toggleFavorite}
+            >
+              <svg className="favorite-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" /></svg> 찜하기
+            </button>
           </div>
 
           <div className="detail-content">
@@ -130,7 +141,9 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
             <div className="detail-tags">
               <span>{getEventCodeName(detailEvent.eventCodes)}</span>
               <span>{formatDate(detailEvent.startDate)} ~ {formatDate(detailEvent.endDate)}</span>
+              <span>조회수 {Number(detailEvent.viewCount || 0).toLocaleString()}</span>
             </div>
+            {favoriteError && <p className="favorite-error" role="alert">{favoriteError}</p>}
             <p className="detail-description">
               {detailEvent.description || '이벤트에 대한 자세한 할인 내용을 확인해보세요.'}
             </p>
@@ -172,14 +185,14 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
           {commentError && <p className="comment-error" role="alert">{commentError}</p>}
 
           <div className="comment-list">
-            {comments.length === 0 ? (
+            {commentLoading ? <p className="no-comments">댓글을 불러오는 중입니다...</p> : comments.length === 0 ? (
               <p className="no-comments">첫 번째 댓글을 작성해보세요.</p>
             ) : comments.map((comment) => (
-              <div className="comment-item" key={comment.id}>
+              <div className="comment-item" key={getCommentId(comment)}>
                 <div className="comment-meta">
-                  <strong>{comment.author || comment.nickname || comment.userNickname}</strong>
+                  <strong>{comment.nickname || comment.author || comment.userNickname || '익명'}</strong>
                   <span>{comment.createdAt || comment.createdAtAt || comment.created_at}</span>
-                  {user && (comment.author === user.nickname || comment.author === user.id || comment.nickname === user.nickname || comment.userId === user.id) && <button type="button" className="comment-delete-button" onClick={() => deleteComment(comment)}>삭제</button>}
+                  {user && (comment.isMine || comment.userId === user.id || comment.nickname === user.nickname) && <button type="button" className="comment-delete-button" onClick={() => deleteComment(comment)}>삭제</button>}
                 </div>
                 <p>{comment.content || comment.comment}</p>
               </div>

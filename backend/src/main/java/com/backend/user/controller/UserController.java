@@ -26,7 +26,7 @@ public class UserController {
             description = "이미 존재하는 이메일인지 확인합니다."
     )
     @GetMapping("/email-availability")
-    public boolean isExistEmail(@PathVariable String emailID) {
+    public boolean isExistEmail(@RequestParam String emailID) {
         return userService.isExistEmail(emailID);
     }
 
@@ -35,7 +35,7 @@ public class UserController {
             description = "이미 존재하는 닉네임인지 확인합니다."
     )
     @GetMapping("/nickname-availability")
-    public boolean isExistNickname(@PathVariable String nickname) {
+    public boolean isExistNickname(@RequestParam String nickname) {
         return userService.isExistNickname(nickname);
     }
 

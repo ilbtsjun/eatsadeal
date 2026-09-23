@@ -1,5 +1,6 @@
 package com.backend.mail.service;
 
+import com.backend.common.log.CudLogging;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +10,6 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.util.Random;
 
 @Slf4j
 @Service
@@ -22,13 +21,14 @@ public class MailService {
     private String senderEmail;
 
     @Async
-    public void sendSignUpMessage(String sendEmail) {
-        String authCode = createCode();
-        String title = "회원가입 인증";
+    @CudLogging("회원가입 메일 송신")
+    public void sendSignUpMessage(String sendEmail, String code) {
+        String title = "[EatsADeal]회원가입 인증 테스트 메일입니다.";
         String body = "";
         body += "<h3>요청하신 인증 번호입니다.</h3>";
-        body += "<h1>" + authCode + "</h1>";
+        body += "<h1>" + code + "</h1>";
         body += "<h3>감사합니다.</h3>";
+        body += "인증의 유효기간은 10분입니다. 10분내로 인증하지 않을 시, 다시 회원가입을 진행해주시기 바랍니다.";
 
         try {
             MimeMessage message = createMail(sendEmail, title, body);
@@ -38,19 +38,22 @@ public class MailService {
         }
     }
 
-    public String createCode() {
-        Random random = new Random();
-        StringBuilder key = new StringBuilder();
+    @Async
+    @CudLogging("비밀번호 변경 메일 송신")
+    public void sendPasswordMessage(String sendEmail, String code) {
+        String title = "[EatsADeal]패스워드 인증 테스트 메일입니다.";
+        String body = "";
+        body += "<h3>요청하신 인증 번호입니다.</h3>";
+        body += "<h1>" + code + "</h1>";
+        body += "<h3>감사합니다.</h3>";
+        body += "인증의 유효기간은 10분입니다. 10분내로 인증하지 않을 시, 다시 비밀번호 찾기를 진행해주시기 바랍니다.";
 
-        for (int i = 0; i < 6; i++) {
-            int index = random.nextInt(2);
-
-            switch (index) {
-                case 0 -> key.append((char) (random.nextInt(26) + 65)); // 대문자
-                case 1 -> key.append(random.nextInt(10)); // 숫자
-            }
+        try {
+            MimeMessage message = createMail(sendEmail, title, body);
+            javaMailSender.send(message);
+        } catch (MailException | MessagingException e) {
+            log.error("메일 전송 실패 [Target: {}]: {}", sendEmail, e.getMessage());
         }
-        return key.toString();
     }
 
     public MimeMessage createMail(String mail, String title, String body) throws MessagingException {

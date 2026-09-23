@@ -4,6 +4,7 @@ import com.backend.auth.service.CurrentUserService;
 import com.backend.comment.entity.CommentStatus;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.log.CudLogging;
 import com.backend.event.dto.CreateComment;
 import com.backend.comment.dto.CommentResponse;
 import com.backend.comment.dto.UpdateComment;
@@ -42,6 +43,7 @@ public class CommentService {
     }
 
     @Transactional
+    @CudLogging("댓글 수정")
     public CommentResponse updateComment(Long commentId, UpdateComment request){
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -66,6 +68,7 @@ public class CommentService {
     }
 
     @Transactional
+    @CudLogging("댓글 삭제")
     public void deleteComment(Long commentId){
         Comment comment = commentRepository.findById(commentId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -84,6 +87,7 @@ public class CommentService {
     }
 
     @Transactional
+    @CudLogging("댓글 숨김")
     public void hideComment(Long commentId){
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -96,6 +100,7 @@ public class CommentService {
     }
 
     @Transactional
+    @CudLogging("댓글 숨김 해제")
     public void unhideComment(Long commentId){
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
@@ -126,6 +131,7 @@ public class CommentService {
     }
 
     @Transactional
+    @CudLogging("댓글 생성")
     public CommentResponse createComment(Long eventId, CreateComment request) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

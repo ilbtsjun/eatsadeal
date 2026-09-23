@@ -32,6 +32,9 @@ public record SignUp(
         UserGender userGender,
 
         @Schema(description = "유저 생일", example = "2000-01-01T00:00:00")
-        LocalDate birth
+        LocalDate birth,
+
+        @Schema(description = "인증 코드")
+        String authCode
 ) {
 }

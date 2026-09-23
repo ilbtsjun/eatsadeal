@@ -5,10 +5,9 @@ import HighlightBanner from '../components/HighlightBanner';
 import EventCardList from '../components/EventCardList';
 import FloatingButton from '../components/FloatingButton';
 
-export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, onOpenAdminPage, onOpenMyPage }) {
+export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, onOpenAdminPage, onOpenMyPage, onOpenFavorites, searchKeyword = '', onSearch }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSort, setActiveSort] = useState('latest');
-  const [isManaging, setIsManaging] = useState(false);
 
   return (
     <div className="main-page">
@@ -17,7 +16,10 @@ export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, 
         onLoginClick={onLoginClick}
         onLogout={onLogout}
         onOpenMyPage={onOpenMyPage}
+        onOpenFavorites={onOpenFavorites}
         onOpenAdminPage={onOpenAdminPage}
+        searchKeyword={searchKeyword}
+        onSearch={onSearch}
       />
 
       <CategoryFilter
@@ -32,12 +34,9 @@ export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, 
       <EventCardList
         activeCategory={activeCategory}
         activeSort={activeSort}
-        isAdmin={user?.role === 'ADMIN'}
-        isManaging={isManaging}
-        onToggleManage={() => setIsManaging((current) => !current)}
+        searchKeyword={searchKeyword}
         onSelectEvent={onSelectEvent}
-        onOpenAdminPage={onOpenAdminPage}
-        onOpenMyPage={onOpenMyPage}
+        user={user}
       />
 
       <FloatingButton />

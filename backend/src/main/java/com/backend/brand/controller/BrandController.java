@@ -77,4 +77,15 @@ public class BrandController {
         brandService.deleteBrand(brandID);
         return new MsgResponse("브랜드가 삭제되었습니다", "200");
     }
+
+    @Operation(
+            summary = "브랜드 활성화",
+            description = "선택한 브랜드의 정지 상태 해제"
+    )
+    @PatchMapping("/{brandID}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse activeBrand(@PathVariable Long brandID) {
+        brandService.activeBrand(brandID);
+        return new MsgResponse("브랜드가 활성화 되었습니다.", "200");
+    }
 }

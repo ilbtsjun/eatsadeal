@@ -56,9 +56,21 @@ public enum ErrorCode {
     ),
 
     LOGIN_FAILED(
-            HttpStatus.FORBIDDEN,
+            HttpStatus.UNAUTHORIZED,
             "AUTH-004",
             "로그인에 실패했습니다."
+    ),
+
+    TOO_MANY_REQUEST(
+            HttpStatus.TOO_MANY_REQUESTS,
+            "AUTH-005",
+            "너무 많은 요청을 했습니다."
+    ),
+
+    AUTH_FAILED(
+            HttpStatus.FORBIDDEN,
+            "AUTH-006",
+            "인증에 실패했습니다."
     ),
 
 
@@ -72,6 +84,12 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN,
             "USER-002",
                     "비밀번호가 일치하지 않습니다."
+    ),
+
+    CATEGORY_CANNOT_DELETE(
+            HttpStatus.FORBIDDEN,
+            "CATEGORY-001",
+            "브랜드에 카테고리가 있어 삭제할 수 없습니다."
     );
 
     private final HttpStatus status;
