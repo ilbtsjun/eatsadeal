@@ -50,10 +50,6 @@ public class AuthService {
         User user = userRepository.findByEmailOrNickname(request.id().trim())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.LOGIN_FAILED);
-        }
-
         user.releaseIfExpired(LocalDateTime.now());
 
         String message = "정상적으로 로그인 되었습니다.";
@@ -66,6 +62,10 @@ public class AuthService {
             case WITHDRAWN :
                 message = "이미 탈퇴한 사용자입니다.";
                 return new LoginResponse(message,"403",null);
+        }
+
+        if(!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
         user.login();
