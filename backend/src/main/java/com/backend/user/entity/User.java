@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 @Getter
 @Entity
@@ -111,9 +112,14 @@ public class User {
     }
 
     public void withdrawn(){
+        String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+
         this.userStatus = UserStatus.WITHDRAWN;
-        this.email = "withdrawn_" + this.id + "@deleted.local";
-        this.nickname = "탈퇴한 사용자";
+        this.name = null;
+        this.birth = null;
+        this.gender = UserGender.UNSPECIFIED;
+        this.email = "withdrawn_" + randomSuffix + "@deleted.local";
+        this.nickname = "탈퇴한 사용자_" + randomSuffix;
         this.phoneNumber = null;
         this.password = null;
     }
