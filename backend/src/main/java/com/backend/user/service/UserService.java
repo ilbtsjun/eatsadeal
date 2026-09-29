@@ -2,6 +2,7 @@ package com.backend.user.service;
 
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
+import com.backend.common.dto.UserRole;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
@@ -108,9 +109,19 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public GetMyPageResponse getUserInfo(Long userID) {
-        User user = userRepository.findById(userID)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    public GetMyPageResponse getUserInfo(GetUserInfoRequest request) {
+        if(request.id() == null && ((request.nickname() == null || request.nickname().isBlank()))){
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        User user = null;
+        if(request.id() == null){
+            user = userRepository.findByEmailOrNickname(request.nickname())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+        }
+        else{
+            user = userRepository.findById(request.id())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+        }
         return GetMyPageResponse.from(user);
     }
 
@@ -119,6 +130,9 @@ public class UserService {
     public void suspensionUser(Long userID, SuspensionUser request) {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if(user.getRole() == UserRole.ADMIN){
+            new BusinessException(ErrorCode.INVALID_STATUS);
+        }
         if(request.status()){
             if(user.getUserStatus() != UserStatus.ACTIVE){
                 throw new BusinessException(ErrorCode.INVALID_STATUS);

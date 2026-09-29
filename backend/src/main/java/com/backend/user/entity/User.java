@@ -115,7 +115,7 @@ public class User {
     public void withdrawn(){
         String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
-        String rawData = this.nickname + "_" + UUID.randomUUID().toString() + "_withdrawn";
+        String rawData = this.nickname + "_" + UUID.randomUUID() + "_withdrawn";
 
         this.userStatus = UserStatus.WITHDRAWN;
         this.name = null;

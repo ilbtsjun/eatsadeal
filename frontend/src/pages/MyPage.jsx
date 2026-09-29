@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import './MyPage.css';
 import { apiRequest } from '../api/client';
@@ -8,7 +8,7 @@ function getCommentId(comment) {
   return id === null || id === undefined || id === '' ? null : String(id);
 }
 
-export default function MyPage({ user, initialSection = 'profile', onLoginClick, onLogout, onBack, onOpenEvent, onOpenMyPage, onOpenFavorites, onOpenAdminPage, onUserUpdate }) {
+export default function MyPage({ user, onLoginClick, onLogout, onBack, onOpenEvent, onOpenMyPage, onOpenFavorites, onOpenAdminPage, onUserUpdate }) {
   const [profile, setProfile] = useState(user || {});
   const [profileForm, setProfileForm] = useState({ nickname: user?.nickname || '', name: user?.name || '', phoneNumber: user?.phoneNumber || '', birth: user?.birth || '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', updatePassword: '', passwordConfirm: '' });

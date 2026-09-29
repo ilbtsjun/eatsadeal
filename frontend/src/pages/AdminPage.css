@@ -42,3 +42,75 @@
 .crawler-brand-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding-top: 12px; border-top: 1px solid #edf0f2; }
 .crawler-brand-actions strong { margin-right: 4px; color: #747d8c; }
 @media (max-width: 700px) { .admin-tabs { flex-wrap: wrap; } .admin-tabs button { flex: 1 1 30%; } .admin-comment-row { align-items: flex-start; flex-direction: column; } }
+
+/* ===== 브랜드 생성/수정: 카테고리 선택 ===== */
+.category-picker { display: grid; gap: 8px; }
+.category-picker-label { color: #57606f; font-size: 13px; font-weight: 700; }
+.category-picker-label em { margin-left: 8px; color: #ff4757; font-size: 12px; font-style: normal; }
+.category-picker-empty { margin: 0; color: #a4b0be; font-size: 13px; }
+.category-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-chip { padding: 7px 14px; border: 1px solid #dfe4ea; border-radius: 999px; color: #57606f; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; }
+.category-chip:hover { color: #ff4757; border-color: #ff4757; }
+.category-chip.selected { color: #fff; border-color: #ff4757; background: #ff4757; }
+
+/* ===== 회원 관리: 탈퇴 회원 ===== */
+.user-withdrawn-notice { margin: 0 auto 0 0; align-self: center; color: #e84118; font-size: 13px; }
+.user-actions button:disabled { color: #b2bec3; border-color: #dfe4ea; background: #f1f2f6; cursor: not-allowed; }
+
+
+.user-comments {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+    .user-comments {
+        border-top-color: #374151;
+    }
+}
+
+.user-comments-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.user-comments-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.user-comments-header span {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.user-comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.user-comment-item {
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.user-comment-content {
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.user-comment-meta {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #6b7280;
+}

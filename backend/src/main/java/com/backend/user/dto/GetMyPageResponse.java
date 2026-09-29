@@ -30,7 +30,10 @@ public record GetMyPageResponse(
         LocalDate birth,
 
         @Schema(description = "권한 여부", example = "USER")
-        UserRole role) {
+        UserRole role,
+
+        @Schema(description = "현재 상태", example = "ACTIVE")
+        UserStatus status) {
     public static GetMyPageResponse from(User user) {
         return new GetMyPageResponse(
                 user.getId(),
@@ -40,7 +43,8 @@ public record GetMyPageResponse(
                 user.getPhoneNumber(),
                 user.getGender(),
                 user.getBirth(),
-                user.getRole()
+                user.getRole(),
+                user.getUserStatus()
         );
     }
 }
