@@ -13,6 +13,16 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 const SAVED_USER_KEY = 'eats-a-deal-user';
 const TOKEN_KEY = 'eats-a-deal-token';
 
+// 회원가입 중 약관을 볼 때, 회원가입 화면을 unmount 하지 않고 그 위에 덮어씌우는 오버레이 스타일
+const LEGAL_OVERLAY_STYLE = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 2000,
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  background: '#fff',
+};
+
 function getSavedUser() {
   try { return JSON.parse(localStorage.getItem(SAVED_USER_KEY)) || null; } catch { return null; }
 }
@@ -45,7 +55,8 @@ function App() {
     setLegalPage(page);
   };
   const closeLegalPage = () => {
-    window.history.pushState({ view: 'home' }, '', window.location.href);
+    // 회원가입 화면에서 열었다면 회원가입으로, 그 외에는 메인으로 돌아감
+    window.history.pushState({ view: showSignup ? 'signup' : 'home' }, '', window.location.href);
     setLegalPage(null);
   };
   const navigateTo = (view, action) => {
@@ -95,17 +106,36 @@ function App() {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   };
-  if (legalPage === 'terms') return <TermsPage onBack={closeLegalPage} onPrivacy={() => openLegalPage('privacy')} />;
-  if (legalPage === 'privacy') return <PrivacyPage onBack={closeLegalPage} onTerms={() => openLegalPage('terms')} />;
+
+  const backLabel = showSignup ? '회원가입으로' : undefined;
+  const legalContent = legalPage === 'terms'
+      ? <TermsPage onBack={closeLegalPage} onPrivacy={() => openLegalPage('privacy')} backLabel={backLabel} />
+      : legalPage === 'privacy'
+          ? <PrivacyPage onBack={closeLegalPage} onTerms={() => openLegalPage('terms')} backLabel={backLabel} />
+          : null;
+
+  // 회원가입 화면이 아닐 때는 기존처럼 약관 페이지가 전체 화면을 대체
+  if (legalContent && !showSignup) return legalContent;
   if (showLogin) return <LoginPage onLogin={handleLogin} onBack={() => navigateTo('home', () => setShowLogin(false))} onSignupClick={() => navigateTo('signup', () => { setShowLogin(false); setShowSignup(true); })} />;
 
   if (showSignup) {
     return (
-        <SignupPage
-            onBack={() => navigateTo('home', () => setShowSignup(false))}
-            onLoginClick={() => navigateTo('login', () => { setShowSignup(false); setShowLogin(true); })}
-            onSignupSuccess={() => { setShowSignup(false); setShowLogin(true); }}
-        />
+        <>
+          {/* 약관을 보는 동안에도 SignupPage 가 unmount 되지 않으므로 입력값과 체크 상태가 유지됨 */}
+          <SignupPage
+              onBack={() => navigateTo('home', () => setShowSignup(false))}
+              onLoginClick={() => navigateTo('login', () => { setShowSignup(false); setShowLogin(true); })}
+              onSignupSuccess={() => { setShowSignup(false); setShowLogin(true); }}
+              onOpenTerms={() => openLegalPage('terms')}
+              onOpenPrivacy={() => openLegalPage('privacy')}
+          />
+          {legalContent && (
+              // key: 이용약관 ↔ 개인정보처리방침 전환 시 스크롤이 맨 위로 초기화되도록
+              <div key={legalPage} style={LEGAL_OVERLAY_STYLE}>
+                {legalContent}
+              </div>
+          )}
+        </>
     );
   }
 

@@ -1,12 +1,12 @@
 import './LegalPage.css';
 
-export default function TermsPage({ onBack, onPrivacy }) {
+export default function TermsPage({ onBack, onPrivacy, backLabel = '메인으로' }) {
     return <div className="legal-page">
         <header className="legal-page__header">
             <a className="legal-page__logo" href="/" onClick={
                 (event) => { event.preventDefault(); onBack(); }
             }>이츠어딜!</a>
-            <button className="legal-page__home" type="button" onClick={onBack}>메인으로</button>
+            <button className="legal-page__home" type="button" onClick={onBack}>{backLabel}</button>
         </header>
         <main className="legal-page__main">
             <p className="legal-page__eyebrow">EATS a DEAL POLICY</p>

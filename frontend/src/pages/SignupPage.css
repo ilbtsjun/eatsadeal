@@ -30,3 +30,76 @@
 @media (max-width: 480px) { .signup-card { padding: 25px 20px; } .input-with-button button { padding-inline: 9px; } }
 
 .inline-login-button { padding: 0; border: 0; color: #ff4757; background: transparent; cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; }
+
+/* ===== 약관 / 개인정보처리방침 동의 ===== */
+.signup-agreements {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 14px 16px;
+    border: 1px solid #dfe4ea;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.signup-form .agree-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* 기존 .signup-form label(굵게, 위 여백) 스타일을 동의 항목에서는 덮어씀 */
+.signup-form .agree-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #2f3542;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* 기존 .signup-form input(width 100%, padding 13px) 스타일이 체크박스에 적용되지 않게 함 */
+.signup-form .agree-row input[type='checkbox'] {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    accent-color: #ff4757;
+    cursor: pointer;
+}
+
+.signup-form .agree-all {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f2f6;
+}
+
+.signup-form .agree-all label {
+    font-weight: 700;
+}
+
+/* .signup-form label em(회색, 작은 글씨)보다 우선하도록 선택자를 구체적으로 지정 */
+.signup-form .agree-required {
+    color: #ff4757;
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.agree-view-button {
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    color: #747d8c;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: underline;
+}
+
+.agree-view-button:hover {
+    color: #ff4757;
+}
