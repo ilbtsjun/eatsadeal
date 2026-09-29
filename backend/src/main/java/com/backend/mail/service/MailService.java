@@ -10,6 +10,9 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -19,6 +22,9 @@ public class MailService {
 
     @Value("${spring.mail.username}")
     private String senderEmail;
+
+    @Value("${report.mail.to}")
+    private String reportRecipient;
 
     @Async
     @CudLogging("회원가입 메일 송신")
@@ -53,6 +59,29 @@ public class MailService {
             javaMailSender.send(message);
         } catch (MailException | MessagingException e) {
             log.error("메일 전송 실패 [Target: {}]: {}", sendEmail, e.getMessage());
+        }
+    }
+
+    //public boolean sendReportMessage(/*Long reportId*/, String reporter, String title, String content, LocalDateTime createdAt) {
+    public boolean sendReportMessage(String reporter, String title, String content, LocalDateTime createdAt) {
+        String safeSubject = "[EatsADeal 제보] " + title.replaceAll("[\\r\\n]+", " ");
+
+        String body = "";
+        body += "<h3>새 제보가 접수되었습니다.</h3>";
+//        body += "<p><b>제보 번호:</b> " + reportId + "<br>";
+        body += "<b>제보자:</b> " + HtmlUtils.htmlEscape(reporter) + "<br>";
+        body += "<b>접수 시각:</b> " + createdAt + "</p><hr>";
+        body += "<h4>" + HtmlUtils.htmlEscape(title) + "</h4>";
+        body += "<p>" + HtmlUtils.htmlEscape(content).replace("\r\n", "\n").replace("\n", "<br>") + "</p>";
+
+        try {
+            MimeMessage message = createMail(reportRecipient, safeSubject, body);
+            javaMailSender.send(message);
+            return true;
+        } catch (MailException | MessagingException e) {
+            //log.error("제보 메일 전송 실패 [reportId: {}]: {}", reportId, e.getMessage());
+            log.error("제보 메일 전송 실패 {}", e.getMessage());
+            return false;
         }
     }
 

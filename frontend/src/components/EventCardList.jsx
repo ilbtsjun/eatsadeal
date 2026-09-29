@@ -24,43 +24,21 @@ function getEventCodeName(eventCodes) {
     return codeName[eventCodes[0]] || '이벤트';
 }
 
-// 백엔드에 category 필드가 추가되기 전에도 기존 데이터로 필터가 동작하도록 만든 임시 분류 함수입니다.
-function getEventCategory(event) {
-    if (event.category) return String(event.category).toLowerCase();
-    if (event.categoryId) return String(event.categoryId).toLowerCase();
-
-    const text = `${event.title || ''} ${event.description || ''} ${event.brand || ''}`.toLowerCase();
-    const categoryKeywords = {
-        chicken: ['치킨', 'bhc', '교촌', '굽네', '네네', '푸라닭', '후라이드'],
-        pizza: ['피자', '도미노', '피자헛', '미스터피자'],
-        bunsik: ['분식', '떡볶이', '김밥', '순대', '튀김'],
-        western: ['양식', '파스타', '스테이크', '햄버거', '버거'],
-        chinese: ['중식', '짜장', '짬뽕', '탕수육', '마라'],
-        korean: ['한식', '비빔밥', '불고기', '국밥', '찌개'],
-        japanese: ['일식', '초밥', '스시', '돈카츠', '우동', '라멘'],
-        fastfood: ['패스트푸드', '맥도날드', '버거킹', '롯데리아', 'kfc'],
-        cafe: ['카페', '디저트', '커피', '베이커리', '케이크', '빵'],
-    };
-    return Object.entries(categoryKeywords).find(([, keywords]) =>
-        keywords.some((keyword) => text.includes(keyword.toLowerCase())),
-    )?.[0] || 'etc';
-}
-
 export default function EventCardList({
-    activeCategory = 'all',
-    activeSort = 'latest',
-    searchKeyword = '',
-    onSelectEvent,
-    user,
-}) {
+                                          activeCategory = 'all',
+                                          activeSort = 'latest',
+                                          searchKeyword = '',
+                                          onSelectEvent,
+                                          user,
+                                      }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [pageInput, setPageInput] = useState('1');
-    const PAGE_SIZE = 20; // 데스크톱 기준 4열 x 5줄
+    const PAGE_SIZE = 20;
+    const PAGE_GROUP_SIZE = 5;
 
     useEffect(() => {
         let cancelled = false;
@@ -99,24 +77,7 @@ export default function EventCardList({
 
     useEffect(() => {
         setPage(0);
-        setPageInput('1');
     }, [activeCategory, activeSort, searchKeyword, user]);
-
-    useEffect(() => {
-        setPageInput(String(page + 1));
-    }, [page]);
-
-    const moveToInputPage = (event) => {
-        event.preventDefault();
-        const requestedPage = Number.parseInt(pageInput, 10);
-        if (!Number.isInteger(requestedPage) || totalPages < 1) {
-            setPageInput(String(page + 1));
-            return;
-        }
-        const targetPage = Math.min(Math.max(requestedPage, 1), totalPages) - 1;
-        setPage(targetPage);
-        setPageInput(String(targetPage + 1));
-    };
 
     const toggleFavorite = async (event, clickEvent) => {
         clickEvent.stopPropagation();
@@ -140,6 +101,10 @@ export default function EventCardList({
 
     const visibleEvents = events;
 
+    const groupStart = Math.floor(page / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE;
+    const groupEnd = Math.min(groupStart + PAGE_GROUP_SIZE, totalPages);
+    const pageNumbers = Array.from({ length: groupEnd - groupStart }, (_, i) => groupStart + i);
+
     if (loading) return <p>이벤트 정보를 불러오는 중입니다...</p>;
     if (error) return <p>오류가 발생했습니다: {error}</p>;
 
@@ -161,15 +126,6 @@ export default function EventCardList({
                                         <img src={event.img} alt={event.title} className="card-image" />
                                     ) : <span className="card-emoji">🍗</span>}
                                     <span className="card-dday">{calculateDDay(event.endDate)}</span>
-                                    <button
-                                        type="button"
-                                        className={`card-favorite ${event.isFavorite ? 'is-favorite' : ''}`}
-                                        aria-label={event.isFavorite ? '찜 취소' : '찜하기'}
-                                        aria-pressed={Boolean(event.isFavorite)}
-                                        onClick={(clickEvent) => toggleFavorite(event, clickEvent)}
-                                    >
-                                        <svg className="favorite-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" /></svg>
-                                    </button>
                                 </div>
                                 <div className="card-info">
                                     <span className="card-brand">{event.brand || '이츠어딜'}</span>
@@ -180,27 +136,70 @@ export default function EventCardList({
                                     </div>
                                 </div>
                             </button>
-
+                            <button
+                                type="button"
+                                className={`card-favorite ${event.isFavorite ? 'is-favorite' : ''}`}
+                                aria-label={event.isFavorite ? '찜 취소' : '찜하기'}
+                                aria-pressed={Boolean(event.isFavorite)}
+                                onClick={(clickEvent) => toggleFavorite(event, clickEvent)}
+                            >
+                                <svg className="favorite-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" /></svg>
+                            </button>
                         </div>
                     ))}
                 </div>
             )}
             {totalPages > 1 && (
                 <nav className="pagination" aria-label="이벤트 페이지 이동">
-                    <form className="page-jump-form" onSubmit={moveToInputPage}>
-                        <label htmlFor="event-page-input">페이지</label>
-                        <input
-                            id="event-page-input"
-                            type="number"
-                            min="1"
-                            max={totalPages}
-                            value={pageInput}
-                            onChange={(event) => setPageInput(event.target.value)}
-                            disabled={loading}
-                            aria-label={`페이지 번호 입력, 1에서 ${totalPages}까지`}
-                        />
-                        <span>/ {totalPages}</span>
-                    </form>
+                    <button
+                        type="button"
+                        className="page-btn"
+                        onClick={() => setPage(0)}
+                        disabled={page === 0}
+                        aria-label="첫 페이지"
+                    >
+                        &laquo;
+                    </button>
+                    <button
+                        type="button"
+                        className="page-btn"
+                        onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                        disabled={page === 0}
+                        aria-label="이전 페이지"
+                    >
+                        &lsaquo;
+                    </button>
+
+                    {pageNumbers.map((pageIndex) => (
+                        <button
+                            key={pageIndex}
+                            type="button"
+                            className={`page-btn ${pageIndex === page ? 'is-active' : ''}`}
+                            onClick={() => setPage(pageIndex)}
+                            aria-current={pageIndex === page ? 'page' : undefined}
+                        >
+                            {pageIndex + 1}
+                        </button>
+                    ))}
+
+                    <button
+                        type="button"
+                        className="page-btn"
+                        onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+                        disabled={page >= totalPages - 1}
+                        aria-label="다음 페이지"
+                    >
+                        &rsaquo;
+                    </button>
+                    <button
+                        type="button"
+                        className="page-btn"
+                        onClick={() => setPage(totalPages - 1)}
+                        disabled={page >= totalPages - 1}
+                        aria-label="마지막 페이지"
+                    >
+                        &raquo;
+                    </button>
                 </nav>
             )}
         </div>

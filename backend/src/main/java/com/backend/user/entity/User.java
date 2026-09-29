@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -114,6 +115,8 @@ public class User {
     public void withdrawn(){
         String randomSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
+        String rawData = this.nickname + "_" + UUID.randomUUID() + "_withdrawn";
+
         this.userStatus = UserStatus.WITHDRAWN;
         this.name = null;
         this.birth = null;
@@ -121,7 +124,7 @@ public class User {
         this.email = "withdrawn_" + randomSuffix + "@deleted.local";
         this.nickname = "탈퇴한 사용자_" + randomSuffix;
         this.phoneNumber = null;
-        this.password = null;
+        this.password = DigestUtils.sha256Hex(rawData);
     }
 
     public void suspend(Long suspendTime, String suspendingReason){

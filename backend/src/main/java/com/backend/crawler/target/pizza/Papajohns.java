@@ -8,6 +8,7 @@ import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -244,10 +245,7 @@ public class Papajohns implements Crawler {
     }
 
     private String unescapeHtml(String s) {
-        return s.replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&#39;", "'");
+        if (s == null) return "";
+        return HtmlUtils.htmlUnescape(s);
     }
 }

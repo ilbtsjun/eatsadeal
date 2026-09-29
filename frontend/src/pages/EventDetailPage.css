@@ -39,4 +39,37 @@
 .comment-item p { margin: 8px 0 0; color: #57606f; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
 @media (max-width: 700px) { .event-detail-container { width: min(100% - 28px, 900px); padding-top: 20px; } .event-detail-card { grid-template-columns: 1fr; } .detail-image-box { min-height: 220px; } .detail-content { padding: 25px 20px; } .detail-content h1 { font-size: 23px; } .comments-section { padding: 20px; } }
 @media (max-width: 480px) { .comment-login-guide { align-items: stretch; flex-direction: column; } }
+
+/* ===== 댓글 액션 버튼 (답글 / 수정 / 삭제 / 숨김) ===== */
+.comment-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.comment-action-button { padding: 4px 8px; border: 1px solid #dfe4ea; border-radius: 5px; color: #747d8c; background: #fff; cursor: pointer; font-size: 11px; }
+.comment-action-button:hover { color: #ff4757; border-color: #ff4757; background: #fff1f2; }
+.comment-action-button.comment-hide-button { color: #e58e26; border-color: #fde3b8; }
+.comment-action-button.comment-hide-button:hover { background: #fff8ec; border-color: #e58e26; }
+.comment-action-button.comment-unhide-button { color: #20bf6b; border-color: #c8f0d9; }
+.comment-action-button.comment-unhide-button:hover { background: #f0fbf5; border-color: #20bf6b; }
+/* 삭제 버튼은 아래(기존) 스타일을 그대로 쓰되, 액션 줄에서는 오른쪽 끝으로 밀리지 않게 함 */
+.comment-actions .comment-delete-button { margin-left: 0; }
+
+/* ===== 댓글 수정 / 답글 입력 폼 ===== */
+.comment-edit-form, .comment-reply-form { margin-top: 10px; border: 1px solid #dfe4ea; border-radius: 9px; overflow: hidden; background: #fff; }
+.comment-edit-form textarea, .comment-reply-form textarea { display: block; width: 100%; min-height: 70px; padding: 12px; border: 0; outline: 0; resize: vertical; box-sizing: border-box; color: #2f3542; font: inherit; font-size: 14px; }
+.comment-edit-form:focus-within, .comment-reply-form:focus-within { border-color: #ff4757; }
+.comment-inline-buttons { display: flex; gap: 6px; }
+.comment-inline-buttons .comment-action-button { padding: 8px 12px; border: 1px solid #dfe4ea; border-radius: 6px; color: #747d8c; background: #fff; font-size: 12px; font-weight: 700; }
+.comment-inline-buttons .comment-action-button:hover { color: #ff4757; border-color: #ff4757; background: #fff; }
+.comment-form-footer button:disabled { opacity: .6; cursor: wait; }
+
+/* ===== 대댓글 ===== */
+.comment-replies { margin-left: 18px; padding-left: 14px; border-left: 2px solid #f1f2f6; }
+.comment-item.is-reply { padding: 14px 0 14px 4px; }
+
+/* ===== 숨김 처리된 댓글 ===== */
+.comment-item.is-hidden { opacity: .7; }
+.comment-item.is-deleted { opacity: .55; }
+.comment-meta .comment-hidden-badge { padding: 2px 6px; border-radius: 4px; color: #e58e26; background: #fff8ec; font-size: 11px; font-weight: 700; }
+.comment-item p.comment-hidden-text { color: #a4b0be; font-style: italic; }
+
+@media (max-width: 480px) { .comment-replies { margin-left: 8px; padding-left: 10px; } }
+
 .comment-delete-button{margin-left:auto;padding:4px 8px;border:1px solid #ffd1d5;border-radius:5px;color:#e84118;background:#fff;cursor:pointer;font-size:11px}.comment-delete-button:hover{background:#fff1f2}.comment-error{margin:12px 0;color:#e84118;font-size:13px}

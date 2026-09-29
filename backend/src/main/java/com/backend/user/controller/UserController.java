@@ -86,10 +86,10 @@ public class UserController {
             summary = "유저 정보 조회",
             description = "JWT 토큰으로 관리자 인증을 한 뒤 유저의 정보를 조회합니다."
     )
-    @GetMapping("/admin/{userID}")
+    @GetMapping("/admin/user")
     @PreAuthorize("hasRole('ADMIN')")
-    public GetMyPageResponse getUserInfo(@PathVariable Long userID) {
-        return userService.getUserInfo(userID);
+    public GetMyPageResponse getUserInfo(@ModelAttribute GetUserInfoRequest request) {
+        return userService.getUserInfo(request);
     }
 
     @Operation(
@@ -110,7 +110,7 @@ public class UserController {
     )
     @GetMapping("/me/favorites")
     @PreAuthorize("isAuthenticated()")
-    public List<Long> toggleFavorite() {
+    public List<Long> getFavoriteList() {
         return favoriteService.getFavoriteList();
     }
 }

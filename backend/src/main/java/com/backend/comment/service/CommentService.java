@@ -13,6 +13,7 @@ import com.backend.comment.repository.CommentRepository;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.user.entity.User;
+import com.backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,10 +30,24 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final CurrentUserService currentUserService;
     private final EventRepository eventRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<CommentResponse> getMyCommentList(){
         User user = currentUserService.getRequiredUser();
+
+        List<Comment> eventCommentList = commentRepository.findByUser(user);
+        List<CommentResponse> commentList = new ArrayList<>();
+        for(Comment comment : eventCommentList){
+            commentList.add(CommentResponse.from(comment, user.getId()));
+        }
+        return commentList;
+    }
+
+    @Transactional(readOnly = true)
+    public List<CommentResponse> getUserCommentList(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         List<Comment> eventCommentList = commentRepository.findByUser(user);
         List<CommentResponse> commentList = new ArrayList<>();

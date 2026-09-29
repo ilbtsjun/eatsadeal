@@ -31,6 +31,16 @@ public class CommentController {
     }
 
     @Operation(
+            summary = "회원 댓글 목록 조회",
+            description = "관리자가 특정 회원의 댓글 목록을 조회합니다."
+    )
+    @GetMapping("/user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<CommentResponse> getUserCommentList(@PathVariable Long userId) {
+        return commentService.getUserCommentList(userId);
+    }
+
+    @Operation(
             summary = "댓글 수정",
             description = "댓글을 수정합니다."
     )

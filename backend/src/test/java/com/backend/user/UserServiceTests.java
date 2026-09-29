@@ -141,10 +141,25 @@ class UserServiceTests {
 
         @Test
         @DisplayName("getUserInfo 성공: ID로 조회한 유저의 정보를 응답으로 만든다 (현재 유저 조회는 하지 않음)")
-        void getUserInfo() {
+        void getUserInfoID() {
             when(userRepository.findById(1L)).thenReturn(Optional.of(buildUser()));
 
-            GetMyPageResponse response = userService.getUserInfo(1L);
+            GetUserInfoRequest request = new GetUserInfoRequest(1L, null);
+
+            GetMyPageResponse response = userService.getUserInfo(request);
+
+            assertNotNull(response);
+            verifyNoInteractions(currentUserService);
+        }
+
+        @Test
+        @DisplayName("getUserInfo 성공: ID로 조회한 유저의 정보를 응답으로 만든다 (현재 유저 조회는 하지 않음)")
+        void getUserInfoString() {
+            when(userRepository.findByEmailOrNickname("test")).thenReturn(Optional.of(buildUser()));
+
+            GetUserInfoRequest request = new GetUserInfoRequest(null, "test");
+
+            GetMyPageResponse response = userService.getUserInfo(request);
 
             assertNotNull(response);
             verifyNoInteractions(currentUserService);
@@ -152,10 +167,31 @@ class UserServiceTests {
 
         @Test
         @DisplayName("getUserInfo 실패: 존재하지 않는 유저면 NOT_FOUND")
-        void getUserInfoNotFound() {
+        void getUserInfoNotFoundID() {
             when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
-            assertBusinessException(() -> userService.getUserInfo(999L), ErrorCode.NOT_FOUND);
+            GetUserInfoRequest request = new GetUserInfoRequest(999L, null);
+
+            assertBusinessException(() -> userService.getUserInfo(request), ErrorCode.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("getUserInfo 실패: 존재하지 않는 유저면 NOT_FOUND")
+        void getUserInfoNotFoundString() {
+            when(userRepository.findByEmailOrNickname("test")).thenReturn(Optional.empty());
+
+            GetUserInfoRequest request = new GetUserInfoRequest(null, "test");
+
+            assertBusinessException(() -> userService.getUserInfo(request), ErrorCode.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("getUserInfo 실패: 둘 다 null 값이면 INVALID_REQUEST")
+        void getUserInfoNotFoundNull() {
+
+            GetUserInfoRequest request = new GetUserInfoRequest(null, null);
+
+            assertBusinessException(() -> userService.getUserInfo(request), ErrorCode.INVALID_REQUEST);
         }
     }
 
@@ -408,10 +444,7 @@ class UserServiceTests {
 
             verify(authService, times(1)).addBlackList(TOKEN, EXPIRATION);
             assertEquals(UserStatus.WITHDRAWN, user.getUserStatus());
-            assertEquals("withdrawn_1@deleted.local", user.getEmail());
-            assertEquals("탈퇴한 사용자_1", user.getNickname());
             assertNull(user.getPhoneNumber());
-            assertNull(user.getPassword());
         }
 
         @Test

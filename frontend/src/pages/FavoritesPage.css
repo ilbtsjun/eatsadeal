@@ -1,1 +1,27 @@
-.favorites-page{min-height:100vh;background:#f8f9fa;color:#2f3542}.favorites-container{width:min(100% - 40px,900px);margin:auto;padding:28px 0 60px}.favorites-back{border:0;padding:0;color:#747d8c;background:transparent;cursor:pointer}.favorites-container h1{margin:28px 0 5px;font-size:32px}.favorites-intro{margin:0 0 22px;color:#747d8c}.favorites-list{display:grid;gap:12px;margin-top:20px}.favorite-event-item{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:18px;border:1px solid #eaeaea;border-radius:14px;background:#fff;color:#2f3542;cursor:pointer;text-align:left;transition:transform .2s,box-shadow .2s}.favorite-event-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.08);border-color:#ff4757}.favorite-event-item strong{font-size:16px}.favorite-event-item span{color:#747d8c;font-size:13px}.favorites-message,.favorites-empty,.favorites-error{margin-top:24px;color:#747d8c;font-size:14px}.favorites-error{color:#e84118}@media(max-width:600px){.favorites-container{width:min(100% - 28px,900px)}}
+.favorites-page { min-height: 100vh; background: #f8f9fa; color: #2f3542; }
+.favorites-container { width: min(100% - 40px, 900px); margin: auto; padding: 28px 0 60px; }
+.favorites-back { border: 0; padding: 0; color: #747d8c; background: transparent; cursor: pointer; }
+.favorites-container h1 { margin: 28px 0 5px; font-size: 32px; }
+.favorites-intro { margin: 0 0 22px; color: #747d8c; }
+.favorites-list { display: grid; gap: 12px; margin-top: 20px; }
+
+/* 카드 버튼 + 찜 버튼을 감싸는 행 (호버 시 둘이 함께 움직이도록 transform 은 행에 적용) */
+.favorite-event-row { position: relative; transition: transform .2s; }
+.favorite-event-row:hover { transform: translateY(-2px); }
+
+.favorite-event-item { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; width: 100%; box-sizing: border-box; padding: 18px 68px 18px 18px; border: 1px solid #eaeaea; border-radius: 14px; background: #fff; color: #2f3542; cursor: pointer; text-align: left; transition: box-shadow .2s, border-color .2s; }
+.favorite-event-row:hover .favorite-event-item { box-shadow: 0 6px 16px rgba(0,0,0,.08); border-color: #ff4757; }
+.favorite-event-item strong { font-size: 16px; }
+.favorite-event-item span { color: #747d8c; font-size: 13px; }
+
+/* 찜 토글 버튼 */
+.favorite-toggle { position: absolute; top: 50%; right: 16px; transform: translateY(-50%); display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 1px solid #eaeaea; border-radius: 50%; color: #ff4757; background: #fff; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.08); transition: background .2s, color .2s, border-color .2s; }
+.favorite-toggle:hover, .favorite-toggle.is-favorite { color: #fff; background: #ff4757; border-color: #ff4757; }
+.favorite-toggle.is-favorite:hover { color: #ff4757; background: #fff; }
+.favorite-toggle:disabled { opacity: .6; cursor: wait; }
+.favorite-toggle .favorite-icon { display: block; width: 20px; height: 20px; fill: transparent; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.favorite-toggle.is-favorite .favorite-icon { fill: currentColor; }
+
+.favorites-message, .favorites-empty, .favorites-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
+.favorites-error { color: #e84118; }
+@media (max-width: 600px) { .favorites-container { width: min(100% - 28px, 900px); } .favorite-event-item { padding-right: 62px; } .favorite-toggle { right: 12px; width: 36px; height: 36px; } }

@@ -8,6 +8,7 @@ import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -253,14 +254,9 @@ public class Lotteria implements Crawler {
     }
 
     private String cleanText(String html) {
-        return html
-                .replaceAll("<[^>]*>", " ")
-                .replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&#39;", "'")
-                .replaceAll("\\s+", " ")
-                .trim();
+        if (html == null) return "";
+        String noTags = html.replaceAll("<[^>]*>", " ");
+        String unescaped = HtmlUtils.htmlUnescape(noTags);
+        return unescaped.replaceAll("\\s+", " ").trim();
     }
 }
