@@ -1,13 +1,36 @@
+import { useState } from 'react';
 import './FloatingButton.css';
+import ReportForm from './ReportForm.jsx';
 
 export default function FloatingButton() {
-    const handleReportClick = () => {
-        alert('할인 제보 페이지로 이동합니다! (추후 구현 예정)');
-    };
+    const [open, setOpen] = useState(false);
 
     return (
-        <button className="floating-report-btn" onClick={handleReportClick}>
-            ➕ 할인 제보하기
-        </button>
+        <>
+            <button
+                type="button"
+                className="floating-report-btn"
+                onClick={() => setOpen(true)}
+            >
+                ➕ 할인 제보하기
+            </button>
+
+            {open && (
+                <div
+                    className="report-modal-overlay"
+                    onClick={() => setOpen(false)}
+                >
+                    <div
+                        className="report-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="제보하기"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <ReportForm onCancel={() => setOpen(false)} />
+                    </div>
+                </div>
+            )}
+        </>
     );
 }
