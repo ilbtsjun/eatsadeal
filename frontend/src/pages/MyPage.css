@@ -8,3 +8,31 @@
 .favorite-item { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; border: 1px solid #eee; background: #fff; border-radius: 10px; padding: 12px; cursor: pointer; text-align: left; }
 .favorite-item span { color: #777; font-size: .9rem; }
 .focused-panel { border-color: #ff4757; box-shadow: 0 0 0 3px rgba(255, 71, 87, .12); }
+
+.confirm-input {
+    width: 100%;
+    margin-top: 12px;
+    padding: 11px 12px;
+    border: 1px solid #dfe4ea;
+    border-radius: 8px;
+    box-sizing: border-box;
+    outline: none;
+    font: inherit;
+    font-size: 14px;
+}
+
+.confirm-input:focus {
+    border-color: #ff4757;
+    box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.12);
+}
+
+.confirm-error {
+    margin: 8px 0 0;
+    color: #e84118;
+    font-size: 13px;
+}
+
+.confirm-dialog-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -99,6 +99,12 @@ function App() {
     setUser(loggedInUser);
     navigateTo('home', () => setShowLogin(false));
   };
+  const handleUserUpdate = (patch) => {
+    if (!user) return;
+    const nextUser = { ...user, ...patch };
+    localStorage.setItem(SAVED_USER_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+  };
   const handleLogout = () => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => {});
@@ -140,7 +146,7 @@ function App() {
   }
 
   if (showMyPage) {
-    return <MyPage user={user} initialSection={myPageTarget} onLoginClick={() => navigateTo('login', () => setShowLogin(true))} onLogout={handleLogout} onBack={() => navigateTo('home', () => setShowMyPage(false))} onOpenMyPage={() => openMyPage('profile')} onOpenFavorites={openFavorites} onOpenAdminPage={() => navigateTo('admin', () => { setShowMyPage(false); setShowAdminPage(true); })} onOpenEvent={(event) => { window.history.pushState({ view: 'event', event }, '', window.location.href); setShowMyPage(false); setSelectedEvent(event); }} />;
+    return <MyPage user={user} onUserUpdate={handleUserUpdate} initialSection={myPageTarget} onLoginClick={() => navigateTo('login', () => setShowLogin(true))} onLogout={handleLogout} onBack={() => navigateTo('home', () => setShowMyPage(false))} onOpenMyPage={() => openMyPage('profile')} onOpenFavorites={openFavorites} onOpenAdminPage={() => navigateTo('admin', () => { setShowMyPage(false); setShowAdminPage(true); })} onOpenEvent={(event) => { window.history.pushState({ view: 'event', event }, '', window.location.href); setShowMyPage(false); setSelectedEvent(event); }} />;
   }
 
   if (showFavorites) {

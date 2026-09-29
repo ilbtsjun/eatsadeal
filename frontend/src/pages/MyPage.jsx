@@ -8,7 +8,7 @@ function getCommentId(comment) {
   return id === null || id === undefined || id === '' ? null : String(id);
 }
 
-export default function MyPage({ user, initialSection = 'profile', onLoginClick, onLogout, onBack, onOpenEvent, onOpenMyPage, onOpenFavorites, onOpenAdminPage }) {
+export default function MyPage({ user, initialSection = 'profile', onLoginClick, onLogout, onBack, onOpenEvent, onOpenMyPage, onOpenFavorites, onOpenAdminPage, onUserUpdate }) {
   const [profile, setProfile] = useState(user || {});
   const [profileForm, setProfileForm] = useState({ nickname: user?.nickname || '', name: user?.name || '', phoneNumber: user?.phoneNumber || '', birth: user?.birth || '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', updatePassword: '', passwordConfirm: '' });
@@ -19,6 +19,10 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
   const [commentToDelete, setCommentToDelete] = useState(null);
   const [eventTitles, setEventTitles] = useState({});
   const [commentPage, setCommentPage] = useState(0);
+  const [showQuitModal, setShowQuitModal] = useState(false);
+  const [quitPassword, setQuitPassword] = useState('');
+  const [quitError, setQuitError] = useState('');
+  const [quitLoading, setQuitLoading] = useState(false);
   const COMMENTS_PER_PAGE = 10;
 
   useEffect(() => {
@@ -46,6 +50,16 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
     })).then((entries) => setEventTitles(Object.fromEntries(entries)));
   }, [comments]);
 
+  // 회원탈퇴 모달이 열려 있을 때 Esc 키로 닫기 (처리 중에는 닫지 않음)
+  useEffect(() => {
+    if (!showQuitModal) return;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && !quitLoading) closeQuitModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showQuitModal, quitLoading]);
+
   const currentCommentPage = Math.min(commentPage, Math.max(0, Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1));
 
 
@@ -63,7 +77,11 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
           birth: profileForm.birth || null,
         }),
       });
-      setProfile((current) => ({ ...current, ...profileForm }));
+      // 입력한 값을 그대로 화면에 반영하지 않고, 서버에 실제로 저장된 값을 다시 조회해서 반영
+      const saved = await apiRequest('/api/user/me');
+      setProfile(saved);
+      setProfileForm({ nickname: saved.nickname || '', name: saved.name || '', phoneNumber: saved.phoneNumber || '', birth: saved.birth || '' });
+      if (saved.nickname && saved.nickname !== user?.nickname) onUserUpdate?.({ nickname: saved.nickname });
       setEditingProfile(false);
       setMessage('회원정보가 수정되었습니다.');
     } catch (e) {
@@ -71,7 +89,42 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
     }
   };
   const updatePassword = async (event) => { event.preventDefault(); setError(''); if (passwordForm.updatePassword !== passwordForm.passwordConfirm) { setError('새 비밀번호가 일치하지 않습니다.'); return; } try { await apiRequest('/api/user/me/password', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(passwordForm) }); setPasswordForm({ currentPassword: '', updatePassword: '', passwordConfirm: '' }); setMessage('비밀번호가 변경되었습니다.'); } catch (e) { setError(e.message); } };
-  const quit = async () => { const password = window.prompt('회원탈퇴를 진행하려면 비밀번호를 입력해주세요.'); if (password === null) return; try { await apiRequest('/api/user/me', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) }); onLogout(); } catch (e) { setError(e.message); } };
+
+  const openQuitModal = () => {
+    setQuitPassword('');
+    setQuitError('');
+    setShowQuitModal(true);
+  };
+  const closeQuitModal = () => {
+    setShowQuitModal(false);
+    setQuitPassword('');
+    setQuitError('');
+  };
+  const handleQuit = async (event) => {
+    event.preventDefault();
+    if (!quitPassword) {
+      setQuitError('비밀번호를 입력해주세요.');
+      return;
+    }
+    setQuitLoading(true);
+    setQuitError('');
+    try {
+      await apiRequest('/api/user/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: quitPassword }),
+      });
+      closeQuitModal();
+      window.alert('회원탈퇴가 완료되었습니다.');
+      onLogout();   // 저장된 로그인 정보 삭제
+      onBack();     // 메인 페이지로 이동
+    } catch (e) {
+      setQuitError(e.message || '회원탈퇴에 실패했습니다.');
+    } finally {
+      setQuitLoading(false);
+    }
+  };
+
   const deleteComment = async (comment) => {
     const commentId = getCommentId(comment);
     if (!commentId) return;
@@ -82,7 +135,10 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
     } catch (e) { setError(e.message); }
     finally { setCommentToDelete(null); }
   };
-  const update = (setForm) => (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const update = (setForm) => (event) => {
+    const { name, value } = event.target; // updater 안에서 event.target 을 읽으면 값이 어긋날 수 있어 먼저 꺼냄
+    setForm((current) => ({ ...current, [name]: value }));
+  };
 
   return <div className="mypage"><Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} /><main className="mypage-container"><button type="button" className="mypage-back" onClick={onBack}>← 메인으로</button><h1>마이페이지</h1><p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>{(message || error) && <p className={error ? 'mypage-error' : 'mypage-message'}>{error || message}</p>}
     <section className="mypage-panel"><h2>회원정보</h2><form className="mypage-form" onSubmit={updateProfile}><label>이메일<input value={profile.email || ''} readOnly /></label><label>닉네임<input name="nickname" value={profileForm.nickname} onChange={update(setProfileForm)} readOnly={!editingProfile} required /></label><label>이름<input name="name" value={profileForm.name} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label><label>전화번호<input name="phoneNumber" value={profileForm.phoneNumber} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label><label>생년월일<input name="birth" type="date" value={profileForm.birth || ''} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label>{editingProfile ? <div className="mypage-form-actions"><button type="submit">완료</button><button type="button" className="secondary" onClick={() => { setEditingProfile(false); setProfileForm({ nickname: profile.nickname || '', name: profile.name || '', phoneNumber: profile.phoneNumber || '', birth: profile.birth || '' }); }}>취소</button></div> : <button type="button" onClick={() => { setEditingProfile(true); setMessage('정보를 수정한 뒤 완료를 눌러 저장하세요.'); }}>정보 수정</button>}</form></section>
@@ -96,6 +152,7 @@ export default function MyPage({ user, initialSection = 'profile', onLoginClick,
       {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1 && <div className="comment-pagination"><button type="button" disabled={currentCommentPage === 0} onClick={() => setCommentPage((page) => page - 1)}>이전</button><span>{currentCommentPage + 1} / {Math.ceil(comments.length / COMMENTS_PER_PAGE)}</span><button type="button" disabled={currentCommentPage >= Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1} onClick={() => setCommentPage((page) => page + 1)}>다음</button></div>}
     </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>
     {commentToDelete && <div className="confirm-backdrop" role="presentation"><div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="my-comment-delete-title"><h2 id="my-comment-delete-title">댓글 삭제</h2><p>이 댓글을 삭제하시겠습니까?</p><div className="confirm-dialog-actions"><button type="button" className="confirm-cancel" onClick={() => setCommentToDelete(null)}>취소</button><button type="button" className="confirm-delete" onClick={() => deleteComment(commentToDelete)}>삭제</button></div></div></div>}
-    <section className="danger-zone"><h2>회원탈퇴</h2><p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.</p><button type="button" onClick={quit}>회원탈퇴</button></section>
+    {showQuitModal && <div className="confirm-backdrop" role="presentation"><div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="quit-title"><form onSubmit={handleQuit}><h2 id="quit-title">회원탈퇴</h2><p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.<br />계속하려면 비밀번호를 입력해주세요.</p><input className="confirm-input" type="password" value={quitPassword} onChange={(event) => { setQuitPassword(event.target.value); setQuitError(''); }} placeholder="비밀번호" autoComplete="current-password" autoFocus disabled={quitLoading} />{quitError && <p className="confirm-error" role="alert">{quitError}</p>}<div className="confirm-dialog-actions"><button type="button" className="confirm-cancel" onClick={closeQuitModal} disabled={quitLoading}>취소</button><button type="submit" className="confirm-delete" disabled={quitLoading}>{quitLoading ? '처리 중...' : '탈퇴하기'}</button></div></form></div></div>}
+    <section className="danger-zone"><h2>회원탈퇴</h2><p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.</p><button type="button" onClick={openQuitModal}>회원탈퇴</button></section>
   </main></div>;
 }
