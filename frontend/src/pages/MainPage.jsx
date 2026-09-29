@@ -33,7 +33,7 @@ export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, 
                 onSortChange={setActiveSort}
             />
 
-            <HighlightBanner />
+            <HighlightBanner onSelectEvent={onSelectEvent}/>
 
             <EventCardList
                 activeCategory={activeCategory}
