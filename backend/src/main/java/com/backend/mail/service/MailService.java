@@ -29,7 +29,7 @@ public class MailService {
     @Async
     @CudLogging("회원가입 메일 송신")
     public void sendSignUpMessage(String sendEmail, String code) {
-        String title = "[EatsADeal]회원가입 인증 테스트 메일입니다.";
+        String title = "[EatsADeal]회원가입 인증 메일입니다.";
         String body = "";
         body += "<h3>요청하신 인증 번호입니다.</h3>";
         body += "<h1>" + code + "</h1>";
@@ -47,7 +47,7 @@ public class MailService {
     @Async
     @CudLogging("비밀번호 변경 메일 송신")
     public void sendPasswordMessage(String sendEmail, String code) {
-        String title = "[EatsADeal]패스워드 인증 테스트 메일입니다.";
+        String title = "[EatsADeal]패스워드 인증 메일입니다.";
         String body = "";
         body += "<h3>요청하신 인증 번호입니다.</h3>";
         body += "<h1>" + code + "</h1>";

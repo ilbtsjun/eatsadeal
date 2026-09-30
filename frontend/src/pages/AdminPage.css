@@ -57,60 +57,22 @@
 .user-withdrawn-notice { margin: 0 auto 0 0; align-self: center; color: #e84118; font-size: 13px; }
 .user-actions button:disabled { color: #b2bec3; border-color: #dfe4ea; background: #f1f2f6; cursor: not-allowed; }
 
+/* ===== 정지 / 정지 해제 모달 ===== */
+.admin-modal textarea { padding: 11px; border: 1px solid #dfe4ea; border-radius: 7px; outline: 0; resize: vertical; font: inherit; }
+.admin-modal input:focus, .admin-modal textarea:focus { border-color: #ff4757; box-shadow: 0 0 0 3px rgba(255, 71, 87, .12); }
+.admin-modal input:disabled, .admin-modal textarea:disabled { background: #f1f2f6; }
+.suspend-target { margin: 0; color: #747d8c; font-size: 13px; }
+.suspend-target strong { color: #2f3542; }
+.admin-modal-error { margin: 0; color: #e84118; font-size: 13px; }
+.modal-submit:disabled { opacity: .6; cursor: wait; }
 
-.user-comments {
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
-}
-
-@media (prefers-color-scheme: dark) {
-    .user-comments {
-        border-top-color: #374151;
-    }
-}
-
-.user-comments-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.user-comments-header h3 {
-    margin: 0;
-    font-size: 18px;
-}
-
-.user-comments-header span {
-    font-size: 13px;
-    color: #6b7280;
-}
-
-.user-comment-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.user-comment-item {
-    padding: 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-}
-
-.user-comment-content {
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-.user-comment-meta {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 8px;
-    font-size: 12px;
-    color: #6b7280;
-}
+/* ===== 브랜드 활성 / 정지 ===== */
+.item-main .item-title { display: flex; align-items: center; gap: 8px; }
+.item-main .brand-status { padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.item-main .brand-status.active { color: #20bf6b; background: #eafaf1; }
+.item-main .brand-status.inactive { color: #e84118; background: #fff1f2; }
+.management-row.is-inactive .item-main img, .management-row.is-inactive .item-main strong { opacity: .5; }
+.row-actions .activate { color: #20bf6b; border-color: #c8f0d9; }
+.row-actions .activate:hover { color: #20bf6b; border-color: #20bf6b; background: #f0fbf5; }
+.confirm-actions .primary-confirm { color: #fff; border-color: #20bf6b; background: #20bf6b; }
+.confirm-actions .primary-confirm:hover { background: #1aa85c; }
