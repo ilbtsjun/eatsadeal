@@ -50,6 +50,12 @@ export default function MyPage({ user, onLoginClick, onLogout, onBack, onOpenEve
     })).then((entries) => setEventTitles(Object.fromEntries(entries)));
   }, [comments]);
 
+  const closeQuitModal = () => {
+    setShowQuitModal(false);
+    setQuitPassword('');
+    setQuitError('');
+  };
+
   // 회원탈퇴 모달이 열려 있을 때 Esc 키로 닫기 (처리 중에는 닫지 않음)
   useEffect(() => {
     if (!showQuitModal) return;
@@ -94,11 +100,6 @@ export default function MyPage({ user, onLoginClick, onLogout, onBack, onOpenEve
     setQuitPassword('');
     setQuitError('');
     setShowQuitModal(true);
-  };
-  const closeQuitModal = () => {
-    setShowQuitModal(false);
-    setQuitPassword('');
-    setQuitError('');
   };
   const handleQuit = async (event) => {
     event.preventDefault();

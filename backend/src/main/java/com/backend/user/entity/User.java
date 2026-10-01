@@ -28,22 +28,22 @@ public class User {
     @Column
     private String name;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     @NotBlank
     private String email;
 
-    @Column
+    @Column(nullable = false)
     @NotBlank
     private String password;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     @NotBlank
     private String nickname;
 
     @Column
     private String phoneNumber;
 
-    @Column
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
@@ -54,11 +54,11 @@ public class User {
     @Column
     private LocalDate birth;
 
-    @Column
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private UserStatus userStatus;
 
-    @Column
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column

@@ -48,21 +48,21 @@ public class CategoryController {
             summary = "카테고리 조회",
             description = "카테고리의 정보를 조회합니다."
     )
-    @GetMapping("/{categoryID}")
+    @GetMapping("/{categoryId}")
     @ResponseStatus(HttpStatus.OK)
-    public GetCategoryResponse getCategory(@PathVariable Long categoryID) {
-        return categoryService.getCategory(categoryID);
+    public GetCategoryResponse getCategory(@PathVariable Long categoryId) {
+        return categoryService.getCategory(categoryId);
     }
 
     @Operation(
             summary = "카테고리 수정",
             description = "카테고리를 수정합니다."
     )
-    @PatchMapping("/{categoryID}")
+    @PatchMapping("/{categoryId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse updateCategory(@PathVariable Long categoryID,
+    public MsgResponse updateCategory(@PathVariable Long categoryId,
                                       @Valid @RequestBody UpdateCategory request) {
-        categoryService.updateCategory(categoryID, request);
+        categoryService.updateCategory(categoryId, request);
         return new MsgResponse("카테고리가 수정되었습니다.", "200");
     }
 
@@ -70,10 +70,10 @@ public class CategoryController {
             summary = "카테고리 삭제",
             description = "카테고리를 삭제합니다."
     )
-    @DeleteMapping("/{categoryID}")
+    @DeleteMapping("/{categoryId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse deleteCategory(@PathVariable Long categoryID) {
-        categoryService.deleteCategory(categoryID);
+    public MsgResponse deleteCategory(@PathVariable Long categoryId) {
+        categoryService.deleteCategory(categoryId);
         return new MsgResponse("카테고리가 삭제되었습니다", "200");
     }
 }

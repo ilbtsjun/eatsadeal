@@ -37,6 +37,12 @@ public enum ErrorCode {
             "상태 오류입니다."
     ),
 
+    METHOD_NOT_ALLOWED(
+            HttpStatus.METHOD_NOT_ALLOWED,
+            "COMMON-006",
+            "지원하지 않는 요청 방식입니다."
+    ),
+
     UNAUTHORIZED(
             HttpStatus.UNAUTHORIZED,
             "AUTH-001",
@@ -73,6 +79,17 @@ public enum ErrorCode {
             "인증에 실패했습니다."
     ),
 
+    ACCOUNT_SUSPENDED(
+            HttpStatus.FORBIDDEN,
+            "AUTH-007",
+            "이용이 제한된 계정입니다."
+    ),
+
+    ACCOUNT_WITHDRAWN(
+            HttpStatus.FORBIDDEN,
+            "AUTH-008",
+            "탈퇴한 계정입니다."
+    ),
 
     NOT_OWNED(
             HttpStatus.FORBIDDEN,

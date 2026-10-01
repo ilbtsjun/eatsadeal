@@ -27,7 +27,7 @@ public class Event {
     @Column
     private String description;
 
-    @Column(nullable = false, length = 1000, unique = true)
+    @Column(nullable = false, length = 700, unique = true)
     private String url;
 
     @Column(nullable = false, length = 1000)
@@ -42,7 +42,7 @@ public class Event {
     @Column(nullable = false)
     private Long viewCount = 0L;
 
-    @Column
+    @Column(nullable = false)
     private Boolean isActive = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
