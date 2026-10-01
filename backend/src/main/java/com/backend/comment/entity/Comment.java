@@ -19,7 +19,7 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long commentId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String content;
 
     @Column(nullable = false)
@@ -31,7 +31,7 @@ public class Comment {
     @Column
     private LocalDateTime deletedAt = null;
 
-    @Column
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private CommentStatus commentStatus;
 
