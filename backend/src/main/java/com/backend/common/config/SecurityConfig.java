@@ -55,7 +55,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/error",
+                                "/actuator/health/**"
                         ).permitAll()
 
                         // 인증 없이 접근 가능한 인증 API
