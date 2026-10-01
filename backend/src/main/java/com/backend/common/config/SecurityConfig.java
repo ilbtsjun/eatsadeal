@@ -4,6 +4,7 @@ import com.backend.auth.filter.JwtAuthenticationFilter;
 import com.backend.auth.handler.CustomAccessDeniedHandler;
 import com.backend.auth.handler.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -31,9 +33,13 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -59,7 +65,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/email-verification",
                                 "/api/auth/password-change",
-                                "/api/auth/password-verification"
+                                "/api/auth/password-verification",
+                                "/api/reports"
                         ).permitAll()
 
                         // 공개 조회 API
@@ -73,11 +80,12 @@ public class SecurityConfig {
                                 "/api/brands/**",
                                 "/api/categories",
                                 "/api/categories/**",
-                                "/api/events/*/comments",
-                                "/api/test/redis",
-                                "/api/crawl/**",
-                                "/api/crawl"
+                                "/api/events/*/comments"
                         ).permitAll()
+
+                        .requestMatchers(
+                                "/api/crawl/**"
+                        ).hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )
@@ -96,24 +104,34 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-//        추후 프론트에서 사용하는 도메인만 api에 요청할 수 있게 변경
-        configuration.setAllowedOriginPatterns(List.of("*"));
+
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+
+        configuration.setAllowedOrigins(origins);
+
         configuration.setAllowedMethods(List.of(
                 "GET",
                 "POST",
                 "PUT",
+                "PATCH",
                 "DELETE",
-                "OPTIONS",
-                "PATCH"
+                "OPTIONS"
         ));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept"
+        ));
+
+        configuration.setAllowCredentials(false);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
+
 }

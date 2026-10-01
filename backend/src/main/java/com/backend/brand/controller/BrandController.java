@@ -49,21 +49,21 @@ public class BrandController {
             summary = "브랜드 조회",
             description = "선택한 브랜드의 내용 조회"
     )
-    @GetMapping("/{brandID}")
+    @GetMapping("/{brandId}")
     @ResponseStatus(HttpStatus.OK)
-    public GetBrandResponse getBrand(@PathVariable Long brandID) {
-        return brandService.getBrand(brandID);
+    public GetBrandResponse getBrand(@PathVariable Long brandId) {
+        return brandService.getBrand(brandId);
     }
 
     @Operation(
             summary = "브랜드 수정",
             description = "선택한 브랜드의 내용 수정"
     )
-    @PatchMapping("/{brandID}")
+    @PatchMapping("/{brandId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse updateBrand(@PathVariable Long brandID,
+    public MsgResponse updateBrand(@PathVariable Long brandId,
                                       @Valid @RequestBody UpdateBrand request) {
-        brandService.updateBrand(brandID, request);
+        brandService.updateBrand(brandId, request);
         return new MsgResponse("브랜드가 수정되었습니다.", "200");
     }
 
@@ -71,10 +71,10 @@ public class BrandController {
             summary = "브랜드 삭제",
             description = "선택한 브랜드 삭제"
     )
-    @DeleteMapping("/{brandID}")
+    @DeleteMapping("/{brandId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse deleteBrand(@PathVariable Long brandID) {
-        brandService.deleteBrand(brandID);
+    public MsgResponse deleteBrand(@PathVariable Long brandId) {
+        brandService.deleteBrand(brandId);
         return new MsgResponse("브랜드가 삭제되었습니다", "200");
     }
 
@@ -82,10 +82,10 @@ public class BrandController {
             summary = "브랜드 활성화",
             description = "선택한 브랜드의 정지 상태 해제"
     )
-    @PatchMapping("/{brandID}/active")
+    @PatchMapping("/{brandId}/active")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse activeBrand(@PathVariable Long brandID) {
-        brandService.activeBrand(brandID);
+    public MsgResponse activeBrand(@PathVariable Long brandId) {
+        brandService.activeBrand(brandId);
         return new MsgResponse("브랜드가 활성화 되었습니다.", "200");
     }
 }

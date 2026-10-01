@@ -22,7 +22,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.Random;
 
 @Slf4j
 @Service
@@ -67,9 +66,6 @@ public class AuthService {
 
         loginAttemptLimiter.reset(loginId);
         user.login();
-
-        String accessToken = jwtTokenProvider.createToken(user);
-
         return new LoginResponse("정상적으로 로그인 되었습니다.", "200", jwtTokenProvider.createToken(user));
     }
 

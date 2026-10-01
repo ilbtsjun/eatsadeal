@@ -62,11 +62,11 @@ public class EventController {
             summary = "이벤트 수정",
             description = "이벤트를 수정합니다."
     )
-    @PatchMapping("/{eventID}")
+    @PatchMapping("/{eventId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse updateEvent(@PathVariable Long eventID,
+    public MsgResponse updateEvent(@PathVariable Long eventId,
                                    @Valid @RequestBody UpdateEvent request){
-        eventService.updateEvent(eventID, request);
+        eventService.updateEvent(eventId, request);
         return new MsgResponse("수정이 성공적으로 완료되었습니다.","200");
     }
 
@@ -85,7 +85,7 @@ public class EventController {
             summary = "이벤트 코드 목록 조회",
             description = "이벤트 코드 목록을 반환합니다.."
     )
-    @GetMapping("/event/codes")
+    @GetMapping("/event-codes")
     public List<GetEventCodeListResponse> getEventCodes(){
         return eventService.getEventCodes();
     }
