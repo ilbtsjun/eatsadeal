@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -34,49 +35,42 @@ public class AuthService {
     private final MailService mailService;
     private final RedisJsonStore redisJsonStore;
     private final MailVerificationPolicy mailVerificationPolicy;
-
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     private static final String PENDING_PREFIX = "pending:user:";
-
     private static final String PASSWORD_PREFIX = "password:change:";
-
     private static final String SIGNUP_PURPOSE = "SIGNUP";
-
     private static final String PASSWORD_RESET_PURPOSE = "PASSWORD_RESET";
-
+    private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailOrNickname(request.id().trim())
-                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+        String loginId = request.id().trim();
+        loginAttemptLimiter.checkAllowed(loginId);
+        User user = userRepository.findByEmailOrNickname(loginId).orElse(null);
+
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {
+            loginAttemptLimiter.recordFailure(loginId);
+            throw new BusinessException(ErrorCode.LOGIN_FAILED, "이메일 또는 비밀번호를 확인해주세요.");
+        }
 
         user.releaseIfExpired(LocalDateTime.now());
 
-        String message = "정상적으로 로그인 되었습니다.";
-
-        switch(user.getUserStatus()){
-            case SUSPEND :
-                message = user.getSuspendedUntil() + "까지 이용이 제한되었습니다.\n" +
-                        "사유 : " +user.getSuspendingReason();
-                return new LoginResponse(message,"403",null);
-            case WITHDRAWN :
-                message = "이미 탈퇴한 사용자입니다.";
-                return new LoginResponse(message,"403",null);
+        switch (user.getUserStatus()) {
+            case SUSPEND -> throw new BusinessException(ErrorCode.ACCOUNT_SUSPENDED,
+                    user.getSuspendedUntil() + "까지 이용이 제한되었습니다.\n"+
+                    "사유 : " + user.getSuspendingReason());
+            case WITHDRAWN -> throw new BusinessException(ErrorCode.ACCOUNT_WITHDRAWN, "이미 탈퇴한 사용자입니다.");
+            default -> { }
         }
 
-        if(!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.LOGIN_FAILED);
-        }
-
+        loginAttemptLimiter.reset(loginId);
         user.login();
 
         String accessToken = jwtTokenProvider.createToken(user);
 
-        return new LoginResponse(
-                message,
-                "200",
-                accessToken
-        );
+        return new LoginResponse("정상적으로 로그인 되었습니다.", "200", jwtTokenProvider.createToken(user));
     }
 
     public void logout(HttpServletRequest request) {
@@ -135,9 +129,7 @@ public class AuthService {
 
         if (!attemptAllowed) {
             redisJsonStore.delete(key);
-
             mailVerificationPolicy.clearAttempts(SIGNUP_PURPOSE, email);
-
             throw new BusinessException(ErrorCode.AUTH_FAILED, "인증번호 입력 횟수를 초과했습니다. 다시 회원가입을 진행해주세요.");
         }
 
@@ -162,27 +154,20 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-
         redisJsonStore.delete(key);
-
         mailVerificationPolicy.clearAttempts(SIGNUP_PURPOSE, email);
     }
 
     public void changePassword(PasswordChange request) {
         String email = RedisKeyUtil.normalizeEmail(request.email());
-
         mailVerificationPolicy.validateSendingAllowed(PASSWORD_RESET_PURPOSE, email);
-
         boolean userExists = userRepository.existsByEmail(email);
-
         if (!userExists) {
             return;
         }
 
         String authCode = createCode();
-
         PasswordChange pendingPassword = new PasswordChange(email, authCode);
-
         String key = PASSWORD_PREFIX + RedisKeyUtil.emailHash(email);
 
         redisJsonStore.save(
@@ -201,16 +186,12 @@ public class AuthService {
         }
 
         String email = RedisKeyUtil.normalizeEmail(request.email());
-
         boolean attemptAllowed = mailVerificationPolicy.isVerificationAttemptAllowed(PASSWORD_RESET_PURPOSE, email);
-
         String key = PASSWORD_PREFIX + RedisKeyUtil.emailHash(email);
 
         if (!attemptAllowed) {
             redisJsonStore.delete(key);
-
             mailVerificationPolicy.clearAttempts(PASSWORD_RESET_PURPOSE, email);
-
             throw new BusinessException(ErrorCode.AUTH_FAILED, "인증번호 입력 횟수를 초과했습니다. 다시 요청해주세요.");
         }
 
@@ -228,9 +209,7 @@ public class AuthService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_FAILED, "인증번호가 만료되었거나 유효하지 않습니다."));
 
         user.updatePassword(passwordEncoder.encode(request.changePassword()));
-
         redisJsonStore.delete(key);
-
         mailVerificationPolicy.clearAttempts(PASSWORD_RESET_PURPOSE, email);
     }
 
@@ -240,17 +219,10 @@ public class AuthService {
     }
 
     public String createCode() {
-        Random random = new Random();
-        StringBuilder key = new StringBuilder();
-
+        StringBuilder sb = new StringBuilder(6);
         for (int i = 0; i < 6; i++) {
-            int index = random.nextInt(2);
-
-            switch (index) {
-                case 0 -> key.append((char) (random.nextInt(26) + 65)); // 대문자
-                case 1 -> key.append(random.nextInt(10)); // 숫자
-            }
+            sb.append(CODE_CHARS.charAt(SECURE_RANDOM.nextInt(CODE_CHARS.length())));
         }
-        return key.toString();
+        return sb.toString();
     }
 }

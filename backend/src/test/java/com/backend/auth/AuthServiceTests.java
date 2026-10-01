@@ -4,6 +4,7 @@ import com.backend.auth.dto.*;
 import com.backend.auth.resolver.BearerTokenResolver;
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.MailVerificationPolicy;
+import com.backend.auth.service.LoginAttemptLimiter;
 import com.backend.auth.token.JwtTokenProvider;
 import com.backend.auth.token.TokenBlacklist;
 import com.backend.common.error.BusinessException;
@@ -60,6 +61,9 @@ class AuthServiceTests {
     @Mock
     private MailVerificationPolicy mailVerificationPolicy;
 
+    @Mock
+    private LoginAttemptLimiter loginAttemptLimiter;
+
     @InjectMocks
     private AuthService authService;
 
@@ -104,101 +108,144 @@ class AuthServiceTests {
     class LoginTests {
 
         @Test
-        @DisplayName("성공: ACTIVE 유저가 비밀번호 일치 시 토큰을 발급받고 200 응답을 받는다")
+        @DisplayName("성공: ACTIVE 유저가 비밀번호 일치 시 토큰을 발급받고, 실패 기록이 초기화된다")
         void success() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
-            when(userRepository.findByEmailOrNickname("user@test.com")).thenReturn(Optional.of(user));
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches("raw-password", "encoded")).thenReturn(true);
             when(jwtTokenProvider.createToken(user)).thenReturn("issued-token");
 
-            LoginResponse response = authService.login(loginRequest("user@test.com", "raw-password"));
+            LoginResponse response = authService.login(loginRequest("[EMAIL]", "raw-password"));
 
             assertEquals("200", response.status());
             assertEquals("issued-token", response.token());
             assertNotNull(user.getLastLoginAt(), "로그인 시각이 기록되어야 한다");
+            verify(loginAttemptLimiter).checkAllowed("[EMAIL]");
+            verify(loginAttemptLimiter).reset("[EMAIL]");
+            verify(loginAttemptLimiter, never()).recordFailure(anyString());
         }
 
         @Test
         @DisplayName("성공: id 앞뒤 공백은 제거되어 조회된다")
         void trimsId() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
-            when(userRepository.findByEmailOrNickname("user@test.com")).thenReturn(Optional.of(user));
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
             when(jwtTokenProvider.createToken(user)).thenReturn("token");
 
-            authService.login(loginRequest("  user@test.com  ", "raw-password"));
+            authService.login(loginRequest("  [EMAIL]  ", "raw-password"));
 
-            verify(userRepository).findByEmailOrNickname("user@test.com");
+            verify(userRepository).findByEmailOrNickname("[EMAIL]");
         }
 
         @Test
-        @DisplayName("실패: 아이디(이메일/닉네임)가 없으면 LOGIN_FAILED, 비밀번호 비교는 하지 않는다")
+        @DisplayName("실패: 아이디가 없으면 LOGIN_FAILED, 실패 횟수를 기록하고 비밀번호 비교는 하지 않는다")
         void userNotFound() {
             when(userRepository.findByEmailOrNickname("nobody")).thenReturn(Optional.empty());
 
             assertBusinessException(() -> authService.login(loginRequest("nobody", "raw-password")), ErrorCode.LOGIN_FAILED);
 
             verifyNoInteractions(passwordEncoder, jwtTokenProvider);
+            verify(loginAttemptLimiter).recordFailure("nobody");
         }
 
         @Test
-        @DisplayName("실패: 비밀번호가 틀리면 LOGIN_FAILED, 토큰을 발급하지 않는다")
+        @DisplayName("실패: 비밀번호가 틀리면 LOGIN_FAILED, 실패 횟수를 기록하고 토큰을 발급하지 않는다")
         void wrongPassword() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
-            when(userRepository.findByEmailOrNickname("user@test.com")).thenReturn(Optional.of(user));
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
 
-            assertBusinessException(() -> authService.login(loginRequest("user@test.com", "wrong")), ErrorCode.LOGIN_FAILED);
+            assertBusinessException(() -> authService.login(loginRequest("[EMAIL]", "wrong")), ErrorCode.LOGIN_FAILED);
 
+            verifyNoInteractions(jwtTokenProvider);
+            assertNull(user.getLastLoginAt());
+            verify(loginAttemptLimiter).recordFailure("[EMAIL]");
+            verify(loginAttemptLimiter, never()).reset(anyString());
+        }
+
+        @Test
+        @DisplayName("실패: 시도 횟수 초과 시 TOO_MANY_REQUEST, DB 조회조차 하지 않는다")
+        void tooManyAttempts() {
+            doThrow(new BusinessException(ErrorCode.TOO_MANY_REQUEST))
+                    .when(loginAttemptLimiter).checkAllowed("[EMAIL]");
+
+            assertBusinessException(() -> authService.login(loginRequest("[EMAIL]", "raw-password")), ErrorCode.TOO_MANY_REQUEST);
+
+            verifyNoInteractions(userRepository, passwordEncoder, jwtTokenProvider);
+        }
+
+        @Test
+        @DisplayName("정지 중 + 비밀번호 일치: ACCOUNT_SUSPENDED 예외와 정지 사유를 알려준다. 토큰은 발급하지 않는다")
+        void suspendedUser() {
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
+            user.suspend(30L, "규정 위반");
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("raw-password", "encoded")).thenReturn(true);
+
+            BusinessException e = assertBusinessException(
+                    () -> authService.login(loginRequest("[EMAIL]", "raw-password")), ErrorCode.ACCOUNT_SUSPENDED);
+
+            assertTrue(e.getMessage().contains("규정 위반"));
             verifyNoInteractions(jwtTokenProvider);
             assertNull(user.getLastLoginAt());
         }
 
         @Test
-        @DisplayName("정지 중(만료 전): 예외 없이 403 응답과 정지 사유가 담긴 메시지를 반환한다. 토큰은 발급하지 않는다")
-        void suspendedUser() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
+        @DisplayName("보안: 정지 계정이라도 비밀번호가 틀리면 LOGIN_FAILED만 나오고 정지 사유는 노출되지 않는다")
+        void suspendedUserWrongPasswordHidesReason() {
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
             user.suspend(30L, "규정 위반");
-            when(userRepository.findByEmailOrNickname("user@test.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
 
-            LoginResponse response = authService.login(loginRequest("user@test.com", "raw-password"));
+            BusinessException e = assertBusinessException(
+                    () -> authService.login(loginRequest("[EMAIL]", "wrong")), ErrorCode.LOGIN_FAILED);
 
-            assertEquals("403", response.status());
-            assertNull(response.token());
-            assertTrue(response.msg().contains("규정 위반"));
-            verifyNoInteractions(jwtTokenProvider);
+            assertFalse(e.getMessage().contains("규정 위반"), "정지 사유가 노출되면 안 된다");
+            verify(loginAttemptLimiter).recordFailure("[EMAIL]");
         }
 
         @Test
         @DisplayName("정지 만료됨: releaseIfExpired로 ACTIVE가 되어 정상 로그인된다")
         void suspensionExpired() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
             user.suspend(30L, "규정 위반");
             ReflectionTestUtils.setField(user, "suspendedUntil", LocalDateTime.now().minusDays(1));
-            when(userRepository.findByEmailOrNickname("user@test.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailOrNickname("[EMAIL]")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
             when(jwtTokenProvider.createToken(user)).thenReturn("token");
 
-            LoginResponse response = authService.login(loginRequest("user@test.com", "raw-password"));
+            LoginResponse response = authService.login(loginRequest("[EMAIL]", "raw-password"));
 
             assertEquals("200", response.status());
             assertEquals(UserStatus.ACTIVE, user.getUserStatus());
         }
 
         @Test
-        @DisplayName("탈퇴한 유저: 예외 없이 403과 탈퇴 안내 메시지를 반환한다. 토큰은 발급하지 않는다")
+        @DisplayName("탈퇴 + 비밀번호 일치: ACCOUNT_WITHDRAWN 예외. 토큰은 발급하지 않는다")
         void withdrawnUser() {
-            User user = buildUser("user@test.com", "닉네임", "encoded");
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
             user.withdrawn();
             when(userRepository.findByEmailOrNickname(anyString())).thenReturn(Optional.of(user));
-            lenient().when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
 
-            LoginResponse response = authService.login(loginRequest("user@test.com", "raw-password"));
+            BusinessException e = assertBusinessException(
+                    () -> authService.login(loginRequest("[EMAIL]", "raw-password")), ErrorCode.ACCOUNT_WITHDRAWN);
 
-            assertEquals("403", response.status());
-            assertNull(response.token());
-            assertTrue(response.msg().contains("탈퇴"));
+            assertTrue(e.getMessage().contains("탈퇴"));
             verifyNoInteractions(jwtTokenProvider);
+        }
+
+        @Test
+        @DisplayName("보안: 탈퇴 계정이라도 비밀번호가 틀리면 LOGIN_FAILED (탈퇴 여부 노출 안 함)")
+        void withdrawnUserWrongPassword() {
+            User user = buildUser("[EMAIL]", "닉네임", "encoded");
+            user.withdrawn();
+            when(userRepository.findByEmailOrNickname(anyString())).thenReturn(Optional.of(user));
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
+
+            assertBusinessException(() -> authService.login(loginRequest("[EMAIL]", "wrong")), ErrorCode.LOGIN_FAILED);
         }
     }
 
@@ -554,7 +601,7 @@ class AuthServiceTests {
             for (int i = 0; i < 50; i++) {
                 String code = authService.createCode();
                 assertEquals(6, code.length());
-                assertTrue(code.matches("[A-Z0-9]{6}"), "코드가 형식에 맞지 않음: " + code);
+                assertTrue(code.matches("[A-HJ-NP-Z2-9]{6}"), "코드가 형식에 맞지 않음(O/0/I/1 제외): " + code);
             }
         }
     }
