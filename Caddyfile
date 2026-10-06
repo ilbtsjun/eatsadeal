@@ -1,0 +1,7 @@
+www.eatsadeal.kr {
+    reverse_proxy frontend:80
+}
+
+eatsadeal.kr {
+    redir https://www.eatsadeal.kr{uri} permanent
+}
