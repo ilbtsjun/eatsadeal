@@ -5,9 +5,6 @@ import { apiRequest } from '../api/client';
 
 const request = apiRequest;
 
-/**
- * 크롤러 목록 (모두 POST 요청).
- */
 const CRAWL_ALL = { path: '/api/crawl', label: '전체' };
 const CRAWL_GROUPS = [
   {
@@ -48,8 +45,6 @@ const CRAWL_GROUPS = [
   },
 ];
 
-// 브랜드 활성/정지: 정지는 기존 DELETE(소프트 삭제)를 사용하고, 활성화는 아래 경로로 가정했습니다.
-// 백엔드의 실제 활성화 경로가 다르면 이 함수만 고치면 됩니다.
 const BRAND_ACTIVATE_API = (id) => `/api/brands/${id}/active`;
 const isBrandActive = (brand) => Boolean(brand?.isActive ?? brand?.active ?? true);
 
@@ -59,7 +54,6 @@ const CONFIRM_TEXT = {
   activate: { title: '브랜드 활성화', question: ' 브랜드를 다시 활성화하시겠습니까?', note: '', button: '활성화하기' },
 };
 
-// 백엔드 UserStatus: ACTIVE / SUSPEND / WITHDRAWN
 const USER_STATUS_LABELS = { ACTIVE: '정상', SUSPEND: '정지', WITHDRAWN: '탈퇴' };
 const getUserStatus = (target) => String(target?.userStatus ?? target?.status ?? '').toUpperCase();
 
@@ -77,9 +71,7 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(null);
   const [crawlerLoading, setCrawlerLoading] = useState(false);
-
-  // 정지 / 정지 해제 모달 (null 이면 닫힘)
-  const [suspendModal, setSuspendModal] = useState(null); // { mode: 'suspend' | 'release', days, reason }
+  const [suspendModal, setSuspendModal] = useState(null);
   const [suspendError, setSuspendError] = useState('');
   const [suspendSubmitting, setSuspendSubmitting] = useState(false);
 
@@ -100,13 +92,26 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     }
   };
 
+  const BRAND_CATEGORY_MAP = {
+    // 치킨 브랜드
+    'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
+    // 피자 브랜드
+    'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
+    // 햄버거 브랜드
+    'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lotteria': 'hamburger', 'Momstouch': 'hamburger',
+  };
+
+  const getFallbackImage = (brandName) => {
+    const category = BRAND_CATEGORY_MAP[brandName];
+    if (category === 'chicken') return '/images/default-chicken.webp';
+    if (category === 'pizza') return '/images/default-pizza.webp';
+    if (category === 'hamburger') return '/images/default-hamburger.webp';
+  };
+
   useEffect(() => {
-    // 목록 초기 조회는 외부 API와 동기화하기 위한 초기 효과입니다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadLists().catch(() => {});
   }, []);
 
-  // 크롤링은 POST 요청입니다.
   const runCrawler = async (path, label) => {
     setCrawlerLoading(true);
     setMessage(`${label} 크롤링을 실행하는 중입니다...`);
@@ -120,12 +125,10 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     } finally { setCrawlerLoading(false); }
   };
 
-  // 카테고리 삭제 확인창
   const deleteItem = (type, id, name) => {
     setConfirmDelete({ kind: 'delete', type, id, name });
   };
 
-  // 브랜드 정지 / 활성화 확인창 (현재 상태에 따라 반대 동작)
   const toggleBrandActive = (brand) => {
     setConfirmDelete({ kind: isBrandActive(brand) ? 'deactivate' : 'activate', type: 'brand', id: brand.id, name: brand.name });
   };
@@ -149,7 +152,6 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     } catch (error) { setMessage(error.message); }
   };
 
-  // ===== 회원 정지 / 해제 (모달) =====
   const openSuspendModal = (release) => {
     if (!selectedUser?.id) return;
     setSuspendError('');
@@ -192,7 +194,6 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
       await request(`/api/user/admin/${selectedUser.id}/suspension`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // status: true = 정지, false = 정지 해제 (기존 코드의 `!active` 와 같은 의미)
         body: JSON.stringify({ suspendTime, suspendReason: reason, status: !release }),
       });
       setSelectedUser(await request(`/api/user/admin/user?id=${selectedUser.id}`));
@@ -215,7 +216,6 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     }
   };
 
-  // 브랜드 목록 응답에는 url / categoryIds 가 없을 수 있으므로, 수정 시 상세 API 로 다시 조회
   const openEdit = async (type, item) => {
     if (!item) return;
     if (type !== 'brand' && type !== 'category') return;
@@ -254,7 +254,6 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
       return;
     }
 
-    // 숫자만 입력하면 회원 ID로 먼저 찾고, 없으면 닉네임으로 다시 찾습니다. (숫자로만 된 닉네임 대응)
     const queries = /^\d+$/.test(keyword)
         ? [`id=${keyword}`, `nickname=${encodeURIComponent(keyword)}`]
         : [`nickname=${encodeURIComponent(keyword)}`];
@@ -288,7 +287,6 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
     }
   };
 
-  // 브랜드 폼에서 카테고리 선택/해제
   const toggleCategory = (categoryId) => {
     const id = Number(categoryId);
     setForm((current) => ({
@@ -425,7 +423,13 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
                     return (
                         <div className={`management-row ${active ? '' : 'is-inactive'}`} key={item.id}>
                           <div className="item-main">
-                            {item.img && <img src={item.img} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
+                            {item.img && <img src={item.img}
+                                              alt=""
+                                              onError={(e) => {
+                                                e.currentTarget.onerror = null; // 무한 루프 방지
+                                                e.currentTarget.src = getFallbackImage(item.name);
+                                              }}
+                            />}
                             <div className="item-title">
                               <strong>{item.name}</strong>
                               {isBrand && <span className={`brand-status ${active ? 'active' : 'inactive'}`}>{active ? '활성' : '정지'}</span>}

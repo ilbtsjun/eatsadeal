@@ -55,7 +55,6 @@ function App() {
     setLegalPage(page);
   };
   const closeLegalPage = () => {
-    // 회원가입 화면에서 열었다면 회원가입으로, 그 외에는 메인으로 돌아감
     window.history.pushState({ view: showSignup ? 'signup' : 'home' }, '', window.location.href);
     setLegalPage(null);
   };
@@ -63,6 +62,7 @@ function App() {
     window.history.pushState({ view }, '', window.location.href);
     action();
   };
+
   useEffect(() => {
     window.history.replaceState({ view: 'home', searchKeyword: '' }, '', window.location.href);
     const handlePopState = (event) => {
@@ -73,6 +73,30 @@ function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  useEffect(() => {
+    let pageTitle = 'Eats a Deal'; // 기본 타이틀
+
+    if (legalPage === 'terms') {
+      pageTitle = '이용약관 - Eats a Deal';
+    } else if (legalPage === 'privacy') {
+      pageTitle = '개인정보처리방침 - Eats a Deal';
+    } else if (showLogin) {
+      pageTitle = '로그인 - Eats a Deal';
+    } else if (showSignup) {
+      pageTitle = '회원가입 - Eats a Deal';
+    } else if (showMyPage) {
+      pageTitle = '마이페이지 - Eats a Deal';
+    } else if (showFavorites) {
+      pageTitle = '즐겨찾기 - Eats a Deal';
+    } else if (showAdminPage) {
+      pageTitle = '관리자 페이지 - Eats a Deal';
+    } else if (selectedEvent) {
+      pageTitle = `${selectedEvent.title || '상세 정보'} - Eats a Deal`; // 이벤트 제목이 있다면 활용 가능
+    }
+    document.title = pageTitle;
+  }, [legalPage, showLogin, showSignup, showMyPage, showFavorites, showAdminPage, selectedEvent]);
+
   const openMyPage = (target = 'profile') => navigateTo('mypage', () => {
     setShowMyPage(true);
     setMyPageTarget(target);

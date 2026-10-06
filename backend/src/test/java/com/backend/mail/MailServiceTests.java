@@ -113,7 +113,7 @@ class MailServiceTests {
 
             MimeMessage sent = captureSentMessage();
             assertEquals(RECEIVER, recipientOf(sent));
-            assertEquals("[EatsADeal]회원가입 인증 테스트 메일입니다.", sent.getSubject());
+            assertEquals("[EatsADeal]회원가입 인증 메일입니다.", sent.getSubject());
             String body = (String) sent.getContent();
             assertTrue(body.contains("<h1>" + CODE + "</h1>"), "인증 코드가 본문에 있어야 한다");
             assertTrue(body.contains("유효기간은 10분"));
@@ -157,7 +157,7 @@ class MailServiceTests {
 
             MimeMessage sent = captureSentMessage();
             assertEquals(RECEIVER, recipientOf(sent));
-            assertEquals("[EatsADeal]패스워드 인증 테스트 메일입니다.", sent.getSubject());
+            assertEquals("[EatsADeal]패스워드 인증 메일입니다.", sent.getSubject());
             String body = (String) sent.getContent();
             assertTrue(body.contains("<h1>" + CODE + "</h1>"), "인증 코드가 본문에 있어야 한다");
             assertTrue(body.contains("유효기간은 10분"));

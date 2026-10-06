@@ -3,13 +3,6 @@ import { apiRequest } from '../api/client';
 import Header from '../components/Header';
 import './EventDetailPage.css';
 
-/**
- * 댓글 API 엔드포인트 모음.
- *  - update : PATCH  /api/comments/{id}         body { content }   (UpdateComment)
- *  - remove : DELETE /api/comments/{id}
- *  - hide   : PATCH  /api/comments/{id}/hide    ADMIN 전용
- *  - unhide : PATCH  /api/comments/{id}/unhide  ADMIN 전용
- */
 const commentApi = {
   list: (eventId) => `/api/events/${eventId}/comments`,
   create: (eventId) => `/api/events/${eventId}/comments`,
@@ -19,11 +12,6 @@ const commentApi = {
   unhide: (commentId) => `/api/comments/${commentId}/unhide`,
 };
 
-/**
- * 대댓글(답글) 기능 스위치.
- * 현재 백엔드 CommentResponse 에 parentId 가 없어서 false 로 꺼둡니다.
- * 백엔드에 대댓글(parentId)을 추가한 뒤 true 로 바꾸면 답글 버튼과 입력 폼이 나타납니다.
- */
 const SUPPORTS_REPLIES = false;
 
 const COMMENT_MAX = 300;
@@ -79,10 +67,6 @@ function getInlineReplies(comment) { return comment.replies ?? comment.children 
 function isHiddenComment(comment) { return comment.status === 'HIDDEN'; }
 function isDeletedComment(comment) { return comment.status === 'DELETED'; }
 
-/**
- * 서버 응답이 (1) 평면 목록 + parentId 이든 (2) 댓글 안에 replies/children 이 중첩된 형태이든
- * "최상위 댓글 + 그 대댓글" 구조로 통일합니다. (대댓글은 1단계만 지원)
- */
 function buildCommentTree(list) {
   const repliesByParent = new Map();
   list.forEach((comment) => {
@@ -110,7 +94,6 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
   const [isFavorite, setIsFavorite] = useState(Boolean(event.isFavorite));
   const [favoriteError, setFavoriteError] = useState('');
 
-  // 수정 / 답글 입력 상태 (동시에 하나만 열림)
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [replyTargetId, setReplyTargetId] = useState(null);
@@ -150,7 +133,6 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
     }
   };
 
-  // 작성/수정/삭제/숨김 후에는 서버 기준으로 목록을 다시 불러와 응답 형태와 상관없이 항상 정확하게 표시
   const loadComments = useCallback(async () => {
     try {
       const data = await commentRequest(commentApi.list(event.id));
