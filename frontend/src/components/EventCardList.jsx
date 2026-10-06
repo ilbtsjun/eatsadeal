@@ -2,6 +2,22 @@ import { useEffect, useState } from 'react';
 import { apiRequest, getToken } from '../api/client';
 import './EventCardList.css';
 
+const BRAND_CATEGORY_MAP = {
+    // 치킨 브랜드
+    'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
+    // 피자 브랜드
+    'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
+    // 햄버거 브랜드
+    'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lottelia': 'hamburger', 'Momstouch': 'hamburger',
+};
+
+const getFallbackImage = (brandName) => {
+    const category = BRAND_CATEGORY_MAP[brandName];
+    if (category === 'chicken') return '/images/default-chicken.webp';
+    if (category === 'pizza') return '/images/default-pizza.webp';
+    if (category === 'hamburger') return '/images/default-hamburger.webp';
+};
+
 function calculateDDay(endDate) {
     if (!endDate) return '';
     const today = new Date();
@@ -123,7 +139,16 @@ export default function EventCardList({
                             <button type="button" className="event-card" onClick={() => onSelectEvent?.(event)}>
                                 <div className="card-image-box">
                                     {event.img ? (
-                                        <img src={event.img} alt={event.title} className="card-image" />
+                                        <img src={event.img}
+                                             alt={event.title}
+                                             className="card-image"
+                                             onLoad={(e) => {
+                                                 if (e.currentTarget.naturalWidth <= 1) e.currentTarget.src = getFallbackImage(event.brand);
+                                             }}
+                                             onError={(e) => {
+                                                 e.currentTarget.onerror = null; // 무한 루프 방지
+                                                 e.currentTarget.src = getFallbackImage(event.brand);
+                                             }}/>
                                     ) : <span className="card-emoji">🍗</span>}
                                     <span className="card-dday">{calculateDDay(event.endDate)}</span>
                                 </div>

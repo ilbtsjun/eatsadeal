@@ -1,0 +1,59 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH 설정
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: 서버에 배포
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o ServerAliveInterval=30 "$SSH_USER@$HOST" bash -s -- "$GITHUB_SHA" <<'REMOTE'
+          set -euo pipefail
+          SHA="$1"
+          cd ~/eatsadeal
+          git fetch origin main
+          git reset --hard "$SHA"
+          export GIT_SHA="$SHA"
+          docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --remove-orphans
+          docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+          docker image prune -f
+          REMOTE
+
+      - name: 배포된 버전 확인 (서버가 이번 커밋으로 떠 있는지)
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          V=""
+          for i in $(seq 1 30); do
+            V=$(curl -fsS --max-time 5 "http://$HOST/version.txt" || true)
+            if [ "$V" = "$GITHUB_SHA" ]; then echo "배포 확인: $V"; break; fi
+            sleep 10
+          done
+          [ "$V" = "$GITHUB_SHA" ] || { echo "버전 불일치 (서버: ${V:-응답 없음})"; exit 1; }
+
+      - name: API 응답 확인
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          curl -fsS "http://$HOST/api/categories" > /dev/null && echo "API OK"
