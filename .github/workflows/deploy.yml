@@ -42,11 +42,11 @@ jobs:
 
       - name: 배포된 버전 확인 (서버가 이번 커밋으로 떠 있는지)
         env:
-          HOST: ${{ secrets.EC2_HOST }}
+          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
           V=""
           for i in $(seq 1 30); do
-            V=$(curl -fsS --max-time 5 "http://$HOST/version.txt" || true)
+            V=$(curl -fsSL --max-time 5 "https://$DOMAIN/version.txt" || true)
             if [ "$V" = "$GITHUB_SHA" ]; then echo "배포 확인: $V"; break; fi
             sleep 10
           done
@@ -54,6 +54,6 @@ jobs:
 
       - name: API 응답 확인
         env:
-          HOST: ${{ secrets.EC2_HOST }}
+          DOMAIN: ${{ secrets.DOMAIN }}
         run: |
-          curl -fsS "http://$HOST/api/categories" > /dev/null && echo "API OK"
+          curl -fsSL "https://$DOMAIN/api/categories" > /dev/null && echo "API OK"
