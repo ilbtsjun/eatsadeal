@@ -56,15 +56,6 @@
   }
 }
 
-.legalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: #fff;
-}
-
 #center {
   display: flex;
   flex-direction: column;
