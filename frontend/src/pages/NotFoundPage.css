@@ -1,0 +1,7 @@
+.notfound-page { min-height: 100vh; background: #f8f9fa; }
+.notfound-card { display: grid; justify-items: center; gap: 10px; width: min(100% - 40px, 900px); margin: 30px auto; padding: 90px 20px; border: 1px solid #eaeaea; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.06); text-align: center; box-sizing: border-box; }
+.notfound-emoji { font-size: 56px; line-height: 1; }
+.notfound-card h1 { margin: 6px 0 0; color: #2f3542; font-size: 22px; }
+.notfound-card p { margin: 0; color: #747d8c; font-size: 14px; }
+.notfound-button { margin-top: 14px; padding: 12px 18px; border-radius: 8px; color: #fff; background: #ff4757; text-decoration: none; font-size: 14px; font-weight: 700; }
+.notfound-button:hover { background: #e84118; }

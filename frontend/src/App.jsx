@@ -7,6 +7,7 @@ import LegalRoute from './routes/LegalRoute.jsx'
 import RequireAuth from './routes/RequireAuth.jsx'
 import { MyPageRoute, FavoritesRoute, AdminRoute } from './routes/AccountRoute.jsx'
 import MainRoute from './routes/MainRoute.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
 
 export default function App() {
   return (
@@ -27,7 +28,7 @@ export default function App() {
               <Route path="/admin" element={<AdminRoute />} />
           </Route>
 
-        <Route path="*" element={<MainRoute />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
   );
 }

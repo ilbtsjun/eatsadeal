@@ -8,8 +8,7 @@ import SiteFooter from '../components/SiteFooter';
 
 const DEFAULTS = { category: 'all', sort: 'latest', q: '', page: 1 };
 
-export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, onOpenAdminPage,
-                                     onOpenMyPage, onOpenFavorites, onOpenTerms, onOpenPrivacy,}) {
+export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPrivacy}) {
     const [params, setParams] = useSearchParams();
     const category = params.get('category') ?? DEFAULTS.category;
     const sort = params.get('sort') ?? DEFAULTS.sort;
@@ -34,15 +33,9 @@ export default function MainPage({ user, onLoginClick, onLogout, onSelectEvent, 
     return (
         <div className="main-page">
             <Header
-                user={user}
-                onLoginClick={onLoginClick}
-                onLogout={onLogout}
-                onOpenMyPage={onOpenMyPage}
-                onOpenFavorites={onOpenFavorites}
-                onOpenAdminPage={onOpenAdminPage}
                 showSearch
                 searchKeyword={keyword}
-                onSearch={(k) => update({ q:k.trim() })}
+                onSearch={(k) => update({ q: k.trim() })}
             />
 
             <CategoryFilter

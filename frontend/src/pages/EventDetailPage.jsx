@@ -85,7 +85,7 @@ function buildCommentTree(list) {
       }));
 }
 
-export default function EventDetailPage({ event, user, onLoginClick, onLogout, onBack, onOpenMyPage, onOpenFavorites, onOpenAdminPage }) {
+export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [detailEvent, setDetailEvent] = useState(event);
   const [loaded, setLoaded] = useState(Boolean(event.title));
   const [loadError, setLoadError] = useState(null);
@@ -357,7 +357,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
 
   const renderStatus = (content) => (
       <div className="event-detail-page">
-        <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} />
+        <Header />
         <main className="event-detail-container">
           <button type="button" className="detail-back-button" onClick={onBack}>← 할인정보 목록으로</button>
           <section className="detail-status" role="status">{content}</section>
@@ -396,7 +396,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
 
   return (
       <div className="event-detail-page">
-        <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} />
+        <Header />
 
         <main className="event-detail-container">
           <button type="button" className="detail-back-button" onClick={onBack}>
