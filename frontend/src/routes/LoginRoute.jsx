@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import LoginPage from '../pages/LoginPage.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useGoBack } from '../hooks/useGoBack.jsx';
@@ -6,6 +6,8 @@ import { usePageTitle } from '../hooks/usePageTitle.jsx';
 
 export default function LoginRoute() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const from = location.state?.from ?? '/';
     const { login } = useAuth();
     const goBack = useGoBack('/');
     usePageTitle('로그인');
@@ -14,7 +16,7 @@ export default function LoginRoute() {
         <LoginPage
             onLogin={(u) => {
                 login(u);
-                navigate('/', { replace: true });
+                navigate(from, { replace: true });
             }}
             onBack={goBack}
             onSignupClick={() => navigate('/signup', { replace: true })}

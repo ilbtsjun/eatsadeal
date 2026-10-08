@@ -1,8 +1,6 @@
 import { Routes, Route } from 'react-router';
 import LegacyApp from './LegacyApp.jsx'
-import LoginRoute from './routes/LoginRoute.jsx';
-import SignupRoute from './routes/SignupRoute.jsx';
-import LegalOverlay from './routes/LegalOverlay.jsx';
+import { LoginRoute, SignupRoute, LegalOverlay, EventDetailRoute } from './routes';
 
 export default function App() {
   return (
@@ -12,6 +10,7 @@ export default function App() {
               <Route path="terms" element={<LegalOverlay kind="terms" />} />
               <Route path="privacy" element={<LegalOverlay kind="privacy" />} />
           </Route>
+          <Route path="/events/:eventId" element={<EventDetailRoute />} />
         <Route path="*" element={<LegacyApp />} />
       </Routes>
   );

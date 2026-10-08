@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from './auth/AuthContext.jsx';
 import MainPage from './pages/MainPage.jsx';
-import EventDetailPage from './pages/EventDetailPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import MyPage from './pages/MyPage.jsx';
 import FavoritesPage from './pages/FavoritesPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 
 function LegacyApp(){
     const navigate = useNavigate();
+    const initialView = useLocation().state?.view;
     const { user, updateUser, logout, } = useAuth();
-    const [selectedEvent, setSelectedEvent] = useState(null);
-    const [showAdminPage, setShowAdminPage] = useState(false);
-    const [showMyPage, setShowMyPage] = useState(false);
-    const [showFavorites, setShowFavorites] = useState(false);
+    const [showAdminPage, setShowAdminPage] = useState(initialView === 'admin');
+    const [showMyPage, setShowMyPage] = useState(initialView === 'mypage');
+    const [showFavorites, setShowFavorites] = useState(initialView === 'favorites');
     const [myPageTarget, setMyPageTarget] = useState('profile');
     const [searchKeyword, setSearchKeyword] = useState('');
     const [legalPage, setLegalPage] = useState(null);
@@ -25,8 +24,6 @@ function LegacyApp(){
         setShowFavorites(view === 'favorites');
         setShowAdminPage(view === 'admin');
         if (view === 'home') setSearchKeyword(nextSearchKeyword || '');
-        if (view === 'event' && event) setSelectedEvent(event);
-        if (view !== 'event') setSelectedEvent(null);
         if (view !== 'terms' && view !== 'privacy') setLegalPage(null);
     };
     const openLegalPage = (page) => {
@@ -66,11 +63,9 @@ function LegacyApp(){
             pageTitle = '즐겨찾기 - Eats a Deal';
         } else if (showAdminPage) {
             pageTitle = '관리자 페이지 - Eats a Deal';
-        } else if (selectedEvent) {
-            pageTitle = `${selectedEvent.title || '상세 정보'} - Eats a Deal`; // 이벤트 제목이 있다면 활용 가능
+            document.title = pageTitle;
         }
-        document.title = pageTitle;
-    }, [legalPage, showMyPage, showFavorites, showAdminPage, selectedEvent]);
+    }, [legalPage, showMyPage, showFavorites, showAdminPage]);
 
     const openMyPage = (target = 'profile') => navigateTo('mypage', () => {
         setShowMyPage(true);
@@ -79,7 +74,6 @@ function LegacyApp(){
     const openFavorites = () => navigateTo('favorites', () => {
         setShowMyPage(false);
         setShowAdminPage(false);
-        setSelectedEvent(null);
         setShowFavorites(true);
     });
 
@@ -114,11 +108,7 @@ function LegacyApp(){
                            setShowMyPage(false);
                            setShowAdminPage(true);
                        })}
-                       onOpenEvent={(event) => {
-                           window.history.pushState({ view: 'event', event }, '', window.location.href);
-                           setShowMyPage(false);
-                           setSelectedEvent(event);
-                       }}
+                       onOpenEvent={(event) => navigate(`/events/${event.id}`, { state: { event } })}
         />;
     }
 
@@ -127,9 +117,7 @@ function LegacyApp(){
                               onLoginClick={() => navigate('/login')}
                               onLogout={handleLogout}
                               onBack={() => navigateTo('home', () => setShowFavorites(false))}
-                              onOpenEvent={(event) => {
-                                  window.history.pushState({ view: 'event', event }, '', window.location.href);
-                                  setShowFavorites(false); setSelectedEvent(event); }}
+                              onOpenEvent={(event) => navigate(`/events/${event.id}`, { state: { event } })}
                               onOpenMyPage={() => openMyPage('profile')}
                               onOpenFavorites={openFavorites}
                               onOpenAdminPage={() => navigateTo('admin', () => {
@@ -147,20 +135,6 @@ function LegacyApp(){
                           onOpenFavorites={openFavorites} />;
     }
 
-    if (selectedEvent) {
-        return (
-            <EventDetailPage
-                event={selectedEvent}
-                user={user}
-                onLoginClick={() => navigate('/login')}
-                onLogout={handleLogout}
-                onBack={() => navigateTo('home', () => setSelectedEvent(null))}
-                onOpenMyPage={() => openMyPage('profile')}
-                onOpenFavorites={openFavorites}
-                onOpenAdminPage={() => navigateTo('admin', () => { setSelectedEvent(null); setShowAdminPage(true); })}
-            />
-        );
-    }
     return (
         <MainPage
             user={user}
@@ -171,11 +145,7 @@ function LegacyApp(){
             onOpenMyPage={() => openMyPage('profile')}
             onOpenFavorites={openFavorites}
             onOpenAdminPage={() => navigateTo('admin', () => setShowAdminPage(true))}
-
-            onSelectEvent={(event) => {
-                window.history.pushState({ view: 'event', event }, '', window.location.href);
-                setSelectedEvent(event);
-            }}
+            onSelectEvent={(event) => navigate(`/events/${event.id}`, { state: { event } })}
             onOpenTerms={() => openLegalPage('terms')}
             onOpenPrivacy={() => openLegalPage('privacy')}
         />
