@@ -22,7 +22,6 @@ export function FavoritesRoute() {
     return <FavoritesPage user={user}
                           onBack={() => navigate('/')}
                           onOpenEvent={openEvent(navigate)} />;
-    return <AdminPage user={user} onBack={() => navigate('/')} />
 }
 
 export function AdminRoute() {

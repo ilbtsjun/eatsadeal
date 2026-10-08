@@ -10,7 +10,6 @@ export default function SignupRoute() {
 
     return (
         <>
-            {/* 하위 라우트(약관)가 바뀌어도 이 요소는 unmount되지 않아 입력값과 체크 상태가 유지됨 */}
             <SignupPage
                 onBack={goBack}
                 onLoginClick={() => navigate('/login', { replace: true })}
