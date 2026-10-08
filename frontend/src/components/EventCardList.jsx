@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { apiRequest, getToken } from '../api/client';
+import { apiRequest } from '../api/client';
+import { getToken } from '../auth/Token.jsx';
 import './EventCardList.css';
 
 const BRAND_CATEGORY_MAP = {
