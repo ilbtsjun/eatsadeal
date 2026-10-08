@@ -2,6 +2,7 @@ import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import EventDetailPage from '../pages/EventDetailPage.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useGoBack } from '../hooks/useGoBack.jsx';
+import { useHeaderProps } from '../hooks/useHeaderProps.jsx'
 
 export default function EventDetailRoute() {
     const { eventId } = useParams();
@@ -9,6 +10,7 @@ export default function EventDetailRoute() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const goBack = useGoBack('/');
+    const header = useHeaderProps();
 
     const id = Number(eventId);
     if (!Number.isInteger(id))
@@ -21,13 +23,8 @@ export default function EventDetailRoute() {
         <EventDetailPage
             key={id}
             event={event}
-            user={user}
-            onLoginClick={() => navigate('/login', { state: { from: location.pathname } })}
-            onLogout={logout}
+            {...header}
             onBack={goBack}
-            onOpenMyPage={() => navigate('/', { state: { view: 'mypage' } })}
-            onOpenFavorites={() => navigate('/', { state: { view: 'favorites' } })}
-            onOpenAdminPage={() => navigate('/', { state: { view: 'admin' } })}
         />
     );
 }
