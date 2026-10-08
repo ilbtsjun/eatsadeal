@@ -35,8 +35,16 @@ export default function LoginPage({ onLogin, onBack, onSignupClick }) {
       const result = await readJsonResponse(response);
 
       if (!response.ok || String(result.status) !== '200' || !result.token) {
+        let message = result.message;
+        if(response.status === 403){
+          const formattedDate = message.split('T')[0];
+          const reason = "까지" + message.split('까지')[1];
+          const [h ,m] = result.message.split('T')[1].split('까지')[0].split('.')[0].split(':');
+          message = formattedDate + " " + h + "시 "+ m + "분" + reason;
+        }
+
         throw new Error(
-          result.message || result.msg || '이메일 또는 비밀번호를 확인해주세요.',
+          message || result.msg || '이메일 또는 비밀번호를 확인해주세요.',
         );
       }
 

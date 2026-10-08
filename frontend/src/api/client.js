@@ -1,8 +1,4 @@
-const TOKEN_KEY = 'eats-a-deal-token';
-
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
+import { getToken, isTokenExpired } from "../auth/Token.jsx"
 
 export async function apiRequest(url, options = {}) {
   const headers = {
@@ -10,12 +6,22 @@ export async function apiRequest(url, options = {}) {
     ...(options.headers || {}),
   };
   const token = getToken();
-  if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
+  if (token && isTokenExpired(token)) {
+    window.dispatchEvent(new Event('auth:expired'));
+    throw new Error('인증이 만료되었습니다.');
+  }
+  if (token && !headers.Authorization)
+    headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(url, { ...options, headers });
+  if (response.status === 401 && token)
+    window.dispatchEvent(new Event('auth:expired'));
   const text = await response.text();
   let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch {
+  try {
+    data = text ? JSON.parse(text) : {};
+  }
+  catch {
     throw new Error(`서버가 JSON이 아닌 응답을 반환했습니다. (HTTP ${response.status})`);
   }
   if (!response.ok) {

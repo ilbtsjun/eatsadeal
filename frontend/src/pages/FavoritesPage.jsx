@@ -3,7 +3,7 @@ import Header from '../components/Header';
 import { apiRequest } from '../api/client';
 import './FavoritesPage.css';
 
-export default function FavoritesPage({ user, onLoginClick, onLogout, onBack, onOpenEvent, onOpenMyPage, onOpenFavorites, onOpenAdminPage }) {
+export default function FavoritesPage({ user, onBack, onOpenEvent }) {
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -54,14 +54,7 @@ export default function FavoritesPage({ user, onLoginClick, onLogout, onBack, on
 
     return (
         <div className="favorites-page">
-            <Header
-                user={user}
-                onLoginClick={onLoginClick}
-                onLogout={onLogout}
-                onOpenMyPage={onOpenMyPage}
-                onOpenFavorites={onOpenFavorites}
-                onOpenAdminPage={onOpenAdminPage}
-            />
+            <Header />
             <main className="favorites-container">
                 <button type="button" className="favorites-back" onClick={onBack}>← 메인으로</button>
                 <h1>찜한 목록</h1>

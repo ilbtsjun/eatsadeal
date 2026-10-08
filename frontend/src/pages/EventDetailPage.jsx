@@ -2,6 +2,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import Header from '../components/Header';
 import './EventDetailPage.css';
+import { usePageTitle } from '../hooks/usePageTitle.jsx';
+
+const BRAND_CATEGORY_MAP = {
+  // 치킨 브랜드
+  'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
+  // 피자 브랜드
+  'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
+  // 햄버거 브랜드
+  'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lottelia': 'hamburger', 'Momstouch': 'hamburger',
+};
+
+const getFallbackImage = (brandName) => {
+  const category = BRAND_CATEGORY_MAP[brandName];
+  if (category === 'chicken') return '/images/default-chicken.webp';
+  if (category === 'pizza') return '/images/default-pizza.webp';
+  if (category === 'hamburger') return '/images/default-hamburger.webp';
+};
 
 const commentApi = {
   list: (eventId) => `/api/events/${eventId}/comments`,
@@ -84,8 +101,11 @@ function buildCommentTree(list) {
       }));
 }
 
-export default function EventDetailPage({ event, user, onLoginClick, onLogout, onBack, onOpenMyPage, onOpenFavorites, onOpenAdminPage }) {
+export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [detailEvent, setDetailEvent] = useState(event);
+  const [loaded, setLoaded] = useState(Boolean(event.title));
+  const [loadError, setLoadError] = useState(null);
+  usePageTitle(detailEvent.title || '이벤트');
   const [comments, setComments] = useState([]);
   const [commentLoading, setCommentLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
@@ -112,8 +132,13 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
         .then((data) => {
           setDetailEvent({ ...data, brand: data.brandName });
           setIsFavorite(Boolean(data.isFavorite));
+          setLoaded(true);
         })
-        .catch((error) => setFavoriteError(error.message));
+        .catch((error) => {
+          setFavoriteError(error.message);
+          setLoadError(error);
+          setLoaded(true);
+        });
   }, [event.id]);
 
   const toggleFavorite = async () => {
@@ -346,9 +371,48 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
   const commentTree = buildCommentTree(comments);
   const totalComments = commentTree.reduce((count, node) => count + 1 + node.replies.length, 0);
 
+  const renderStatus = (content) => (
+      <div className="event-detail-page">
+        <Header />
+        <main className="event-detail-container">
+          <button type="button" className="detail-back-button" onClick={onBack}>← 할인정보 목록으로</button>
+          <section className="detail-status" role="status">{content}</section>
+        </main>
+      </div>
+  );
+
+  if (!loaded) {
+    return renderStatus(
+        <>
+          <span className="detail-spinner" aria-hidden="true" />
+          <p>이벤트를 불러오는 중입니다…</p>
+        </>
+    );
+  }
+  if (loadError?.status === 404) {
+    return renderStatus(
+        <>
+          <span className="detail-status-emoji" aria-hidden="true">🍗</span>
+          <h1>이벤트를 찾을 수 없어요</h1>
+          <p>종료되었거나 삭제된 이벤트일 수 있습니다.</p>
+          <button type="button" className="detail-status-button" onClick={onBack}>이벤트 목록 보기</button>
+        </>
+    );
+  }
+  if (loadError && !detailEvent.title) {   // 404가 아닌 오류(서버 오류, 네트워크 등)
+    return renderStatus(
+        <>
+          <span className="detail-status-emoji" aria-hidden="true">😵</span>
+          <h1>이벤트를 불러오지 못했어요</h1>
+          <p>{loadError.message}</p>
+          <button type="button" className="detail-status-button" onClick={() => window.location.reload()}>다시 시도</button>
+        </>
+    );
+  }
+
   return (
       <div className="event-detail-page">
-        <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onOpenAdminPage} />
+        <Header />
 
         <main className="event-detail-container">
           <button type="button" className="detail-back-button" onClick={onBack}>
@@ -358,7 +422,15 @@ export default function EventDetailPage({ event, user, onLoginClick, onLogout, o
           <article className="event-detail-card">
             <div className="detail-image-box">
               {detailEvent.img ? (
-                  <img src={detailEvent.img} alt={detailEvent.title} className="detail-image" />
+                  <img src={detailEvent.img} alt={detailEvent.title} className="detail-image"
+                       onLoad={(e) => {
+                         if (e.currentTarget.naturalWidth <= 1) e.currentTarget.src = getFallbackImage(event.brand);
+                       }}
+                       onError={(e) => {
+                         e.currentTarget.onerror = null; // 무한 루프 방지
+                         e.currentTarget.src = getFallbackImage(event.brand);
+                       }}
+                  />
               ) : <span className="detail-emoji">🍗</span>}
               <span className="detail-dday">{calculateDDay(detailEvent.endDate)}</span>
               <button

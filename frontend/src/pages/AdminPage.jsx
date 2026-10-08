@@ -57,7 +57,7 @@ const CONFIRM_TEXT = {
 const USER_STATUS_LABELS = { ACTIVE: '정상', SUSPEND: '정지', WITHDRAWN: '탈퇴' };
 const getUserStatus = (target) => String(target?.userStatus ?? target?.status ?? '').toUpperCase();
 
-export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpenMyPage, onOpenFavorites }) {
+export default function AdminPage({ user, onBack }) {
   const [tab, setTab] = useState('brand');
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -339,7 +339,7 @@ export default function AdminPage({ user, onLoginClick, onLogout, onBack, onOpen
 
   return (
       <div className="admin-page">
-        <Header user={user} onLoginClick={onLoginClick} onLogout={onLogout} onOpenMyPage={onOpenMyPage} onOpenFavorites={onOpenFavorites} onOpenAdminPage={onBack} />
+        <Header />
         <main className="admin-container">
           <button type="button" className="admin-back" onClick={onBack}>← 메인으로</button>
           <div className="admin-page-title"><div><span>ADMINISTRATION</span><h1>관리자 페이지</h1><p>브랜드, 카테고리, 회원 정보를 관리합니다.</p></div><button type="button" onClick={loadLists}>새로고침</button></div>
