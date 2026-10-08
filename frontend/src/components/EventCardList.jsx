@@ -28,6 +28,7 @@ function calculateDDay(endDate) {
     const diffDays = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) return '종료';
     if (diffDays === 0) return 'D-Day';
+    if (diffDays > 365) return '365+';
     return `D-${diffDays}`;
 }
 

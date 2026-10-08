@@ -4,6 +4,22 @@ import Header from '../components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '../hooks/usePageTitle.jsx';
 
+const BRAND_CATEGORY_MAP = {
+  // 치킨 브랜드
+  'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
+  // 피자 브랜드
+  'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
+  // 햄버거 브랜드
+  'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lottelia': 'hamburger', 'Momstouch': 'hamburger',
+};
+
+const getFallbackImage = (brandName) => {
+  const category = BRAND_CATEGORY_MAP[brandName];
+  if (category === 'chicken') return '/images/default-chicken.webp';
+  if (category === 'pizza') return '/images/default-pizza.webp';
+  if (category === 'hamburger') return '/images/default-hamburger.webp';
+};
+
 const commentApi = {
   list: (eventId) => `/api/events/${eventId}/comments`,
   create: (eventId) => `/api/events/${eventId}/comments`,
@@ -406,7 +422,15 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
           <article className="event-detail-card">
             <div className="detail-image-box">
               {detailEvent.img ? (
-                  <img src={detailEvent.img} alt={detailEvent.title} className="detail-image" />
+                  <img src={detailEvent.img} alt={detailEvent.title} className="detail-image"
+                       onLoad={(e) => {
+                         if (e.currentTarget.naturalWidth <= 1) e.currentTarget.src = getFallbackImage(event.brand);
+                       }}
+                       onError={(e) => {
+                         e.currentTarget.onerror = null; // 무한 루프 방지
+                         e.currentTarget.src = getFallbackImage(event.brand);
+                       }}
+                  />
               ) : <span className="detail-emoji">🍗</span>}
               <span className="detail-dday">{calculateDDay(detailEvent.endDate)}</span>
               <button
