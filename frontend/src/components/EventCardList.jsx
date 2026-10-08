@@ -45,13 +45,14 @@ export default function EventCardList({
                                           activeCategory = 'all',
                                           activeSort = 'latest',
                                           searchKeyword = '',
+                                          page = 0,
+                                          onPageChange,
                                           onSelectEvent,
                                           user,
                                       }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const PAGE_SIZE = 20;
@@ -93,8 +94,8 @@ export default function EventCardList({
     }, [user, activeCategory, activeSort, searchKeyword, page]);
 
     useEffect(() => {
-        setPage(0);
-    }, [activeCategory, activeSort, searchKeyword, user]);
+        if (!loading && totalPages > 0 && page >= totalPages) onPageChange?.(totalPages - 1, true);
+    }, [loading, totalPages, page]);
 
     const toggleFavorite = async (event, clickEvent) => {
         clickEvent.stopPropagation();
@@ -180,7 +181,7 @@ export default function EventCardList({
                     <button
                         type="button"
                         className="page-btn"
-                        onClick={() => setPage(0)}
+                        onClick={() => onPageChange(0)}
                         disabled={page === 0}
                         aria-label="첫 페이지"
                     >
@@ -189,7 +190,7 @@ export default function EventCardList({
                     <button
                         type="button"
                         className="page-btn"
-                        onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                        onClick={() => onPageChange(Math.max(page - 1, 0))}
                         disabled={page === 0}
                         aria-label="이전 페이지"
                     >
@@ -201,7 +202,7 @@ export default function EventCardList({
                             key={pageIndex}
                             type="button"
                             className={`page-btn ${pageIndex === page ? 'is-active' : ''}`}
-                            onClick={() => setPage(pageIndex)}
+                            onClick={() => onPageChange(pageIndex)}
                             aria-current={pageIndex === page ? 'page' : undefined}
                         >
                             {pageIndex + 1}
@@ -211,7 +212,7 @@ export default function EventCardList({
                     <button
                         type="button"
                         className="page-btn"
-                        onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+                        onClick={() => onPageChange(Math.min(page + 1, totalPages - 1))}
                         disabled={page >= totalPages - 1}
                         aria-label="다음 페이지"
                     >
@@ -220,7 +221,7 @@ export default function EventCardList({
                     <button
                         type="button"
                         className="page-btn"
-                        onClick={() => setPage(totalPages - 1)}
+                        onClick={() => onPageChange(totalPages - 1)}
                         disabled={page >= totalPages - 1}
                         aria-label="마지막 페이지"
                     >

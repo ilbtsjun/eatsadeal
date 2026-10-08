@@ -1,6 +1,9 @@
 import { Routes, Route } from 'react-router';
 import LegacyApp from './LegacyApp.jsx'
-import { LoginRoute, SignupRoute, LegalOverlay, EventDetailRoute } from './routes';
+import LoginRoute from './routes/LoginRoute.jsx';
+import SignupRoute from './routes/SignupRoute.jsx';
+import LegalOverlay from './routes/LegalOverlay.jsx';
+import EventDetailRoute from './routes/EventDetailRoute.jsx';
 
 export default function App() {
   return (

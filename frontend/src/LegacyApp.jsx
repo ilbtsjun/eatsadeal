@@ -16,14 +16,12 @@ function LegacyApp(){
     const [showMyPage, setShowMyPage] = useState(initialView === 'mypage');
     const [showFavorites, setShowFavorites] = useState(initialView === 'favorites');
     const [myPageTarget, setMyPageTarget] = useState('profile');
-    const [searchKeyword, setSearchKeyword] = useState('');
     const [legalPage, setLegalPage] = useState(null);
 
-    const applyView = (view, event = null, nextSearchKeyword = '') => {
+    const applyView = (view, event = null) => {
         setShowMyPage(view === 'mypage');
         setShowFavorites(view === 'favorites');
         setShowAdminPage(view === 'admin');
-        if (view === 'home') setSearchKeyword(nextSearchKeyword || '');
         if (view !== 'terms' && view !== 'privacy') setLegalPage(null);
     };
     const openLegalPage = (page) => {
@@ -40,11 +38,11 @@ function LegacyApp(){
     };
 
     useEffect(() => {
-        window.history.replaceState({ ...window.history.state, view: 'home', searchKeyword: '' }, '', window.location.href);
+        window.history.replaceState({ ...window.history.state, view: 'home'}, '', window.location.href);
         const handlePopState = (event) => {
             const view = event.state?.view || 'home';
             if (view === 'terms' || view === 'privacy') setLegalPage(view);
-            else applyView(view, event.state?.event || null, event.state?.searchKeyword || '');
+            else applyView(view, event.state?.event || null);
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
@@ -76,13 +74,6 @@ function LegacyApp(){
         setShowAdminPage(false);
         setShowFavorites(true);
     });
-
-    const handleSearch = (keyword) => {
-        const nextKeyword = keyword.trim();
-        if (nextKeyword === searchKeyword) return;
-        window.history.pushState({ view: 'home', searchKeyword: nextKeyword }, '', window.location.href);
-        setSearchKeyword(nextKeyword);
-    };
 
     const handleUserUpdate = updateUser;
     const handleLogout = logout;
@@ -138,8 +129,6 @@ function LegacyApp(){
     return (
         <MainPage
             user={user}
-            searchKeyword={searchKeyword}
-            onSearch={handleSearch}
             onLoginClick={() => navigate('/login')}
             onLogout={handleLogout}
             onOpenMyPage={() => openMyPage('profile')}
