@@ -37,6 +37,15 @@
 .comment-meta strong { color: #2f3542; font-size: 13px; }
 .comment-meta span { color: #a4b0be; font-size: 11px; }
 .comment-item p { margin: 8px 0 0; color: #57606f; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+.detail-status { display: grid; justify-items: center; gap: 10px; padding: 90px 20px; border: 1px solid #eaeaea; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.06); text-align: center; }
+.detail-status h1 { margin: 6px 0 0; color: #2f3542; font-size: 22px; }
+.detail-status p { margin: 0; color: #747d8c; font-size: 14px; line-height: 1.6; }
+.detail-status-emoji { font-size: 56px; line-height: 1; }
+.detail-status-button { margin-top: 14px; padding: 12px 18px; border: 0; border-radius: 8px; color: #fff; background: #ff4757; cursor: pointer; font-size: 14px; font-weight: 700; }
+.detail-status-button:hover { background: #e84118; }
+.detail-spinner { width: 34px; height: 34px; border: 3px solid #ffd9dc; border-top-color: #ff4757; border-radius: 50%; animation: detail-spin .8s linear infinite; }
+@keyframes detail-spin { to { transform: rotate(360deg); } }
+@media (max-width: 650px) { .detail-status { padding: 60px 16px; } }
 @media (max-width: 700px) { .event-detail-container { width: min(100% - 28px, 900px); padding-top: 20px; } .event-detail-card { grid-template-columns: 1fr; } .detail-image-box { min-height: 220px; } .detail-content { padding: 25px 20px; } .detail-content h1 { font-size: 23px; } .comments-section { padding: 20px; } }
 @media (max-width: 480px) { .comment-login-guide { align-items: stretch; flex-direction: column; } }
 

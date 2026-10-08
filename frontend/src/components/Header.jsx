@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { useGoLogin } from '../hooks/useGoLogin.jsx';
 import './Header.css';
 
-export default function Header({
-                                   user,
-                                   onLoginClick,
-                                   onLogout,
-                                   onOpenMyPage,
-                                   onOpenFavorites,
-                                   onOpenAdminPage,
-                                   searchKeyword = '',
-                                   onSearch,
-                                   showSearch = false,
-                               }) {
+export default function Header({searchKeyword = '', onSearch, showSearch = false}) {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [searchText, setSearchText] = useState(searchKeyword);
     const userMenuRef = useRef(null);
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+    const goLogin = useGoLogin();
+    const go = (path) => { setIsUserMenuOpen(false); navigate(path); };
+    const handleLogout = () => { setIsUserMenuOpen(false); logout(); };
 
     useEffect(() => {
         const handleOutsideClick = (event) => {
@@ -31,15 +29,10 @@ export default function Header({
         onSearch?.(searchText.trim());
     };
 
-    const handleLogout = () => {
-        setIsUserMenuOpen(false);
-        onLogout();
-    };
-
     return (
         <header className="site-header">
             <div className="header-logo">
-                <a href="/">이츠어딜!</a>
+                <Link to="/">이츠어딜!</Link>
             </div>
 
             {showSearch && (
@@ -75,19 +68,11 @@ export default function Header({
 
                         {isUserMenuOpen && (
                             <div className="user-dropdown">
-                                <div className="user-dropdown-name">
-                                    {user.role === 'ADMIN' ? '관리자' : user.nickname}
-                                </div>
-                                <button type="button" onClick={() => { setIsUserMenuOpen(false); onOpenFavorites?.(); }}>
-                                    찜한 목록
-                                </button>
-                                <button type="button" onClick={() => onOpenMyPage?.()}>
-                                    마이페이지
-                                </button>
-                                {user.role === 'ADMIN' && <button type="button" onClick={() => onOpenAdminPage?.()}>관리자 페이지</button>}
-                                <button type="button" onClick={handleLogout}>
-                                    로그아웃
-                                </button>
+                                <div className="user-dropdown-name">{user.role === 'ADMIN' ? '관리자' : user.nickname}</div>
+                                <button type="button" onClick={() => go('/favorites')}>찜한 목록</button>
+                                <button type="button" onClick={() => go('/mypage')}>마이페이지</button>
+                                {user.role === 'ADMIN' && <button type="button" onClick={() => go('/admin')}>관리자 페이지</button>}
+                                <button type="button" onClick={handleLogout}>로그아웃</button>
                             </div>
                         )}
                     </div>
@@ -95,7 +80,7 @@ export default function Header({
                     <button
                         className="menu-btn login-btn"
                         type="button"
-                        onClick={onLoginClick}
+                        onClick={goLogin}
                     >
                         로그인
                     </button>
