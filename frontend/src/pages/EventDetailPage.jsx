@@ -3,22 +3,8 @@ import { apiRequest } from '../api/client';
 import Header from '../components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '../hooks/usePageTitle.jsx';
-
-const BRAND_CATEGORY_MAP = {
-  // 치킨 브랜드
-  'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
-  // 피자 브랜드
-  'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
-  // 햄버거 브랜드
-  'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lottelia': 'hamburger', 'Momstouch': 'hamburger',
-};
-
-const getFallbackImage = (brandName) => {
-  const category = BRAND_CATEGORY_MAP[brandName];
-  if (category === 'chicken') return '/images/default-chicken.webp';
-  if (category === 'pizza') return '/images/default-pizza.webp';
-  if (category === 'hamburger') return '/images/default-hamburger.webp';
-};
+import { getFallbackImage } from '../utils/BrandUtil.jsx'
+import { calculateDDay, formatDate, formatDateTime } from '../utils/DateUtil.jsx'
 
 const commentApi = {
   list: (eventId) => `/api/events/${eventId}/comments`,
@@ -32,32 +18,6 @@ const commentApi = {
 const SUPPORTS_REPLIES = false;
 
 const COMMENT_MAX = 300;
-
-function calculateDDay(endDate) {
-  if (!endDate) return '기간 정보 없음';
-  const today = new Date();
-  const end = new Date(endDate);
-  today.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  const diffDays = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return '종료된 이벤트';
-  if (diffDays === 0) return '오늘 종료';
-  return `D-${diffDays}`;
-}
-
-function formatDate(value) {
-  if (!value) return '정보 없음';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('ko-KR');
-}
-
-function formatDateTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 function getEventCodeName(eventCodes) {
   if (!eventCodes?.length) return '이벤트';
@@ -80,7 +40,6 @@ const jsonBody = (payload) => ({
 function getCommentId(comment) { return comment.commentId ?? comment.id; }
 function getParentId(comment) { return comment.parentId ?? comment.parentCommentId ?? null; }
 function getInlineReplies(comment) { return comment.replies ?? comment.children ?? []; }
-// 백엔드 CommentStatus: ACTIVE / HIDDEN / DELETED (숨김·삭제 댓글의 content 는 서버가 안내 문구로 바꿔서 내려줌)
 function isHiddenComment(comment) { return comment.status === 'HIDDEN'; }
 function isDeletedComment(comment) { return comment.status === 'DELETED'; }
 

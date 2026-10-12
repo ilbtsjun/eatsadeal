@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './FloatingButton.css';
 import ReportForm from './ReportForm.jsx';
+import Modal from './Modal.jsx'
 
 export default function FloatingButton() {
     const [open, setOpen] = useState(false);
@@ -16,20 +17,11 @@ export default function FloatingButton() {
             </button>
 
             {open && (
-                <div
-                    className="report-modal-overlay"
-                    onClick={() => setOpen(false)}
-                >
-                    <div
-                        className="report-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="제보하기"
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <Modal backdropClassName="report-modal-overlay" onClose={() => setOpen(false)}>
+                    <div className="report-modal" role="dialog" aria-modal="true" aria-label="제보하기">
                         <ReportForm onCancel={() => setOpen(false)} />
                     </div>
-                </div>
+                </Modal>
             )}
         </>
     );

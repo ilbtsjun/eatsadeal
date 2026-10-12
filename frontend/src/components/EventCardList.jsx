@@ -2,35 +2,8 @@ import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import { getToken } from '../auth/Token.jsx';
 import './EventCardList.css';
-
-const BRAND_CATEGORY_MAP = {
-    // 치킨 브랜드
-    'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
-    // 피자 브랜드
-    'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
-    // 햄버거 브랜드
-    'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lottelia': 'hamburger', 'Momstouch': 'hamburger',
-};
-
-const getFallbackImage = (brandName) => {
-    const category = BRAND_CATEGORY_MAP[brandName];
-    if (category === 'chicken') return '/images/default-chicken.webp';
-    if (category === 'pizza') return '/images/default-pizza.webp';
-    if (category === 'hamburger') return '/images/default-hamburger.webp';
-};
-
-function calculateDDay(endDate) {
-    if (!endDate) return '';
-    const today = new Date();
-    const end = new Date(endDate);
-    today.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return '종료';
-    if (diffDays === 0) return 'D-Day';
-    if (diffDays > 365) return '365+';
-    return `D-${diffDays}`;
-}
+import { getFallbackImage } from '../utils/BrandUtil.jsx';
+import { calculateDDay } from '../utils/DateUtil.jsx';
 
 function getEventCodeName(eventCodes) {
     if (!eventCodes || eventCodes.length === 0) return '이벤트';
@@ -146,7 +119,8 @@ export default function EventCardList({
                                              alt={event.title}
                                              className="card-image"
                                              onLoad={(e) => {
-                                                 if (e.currentTarget.naturalWidth <= 1) e.currentTarget.src = getFallbackImage(event.brand);
+                                                 if (e.currentTarget.naturalWidth <= 1)
+                                                     e.currentTarget.src = getFallbackImage(event.brand);
                                              }}
                                              onError={(e) => {
                                                  e.currentTarget.onerror = null; // 무한 루프 방지

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Header from '../components/Header';
+import Modal from '../components/Modal.jsx';
 import './MyPage.css';
 import { apiRequest } from '../api/client';
 
@@ -56,18 +57,7 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     setQuitError('');
   };
 
-  // 회원탈퇴 모달이 열려 있을 때 Esc 키로 닫기 (처리 중에는 닫지 않음)
-  useEffect(() => {
-    if (!showQuitModal) return;
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !quitLoading) closeQuitModal();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showQuitModal, quitLoading]);
-
   const currentCommentPage = Math.min(commentPage, Math.max(0, Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1));
-
 
   const updateProfile = async (event) => {
     event.preventDefault();
@@ -152,8 +142,49 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
       })}
       {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1 && <div className="comment-pagination"><button type="button" disabled={currentCommentPage === 0} onClick={() => setCommentPage((page) => page - 1)}>이전</button><span>{currentCommentPage + 1} / {Math.ceil(comments.length / COMMENTS_PER_PAGE)}</span><button type="button" disabled={currentCommentPage >= Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1} onClick={() => setCommentPage((page) => page + 1)}>다음</button></div>}
     </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>
-    {commentToDelete && <div className="confirm-backdrop" role="presentation"><div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="my-comment-delete-title"><h2 id="my-comment-delete-title">댓글 삭제</h2><p>이 댓글을 삭제하시겠습니까?</p><div className="confirm-dialog-actions"><button type="button" className="confirm-cancel" onClick={() => setCommentToDelete(null)}>취소</button><button type="button" className="confirm-delete" onClick={() => deleteComment(commentToDelete)}>삭제</button></div></div></div>}
-    {showQuitModal && <div className="confirm-backdrop" role="presentation"><div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="quit-title"><form onSubmit={handleQuit}><h2 id="quit-title">회원탈퇴</h2><p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.<br />계속하려면 비밀번호를 입력해주세요.</p><input className="confirm-input" type="password" value={quitPassword} onChange={(event) => { setQuitPassword(event.target.value); setQuitError(''); }} placeholder="비밀번호" autoComplete="current-password" autoFocus disabled={quitLoading} />{quitError && <p className="confirm-error" role="alert">{quitError}</p>}<div className="confirm-dialog-actions"><button type="button" className="confirm-cancel" onClick={closeQuitModal} disabled={quitLoading}>취소</button><button type="submit" className="confirm-delete" disabled={quitLoading}>{quitLoading ? '처리 중...' : '탈퇴하기'}</button></div></form></div></div>}
-    <section className="danger-zone"><h2>회원탈퇴</h2><p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.</p><button type="button" onClick={openQuitModal}>회원탈퇴</button></section>
+    {commentToDelete &&
+        <Modal backdropClassName="confirm-backdrop" onClose={() => setCommentToDelete(null)}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="my-comment-delete-title">
+            <h2 id="my-comment-delete-title">댓글 삭제</h2>
+            <p>이 댓글을 삭제하시겠습니까?</p>
+            <div className="confirm-dialog-actions">
+              <button type="button" className="confirm-cancel" onClick={() => setCommentToDelete(null)}>취소</button>
+              <button type="button" className="confirm-delete" onClick={() => deleteComment(commentToDelete)}>삭제</button>
+            </div>
+          </div>
+        </Modal>
+    }
+    {showQuitModal &&
+        <Modal backdropClassName="confirm-backdrop" onClose={closeQuitModal} locked={quitLoading}>
+          <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="quit-title">
+            <form onSubmit={handleQuit}><h2 id="quit-title">회원탈퇴</h2>
+              <p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.
+                <br />계속하려면 비밀번호를 입력해주세요.</p>
+              <input className="confirm-input" type="password" value={quitPassword} onChange={(event) => { setQuitPassword(event.target.value); setQuitError(''); }}
+                     placeholder="비밀번호"
+                     autoComplete="current-password"
+                     autoFocus disabled={quitLoading} />
+              {quitError &&
+                  <p className="confirm-error" role="alert">{quitError}</p>
+              }
+              <div className="confirm-dialog-actions">
+                <button type="button"
+                        className="confirm-cancel"
+                        onClick={closeQuitModal}
+                        disabled={quitLoading}>취소</button>
+                <button type="submit"
+                        className="confirm-delete"
+                        disabled={quitLoading}>
+                  {quitLoading ? '처리 중...' : '탈퇴하기'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </Modal>}
+    <section className="danger-zone">
+      <h2>회원탈퇴</h2>
+      <p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.</p>
+      <button type="button" onClick={openQuitModal}>회원탈퇴</button>
+    </section>
   </main></div>;
 }

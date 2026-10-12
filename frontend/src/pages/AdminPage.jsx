@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import './AdminPage.css';
 import { apiRequest } from '../api/client';
+import { getFallbackImage }from '../utils/BrandUtil.jsx'
+import Modal from '../components/Modal.jsx';
 
 const request = apiRequest;
 
@@ -90,22 +92,6 @@ export default function AdminPage({ user, onBack }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const BRAND_CATEGORY_MAP = {
-    // 치킨 브랜드
-    'BHC': 'chicken', 'BBQ': 'chicken', 'Kyochon': 'chicken', 'Pelicana': 'chicken', 'Goobne': 'chicken',
-    // 피자 브랜드
-    'Dominos': 'pizza', 'Papajohns': 'pizza', 'Pizzamaru': 'pizza', 'Pizzaettang': 'pizza', 'Pizzaschool': 'pizza',
-    // 햄버거 브랜드
-    'Burgerking': 'hamburger', 'Frankburger': 'hamburger', 'KFC': 'hamburger', 'Lotteria': 'hamburger', 'Momstouch': 'hamburger',
-  };
-
-  const getFallbackImage = (brandName) => {
-    const category = BRAND_CATEGORY_MAP[brandName];
-    if (category === 'chicken') return '/images/default-chicken.webp';
-    if (category === 'pizza') return '/images/default-pizza.webp';
-    if (category === 'hamburger') return '/images/default-hamburger.webp';
   };
 
   useEffect(() => {
@@ -450,7 +436,7 @@ export default function AdminPage({ user, onBack }) {
               </section>
           )}
           {form && (
-              <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setForm(null); }}>
+              <Modal backdropClassName="admin-modal-backdrop" onClose={() => setForm(null)}>
                 <form className="admin-modal" onSubmit={submitForm}>
                   <div className="modal-heading"><h2>{form.id ? '정보 수정' : '정보 생성'}</h2><button type="button" onClick={() => setForm(null)}>×</button></div>
                   <label>이름<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
@@ -485,10 +471,10 @@ export default function AdminPage({ user, onBack }) {
                   <label>{form.type === 'category' ? '카테고리 링크(URL)' : '이미지 URL'}<input value={form.img} onChange={(event) => setForm((current) => ({ ...current, img: event.target.value }))} required /></label>
                   <button className="modal-submit" type="submit">저장</button>
                 </form>
-              </div>
+              </Modal>
           )}
           {suspendModal && (
-              <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeSuspendModal(); }}>
+              <Modal backdropClassName="admin-modal-backdrop" onClose={closeSuspendModal} locked={suspendSubmitting}>
                 <form className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="suspend-title" onSubmit={submitSuspension}>
                   <div className="modal-heading"><h2 id="suspend-title">{isReleaseModal ? '정지 해제' : '회원 정지'}</h2><button type="button" onClick={closeSuspendModal}>×</button></div>
                   <p className="suspend-target">대상: <strong>{selectedUser?.nickname || `회원 ${selectedUser?.id}`}</strong></p>
@@ -520,10 +506,10 @@ export default function AdminPage({ user, onBack }) {
                     {suspendSubmitting ? '처리 중...' : (isReleaseModal ? '정지 해제' : '정지하기')}
                   </button>
                 </form>
-              </div>
+              </Modal>
           )}
           {confirmDelete && confirmText && (
-              <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmDelete(null); }}>
+              <Modal backdropClassName="admin-modal-backdrop" onClose={() => setConfirmDelete(null)}>
                 <div className="admin-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-title">
                   <div className="modal-heading"><h2 id="delete-title">{confirmText.title}</h2><button type="button" onClick={() => setConfirmDelete(null)}>×</button></div>
                   <p><strong>{confirmDelete.name}</strong>{confirmText.question}</p>
@@ -533,7 +519,7 @@ export default function AdminPage({ user, onBack }) {
                     <button type="button" className={confirmDelete.kind === 'activate' ? 'primary-confirm' : 'danger-confirm'} onClick={confirmDeleteItem}>{confirmText.button}</button>
                   </div>
                 </div>
-              </div>
+              </Modal>
           )}
         </main>
       </div>

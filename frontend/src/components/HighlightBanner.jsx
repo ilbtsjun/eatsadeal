@@ -1,18 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import './HighlightBanner.css';
+import { calculateDDay } from '../utils/DateUtil.jsx'
 
-function calculateDDay(endDate) {
-    if (!endDate) return '';
-    const today = new Date();
-    const end = new Date(endDate);
-    today.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-    const diffDays = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return '종료';
-    if (diffDays === 0) return 'D-Day';
-    return `D-${diffDays}`;
-}
 
 export default function HighlightBanner({ onSelectEvent }) {
     const [event, setEvent] = useState(null);
