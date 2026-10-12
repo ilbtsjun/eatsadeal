@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { apiRequest } from '../api/client';
+import { getHighlight } from '@/api/index.js';
 import './HighlightBanner.css';
-import { calculateDDay } from '../utils/DateUtil.jsx'
+import { calculateDDay } from '@/utils/DateUtil.jsx'
 
 
 export default function HighlightBanner({ onSelectEvent }) {
@@ -9,9 +9,9 @@ export default function HighlightBanner({ onSelectEvent }) {
 
     useEffect(() => {
         let cancelled = false;
-        apiRequest('/api/events?page=0&size=1&sort=popular')
+        getHighlight()
             .then((data) => { if (!cancelled) setEvent(data.content?.[0] ?? null); })
-            .catch(() => { if (!cancelled) setEvent(null); }); // 실패하면 배너만 숨김
+            .catch(() => { if (!cancelled) setEvent(null); });
         return () => { cancelled = true; };
     }, []);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import Header from '../components/Header';
-import Modal from '../components/Modal.jsx';
+import Header from '@/common/components/Header';
+import Modal from '@/common/components/Modal';
 import './MyPage.css';
 import { apiRequest } from '../api/client';
 

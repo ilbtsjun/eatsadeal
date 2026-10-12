@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiRequest } from '../api/client';
+import { createReport } from '@/api/index.js';
 import './ReportForm.css';
 
 const TITLE_MAX = 100;
@@ -14,7 +14,8 @@ export default function ReportForm({ onCancel, onSubmitted }) {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (submitting) return;
+        if (submitting)
+            return;
 
         const trimmedTitle = title.trim();
         const trimmedContent = content.trim();
@@ -26,14 +27,7 @@ export default function ReportForm({ onCancel, onSubmitted }) {
         setSubmitting(true);
         setError('');
         try {
-            // 백엔드: POST /api/reports  (body: { title, content })
-            await apiRequest('/api/reports', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ title: trimmedTitle, content: trimmedContent }),
-            });
+            await createReport({ title: trimmedTitle, content: trimmedContent });
             setDone(true);
             onSubmitted?.();
         } catch (requestError) {

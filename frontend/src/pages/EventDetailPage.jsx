@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
-import Header from '../components/Header';
+import Header from '@/common/components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '../hooks/usePageTitle.jsx';
 import { getFallbackImage } from '../utils/BrandUtil.jsx'

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import Header from '../components/Header';
+import Header from '@/common/components/Header';
 import './AdminPage.css';
 import { apiRequest } from '../api/client';
 import { getFallbackImage }from '../utils/BrandUtil.jsx'
-import Modal from '../components/Modal.jsx';
+import Modal from '@/common/components/Modal';
 
 const request = apiRequest;
 

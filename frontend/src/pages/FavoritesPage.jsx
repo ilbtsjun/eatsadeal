@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Header from '../components/Header';
+import Header from '@/common/components/Header';
 import { apiRequest } from '../api/client';
 import './FavoritesPage.css';
 

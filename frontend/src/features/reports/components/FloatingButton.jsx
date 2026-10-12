@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './FloatingButton.css';
 import ReportForm from './ReportForm.jsx';
-import Modal from './Modal.jsx'
+import Modal from '@/common/components/Modal.jsx'
 
 export default function FloatingButton() {
     const [open, setOpen] = useState(false);

@@ -1,10 +1,10 @@
 import { useSearchParams } from 'react-router';
-import Header from '../components/Header';
-import CategoryFilter from '../components/CategoryFilter';
-import HighlightBanner from '../components/HighlightBanner';
-import EventCardList from '../components/EventCardList';
-import FloatingButton from '../components/FloatingButton';
-import SiteFooter from '../components/SiteFooter';
+import Header from '@/common/components/Header';
+import CategoryFilter from '@/features/categories/components/CategoryFilter';
+import HighlightBanner from '@/features/events/components/HighlightBanner';
+import EventCardList from '@/features/events/components/EventCardList';
+import FloatingButton from '@/features/reports/components/FloatingButton';
+import SiteFooter from '@/common/components/SiteFooter';
 
 const DEFAULTS = { category: 'all', sort: 'latest', q: '', page: 1 };
 
