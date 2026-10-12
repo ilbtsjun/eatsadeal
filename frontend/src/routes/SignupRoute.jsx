@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router';
 import SignupPage from '../pages/SignupPage.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
 export default function SignupRoute() {
     const navigate = useNavigate();

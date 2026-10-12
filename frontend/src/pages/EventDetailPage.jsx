@@ -1,23 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiRequest } from '../api/client';
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { getFallbackImage } from '../utils/BrandUtil.jsx'
-import { calculateDDay, formatDate, formatDateTime } from '../utils/DateUtil.jsx'
-
-const commentApi = {
-  list: (eventId) => `/api/events/${eventId}/comments`,
-  create: (eventId) => `/api/events/${eventId}/comments`,
-  update: (commentId) => `/api/comments/${commentId}`,
-  remove: (commentId) => `/api/comments/${commentId}`,
-  hide: (commentId) => `/api/comments/${commentId}/hide`,
-  unhide: (commentId) => `/api/comments/${commentId}/unhide`,
-};
-
-const SUPPORTS_REPLIES = false;
-
-const COMMENT_MAX = 300;
+import { calculateDDay, formatDate } from '../utils/DateUtil.jsx'
+import CommentSection from '@/features/comments/components/CommentSection.jsx';
 
 function getEventCodeName(eventCodes) {
   if (!eventCodes?.length) return '이벤트';
@@ -32,59 +20,13 @@ function getEventCodeName(eventCodes) {
 
 async function commentRequest(url, options = {}) { return apiRequest(url, options); }
 
-const jsonBody = (payload) => ({
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload),
-});
-
-function getCommentId(comment) { return comment.commentId ?? comment.id; }
-function getParentId(comment) { return comment.parentId ?? comment.parentCommentId ?? null; }
-function getInlineReplies(comment) { return comment.replies ?? comment.children ?? []; }
-function isHiddenComment(comment) { return comment.status === 'HIDDEN'; }
-function isDeletedComment(comment) { return comment.status === 'DELETED'; }
-
-function buildCommentTree(list) {
-  const repliesByParent = new Map();
-  list.forEach((comment) => {
-    const parentId = getParentId(comment);
-    if (parentId != null) {
-      repliesByParent.set(parentId, [...(repliesByParent.get(parentId) || []), comment]);
-    }
-  });
-
-  return list
-      .filter((comment) => getParentId(comment) == null)
-      .map((comment) => ({
-        comment,
-        replies: [...getInlineReplies(comment), ...(repliesByParent.get(getCommentId(comment)) || [])],
-      }));
-}
-
 export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [detailEvent, setDetailEvent] = useState(event);
   const [loaded, setLoaded] = useState(Boolean(event.title));
   const [loadError, setLoadError] = useState(null);
   usePageTitle(detailEvent.title || '이벤트');
-  const [comments, setComments] = useState([]);
-  const [commentLoading, setCommentLoading] = useState(true);
-  const [commentText, setCommentText] = useState('');
-  const [commentError, setCommentError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [isFavorite, setIsFavorite] = useState(Boolean(event.isFavorite));
   const [favoriteError, setFavoriteError] = useState('');
-
-  const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [replyTargetId, setReplyTargetId] = useState(null);
-  const [replyText, setReplyText] = useState('');
-
-  const isAdmin = user?.role === 'ADMIN';
-
-  const isMine = (comment) => Boolean(user) && (
-      comment.isMine === true
-      || (comment.userId != null && comment.userId === user.id)
-      || (comment.nickname != null && comment.nickname === user.nickname)
-  );
 
   useEffect(() => {
     apiRequest(`/api/events/${event.id}`)
@@ -116,219 +58,6 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
       setFavoriteError(error.message);
     }
   };
-
-  const loadComments = useCallback(async () => {
-    try {
-      const data = await commentRequest(commentApi.list(event.id));
-      setComments(Array.isArray(data) ? data : []);
-    } catch (error) {
-      setCommentError(error.message);
-    } finally {
-      setCommentLoading(false);
-    }
-  }, [event.id]);
-
-  useEffect(() => {
-    setCommentLoading(true);
-    loadComments();
-  }, [loadComments]);
-
-  const createComment = async (content, parentId = null) => {
-    setSubmitting(true);
-    try {
-      await commentRequest(commentApi.create(event.id), {
-        method: 'POST',
-        ...jsonBody(parentId != null ? { content, parentId } : { content }),
-      });
-      setCommentError('');
-      await loadComments();
-      return true;
-    } catch (error) {
-      setCommentError(error.message);
-      return false;
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCommentSubmit = async (submitEvent) => {
-    submitEvent.preventDefault();
-    const text = commentText.trim();
-    if (!user || !text || submitting) return;
-    if (await createComment(text)) setCommentText('');
-  };
-
-  const openReply = (comment) => {
-    if (!user) {
-      onLoginClick?.();
-      return;
-    }
-    setEditingId(null);
-    setReplyTargetId(getCommentId(comment));
-    setReplyText('');
-  };
-
-  const handleReplySubmit = async (submitEvent, parentComment) => {
-    submitEvent.preventDefault();
-    const text = replyText.trim();
-    if (!user || !text || submitting) return;
-    if (await createComment(text, getCommentId(parentComment))) {
-      setReplyTargetId(null);
-      setReplyText('');
-    }
-  };
-
-  const openEdit = (comment) => {
-    setReplyTargetId(null);
-    setEditingId(getCommentId(comment));
-    setEditText(comment.content || comment.comment || '');
-  };
-
-  const handleEditSubmit = async (submitEvent, comment) => {
-    submitEvent.preventDefault();
-    const text = editText.trim();
-    if (!text || submitting) return;
-    setSubmitting(true);
-    try {
-      await commentRequest(commentApi.update(getCommentId(comment)), {
-        method: 'PATCH',
-        ...jsonBody({ content: text }),
-      });
-      setEditingId(null);
-      setCommentError('');
-      await loadComments();
-    } catch (error) {
-      setCommentError(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const deleteComment = async (comment) => {
-    const commentId = getCommentId(comment);
-    if (!commentId || !window.confirm('이 댓글을 삭제하시겠습니까?')) return;
-    try {
-      await commentRequest(commentApi.remove(commentId), { method: 'DELETE' });
-      setCommentError('');
-      await loadComments();
-    } catch (error) {
-      setCommentError(error.message);
-    }
-  };
-
-  const hideComment = async (comment) => {
-    const commentId = getCommentId(comment);
-    if (!commentId || !window.confirm('이 댓글을 숨김 처리하시겠습니까?')) return;
-    try {
-      await commentRequest(commentApi.hide(commentId), { method: 'PATCH' });
-      setCommentError('');
-      await loadComments();
-    } catch (error) {
-      setCommentError(error.message);
-    }
-  };
-
-  const unhideComment = async (comment) => {
-    const commentId = getCommentId(comment);
-    if (!commentId || !window.confirm('이 댓글의 숨김을 해제하시겠습니까?')) return;
-    try {
-      await commentRequest(commentApi.unhide(commentId), { method: 'PATCH' });
-      setCommentError('');
-      await loadComments();
-    } catch (error) {
-      setCommentError(error.message);
-    }
-  };
-
-  const renderComment = (comment, isReply = false) => {
-    const commentId = getCommentId(comment);
-    const hidden = isHiddenComment(comment);
-    const deleted = isDeletedComment(comment);
-    const active = !hidden && !deleted;
-    const mine = isMine(comment);
-    const editing = editingId === commentId;
-    const replying = replyTargetId === commentId;
-
-    const classNames = ['comment-item'];
-    if (isReply) classNames.push('is-reply');
-    if (hidden) classNames.push('is-hidden');
-    if (deleted) classNames.push('is-deleted');
-
-    return (
-        <div className={classNames.join(' ')} key={commentId}>
-          <div className="comment-meta">
-            <strong>{comment.nickname || comment.author || comment.userNickname || '익명'}</strong>
-            <span>{formatDateTime(comment.createdAt || comment.created_at)}</span>
-            {hidden && isAdmin && <span className="comment-hidden-badge">숨김 처리됨</span>}
-          </div>
-
-          {editing ? (
-              <form className="comment-edit-form" onSubmit={(submitEvent) => handleEditSubmit(submitEvent, comment)}>
-            <textarea
-                value={editText}
-                onChange={(changeEvent) => setEditText(changeEvent.target.value)}
-                maxLength={COMMENT_MAX}
-                required
-                autoFocus
-            />
-                <div className="comment-form-footer">
-                  <span>{editText.length}/{COMMENT_MAX}</span>
-                  <div className="comment-inline-buttons">
-                    <button type="button" className="comment-action-button" onClick={() => setEditingId(null)}>취소</button>
-                    <button type="submit" disabled={submitting}>저장</button>
-                  </div>
-                </div>
-              </form>
-          ) : (
-              // 숨김/삭제 댓글의 content 는 서버가 안내 문구("숨김 처리된 댓글입니다." 등)로 바꿔서 내려줌
-              <p className={active ? undefined : 'comment-hidden-text'}>{comment.content}</p>
-          )}
-
-          {!editing && (
-              <div className="comment-actions">
-                {SUPPORTS_REPLIES && !isReply && active && (
-                    <button type="button" className="comment-action-button" onClick={() => openReply(comment)}>답글</button>
-                )}
-                {mine && active && (
-                    <button type="button" className="comment-action-button" onClick={() => openEdit(comment)}>수정</button>
-                )}
-                {mine && !deleted && (
-                    <button type="button" className="comment-action-button comment-delete-button" onClick={() => deleteComment(comment)}>삭제</button>
-                )}
-                {isAdmin && active && (
-                    <button type="button" className="comment-action-button comment-hide-button" onClick={() => hideComment(comment)}>숨김</button>
-                )}
-                {isAdmin && hidden && (
-                    <button type="button" className="comment-action-button comment-unhide-button" onClick={() => unhideComment(comment)}>숨김 해제</button>
-                )}
-              </div>
-          )}
-
-          {replying && (
-              <form className="comment-reply-form" onSubmit={(submitEvent) => handleReplySubmit(submitEvent, comment)}>
-            <textarea
-                value={replyText}
-                onChange={(changeEvent) => setReplyText(changeEvent.target.value)}
-                placeholder={`${comment.nickname || '익명'}님에게 답글을 남겨주세요.`}
-                maxLength={COMMENT_MAX}
-                required
-                autoFocus
-            />
-                <div className="comment-form-footer">
-                  <span>{replyText.length}/{COMMENT_MAX}</span>
-                  <div className="comment-inline-buttons">
-                    <button type="button" className="comment-action-button" onClick={() => setReplyTargetId(null)}>취소</button>
-                    <button type="submit" disabled={submitting}>답글 작성</button>
-                  </div>
-                </div>
-              </form>
-          )}
-        </div>
-    );
-  };
-
-  const commentTree = buildCommentTree(comments);
-  const totalComments = commentTree.reduce((count, node) => count + 1 + node.replies.length, 0);
 
   const renderStatus = (content) => (
       <div className="event-detail-page">
@@ -375,7 +104,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
 
         <main className="event-detail-container">
           <button type="button" className="detail-back-button" onClick={onBack}>
-            ← 할인정보 목록으로
+            ← 뒤로 가기
           </button>
 
           <article className="event-detail-card">
@@ -423,50 +152,11 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
             </div>
           </article>
 
-          <section className="comments-section" aria-labelledby="comments-title">
-            <div className="comments-heading">
-              <h2 id="comments-title">댓글</h2>
-              <span>{totalComments}개</span>
-            </div>
-
-            {user ? (
-                <form className="comment-form" onSubmit={handleCommentSubmit}>
-              <textarea
-                  value={commentText}
-                  onChange={(submitEvent) => setCommentText(submitEvent.target.value)}
-                  placeholder="이벤트에 대한 의견을 남겨주세요."
-                  maxLength={COMMENT_MAX}
-                  required
-              />
-                  <div className="comment-form-footer">
-                    <span>{commentText.length}/{COMMENT_MAX}</span>
-                    <button type="submit" disabled={submitting}>댓글 작성</button>
-                  </div>
-                </form>
-            ) : (
-                <div className="comment-login-guide">
-                  <p>댓글을 작성하려면 로그인이 필요합니다.</p>
-                  <button type="button" onClick={onLoginClick}>로그인하기</button>
-                </div>
-            )}
-
-            {commentError && <p className="comment-error" role="alert">{commentError}</p>}
-
-            <div className="comment-list">
-              {commentLoading ? <p className="no-comments">댓글을 불러오는 중입니다...</p> : commentTree.length === 0 ? (
-                  <p className="no-comments">첫 번째 댓글을 작성해보세요.</p>
-              ) : commentTree.map(({ comment, replies }) => (
-                  <div className="comment-thread" key={getCommentId(comment)}>
-                    {renderComment(comment)}
-                    {replies.length > 0 && (
-                        <div className="comment-replies">
-                          {replies.map((reply) => renderComment(reply, true))}
-                        </div>
-                    )}
-                  </div>
-              ))}
-            </div>
-          </section>
+          <CommentSection
+              eventId={event.id}
+              user={user}
+              onLoginClick={onLoginClick}
+          />
         </main>
       </div>
   );

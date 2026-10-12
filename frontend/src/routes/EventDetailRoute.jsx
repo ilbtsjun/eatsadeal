@@ -1,8 +1,8 @@
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import EventDetailPage from '../pages/EventDetailPage.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { useGoLogin } from '../hooks/useGoLogin.jsx';
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { useGoLogin } from '@/common/hooks/useGoLogin.js';
 
 export default function EventDetailRoute() {
     const { eventId } = useParams();

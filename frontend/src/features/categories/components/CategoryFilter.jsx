@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useCategories } from '../hooks/useCategories.js';
 import './CategoryFilter.css';
 
