@@ -6,7 +6,7 @@ import {
     deleteComment,
     hideComment,
     unhideComment,
-} from '../api/commentApi.js';
+} from '@/api/index.js';
 import { getCommentId } from '../utils/commentTree.js';
 
 export function useComments(eventId, user, onLoginClick) {

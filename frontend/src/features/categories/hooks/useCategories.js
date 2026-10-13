@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getListCategories } from '@/api/categories.js';
+import { getListCategories } from '@/api/index.js';
 
 const ALL = { id: 'all', name: '전체' };
 

@@ -1,4 +1,6 @@
 export * from './events.js';
-export * from '@/features/comments/api/commentApi';
+export * from './comments';
 export * from './categories.js';
 export * from './reports.js';
+export * from './brands.js';
+export * from './admin.js';
