@@ -1,4 +1,4 @@
-import {apiRequest} from "../../api/client.js";
+import { setFavorite } from "@/api/index.js";
 
 export const toggleFavorite = async (user, event, clickEvent, setError, setEvents) => {
     clickEvent.stopPropagation();
@@ -9,9 +9,7 @@ export const toggleFavorite = async (user, event, clickEvent, setError, setEvent
 
     const nextFavorite = !event.isFavorite;
     try {
-        await apiRequest(`/api/events/${event.id}/favorite`, {
-            method: nextFavorite ? 'POST' : 'DELETE',
-        });
+        await setFavorite(event.id, nextFavorite);
         setEvents((current) => current.map((item) => item.id === event.id
             ? { ...item, isFavorite: nextFavorite }
             : item));

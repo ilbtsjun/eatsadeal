@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import Header from '@/common/components/Header';
 import Modal from '@/common/components/Modal';
 import './MyPage.css';
-import { apiRequest } from '../api/client';
+import { getCurrentUser, getMyComments, getEvent, updateCurrentUser, deleteCurrentUser,
+  deleteComment as deleteMyComment,
+  updatePassword as updateMyPassword
+} from '@/api/index.js';
 
 function getCommentId(comment) {
   const id = comment.id ?? comment.commentId ?? comment.comment_id;
@@ -27,10 +30,19 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
   const COMMENTS_PER_PAGE = 10;
 
   useEffect(() => {
-    apiRequest('/api/user/me').then((data) => { setProfile(data); setProfileForm({ nickname: data.nickname || '', name: data.name || '', phoneNumber: data.phoneNumber || '', birth: data.birth || '' }); }).catch((e) => setError(e.message));
-    apiRequest('/api/comments').then((data) => {
-      const serverComments = Array.isArray(data) ? data : (data.comments || data.content || []);
-      setComments(serverComments);
+    getCurrentUser()
+        .then((data) => {
+          setProfile(data);
+          setProfileForm({
+            nickname: data.nickname || '',
+            name: data.name || '',
+            phoneNumber: data.phoneNumber || '',
+            birth: data.birth || '' }); })
+        .catch((e) => setError(e.message));
+    getMyComments()
+        .then((data) => {
+          const serverComments = Array.isArray(data) ? data : (data.comments || data.content || []);
+          setComments(serverComments);
     }).catch((e) => {
       setComments([]);
       setError(e.message);
@@ -43,7 +55,7 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
 
     Promise.all(eventIds.map(async (eventId) => {
       try {
-        const event = await apiRequest(`/api/events/${eventId}`);
+        const event = await getEvent(eventId);
         return [String(eventId), event.title || `이벤트 ${eventId}`];
       } catch {
         return [String(eventId), `이벤트 ${eventId}`];
@@ -63,20 +75,20 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     event.preventDefault();
     setError('');
     try {
-      await apiRequest('/api/user/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nickname: profileForm.nickname.trim(),
-          name: profileForm.name.trim(),
-          phoneNumber: profileForm.phoneNumber.trim(),
-          birth: profileForm.birth || null,
-        }),
+      await updateCurrentUser({
+        nickname: profileForm.nickname.trim(),
+        name: profileForm.name.trim(),
+        phoneNumber: profileForm.phoneNumber.trim(),
+        birth: profileForm.birth || null,
       });
-      // 입력한 값을 그대로 화면에 반영하지 않고, 서버에 실제로 저장된 값을 다시 조회해서 반영
-      const saved = await apiRequest('/api/user/me');
+
+      const saved = await getCurrentUser();
       setProfile(saved);
-      setProfileForm({ nickname: saved.nickname || '', name: saved.name || '', phoneNumber: saved.phoneNumber || '', birth: saved.birth || '' });
+      setProfileForm({
+        nickname: saved.nickname || '',
+        name: saved.name || '',
+        phoneNumber: saved.phoneNumber || '',
+        birth: saved.birth || '' });
       if (saved.nickname && saved.nickname !== user?.nickname) onUserUpdate?.({ nickname: saved.nickname });
       setEditingProfile(false);
       setMessage('회원정보가 수정되었습니다.');
@@ -84,7 +96,18 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
       setError(e.message);
     }
   };
-  const updatePassword = async (event) => { event.preventDefault(); setError(''); if (passwordForm.updatePassword !== passwordForm.passwordConfirm) { setError('새 비밀번호가 일치하지 않습니다.'); return; } try { await apiRequest('/api/user/me/password', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(passwordForm) }); setPasswordForm({ currentPassword: '', updatePassword: '', passwordConfirm: '' }); setMessage('비밀번호가 변경되었습니다.'); } catch (e) { setError(e.message); } };
+  const updatePassword = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (passwordForm.updatePassword !== passwordForm.passwordConfirm) {
+      setError('새 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    try {
+      await updateMyPassword(passwordForm);
+      setPasswordForm({ currentPassword: '', updatePassword: '', passwordConfirm: '' });
+      setMessage('비밀번호가 변경되었습니다.');
+    } catch (e) { setError(e.message); } };
 
   const openQuitModal = () => {
     setQuitPassword('');
@@ -100,15 +123,11 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     setQuitLoading(true);
     setQuitError('');
     try {
-      await apiRequest('/api/user/me', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: quitPassword }),
-      });
+      await deleteCurrentUser(quitPassword);
       closeQuitModal();
       window.alert('회원탈퇴가 완료되었습니다.');
-      onLogout();   // 저장된 로그인 정보 삭제
-      onBack();     // 메인 페이지로 이동
+      onLogout();
+      onBack();
     } catch (e) {
       setQuitError(e.message || '회원탈퇴에 실패했습니다.');
     } finally {
@@ -120,7 +139,7 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     const commentId = getCommentId(comment);
     if (!commentId) return;
     try {
-      await apiRequest(`/api/comments/${commentId}`, { method: 'DELETE' });
+      await deleteMyComment(commentId);
       setComments((current) => current.filter((item) => getCommentId(item) !== commentId));
       setMessage('댓글이 삭제되었습니다.');
     } catch (e) { setError(e.message); }
@@ -131,16 +150,109 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  return <div className="mypage"><Header /><main className="mypage-container"><button type="button" className="mypage-back" onClick={onBack}>← 메인으로</button><h1>마이페이지</h1><p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>{(message || error) && <p className={error ? 'mypage-error' : 'mypage-message'}>{error || message}</p>}
-    <section className="mypage-panel"><h2>회원정보</h2><form className="mypage-form" onSubmit={updateProfile}><label>이메일<input value={profile.email || ''} readOnly /></label><label>닉네임<input name="nickname" value={profileForm.nickname} onChange={update(setProfileForm)} readOnly={!editingProfile} required /></label><label>이름<input name="name" value={profileForm.name} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label><label>전화번호<input name="phoneNumber" value={profileForm.phoneNumber} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label><label>생년월일<input name="birth" type="date" value={profileForm.birth || ''} onChange={update(setProfileForm)} readOnly={!editingProfile} /></label>{editingProfile ? <div className="mypage-form-actions"><button type="submit">완료</button><button type="button" className="secondary" onClick={() => { setEditingProfile(false); setProfileForm({ nickname: profile.nickname || '', name: profile.name || '', phoneNumber: profile.phoneNumber || '', birth: profile.birth || '' }); }}>취소</button></div> : <button type="button" onClick={() => { setEditingProfile(true); setMessage('정보를 수정한 뒤 완료를 눌러 저장하세요.'); }}>정보 수정</button>}</form></section>
-    <section className="mypage-panel"><h2>보안 설정</h2><form className="mypage-form" onSubmit={updatePassword}><label>현재 비밀번호<input name="currentPassword" type="password" value={passwordForm.currentPassword} onChange={update(setPasswordForm)} required /></label><label>새 비밀번호<input name="updatePassword" type="password" value={passwordForm.updatePassword} onChange={update(setPasswordForm)} required /></label><label>새 비밀번호 확인<input name="passwordConfirm" type="password" value={passwordForm.passwordConfirm} onChange={update(setPasswordForm)} required /></label><button type="submit">비밀번호 변경</button></form></section>
-    <section className="mypage-panel"><h2>내가 작성한 댓글</h2>{comments.length ? <>
-      {comments.slice(currentCommentPage * COMMENTS_PER_PAGE, (currentCommentPage + 1) * COMMENTS_PER_PAGE).map((comment, index) => {
-        const number = currentCommentPage * COMMENTS_PER_PAGE + index + 1;
-        const eventId = comment.eventId;
-        return <article className="my-comment" key={getCommentId(comment) || `${eventId}-${comment.createdAt}`}><div className="my-comment-meta"><span className="my-comment-number">{number}.</span><span>{comment.createdAt || comment.createdAtAt || comment.created_at || ''}</span><button type="button" onClick={() => setCommentToDelete(comment)}>삭제</button></div><button type="button" className="my-comment-event" onClick={() => eventId && onOpenEvent?.({ id: eventId, title: eventTitles[String(eventId)] || `이벤트 ${eventId}` })}>{eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`}</button><p>{comment.content || comment.comment}</p></article>;
-      })}
-      {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1 && <div className="comment-pagination"><button type="button" disabled={currentCommentPage === 0} onClick={() => setCommentPage((page) => page - 1)}>이전</button><span>{currentCommentPage + 1} / {Math.ceil(comments.length / COMMENTS_PER_PAGE)}</span><button type="button" disabled={currentCommentPage >= Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1} onClick={() => setCommentPage((page) => page + 1)}>다음</button></div>}
+  return <div className="mypage">
+    <Header />
+    <main className="mypage-container">
+      <button type="button" className="mypage-back" onClick={onBack}>← 메인으로</button>
+      <h1>마이페이지</h1>
+      <p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>
+      {(message || error) && <p className={error ? 'mypage-error' : 'mypage-message'}>{error || message}</p>}
+      <section className="mypage-panel">
+        <h2>회원정보</h2>
+        <form className="mypage-form" onSubmit={updateProfile}>
+          <label>이메일<input value={profile.email || ''} readOnly /></label>
+          <label>닉네임<input name="nickname"
+                           value={profileForm.nickname}
+                           onChange={update(setProfileForm)}
+                           readOnly={!editingProfile}
+                           required /></label>
+          <label>이름<input name="name" value={profileForm.name}
+                          onChange={update(setProfileForm)}
+                          readOnly={!editingProfile} /></label>
+          <label>전화번호<input name="phoneNumber"
+                            value={profileForm.phoneNumber}
+                            onChange={update(setProfileForm)}
+                            readOnly={!editingProfile} /></label>
+          <label>생년월일<input name="birth"
+                            type="date"
+                            value={profileForm.birth || ''}
+                            onChange={update(setProfileForm)}
+                            readOnly={!editingProfile} /></label>
+          {editingProfile ?
+              <div className="mypage-form-actions">
+                <button type="submit">완료</button>
+                <button type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setEditingProfile(false);
+                          setProfileForm({
+                            nickname: profile.nickname || '',
+                            name: profile.name || '',
+                            phoneNumber: profile.phoneNumber || '',
+                            birth: profile.birth || '' });
+                        }}>취소</button>
+              </div> :
+              <button type="button"
+                      onClick={() => {
+                        setEditingProfile(true);
+                        setMessage('정보를 수정한 뒤 완료를 눌러 저장하세요.');
+                      }}>정보 수정</button>}
+        </form>
+      </section>
+      <section className="mypage-panel">
+        <h2>보안 설정</h2>
+        <form className="mypage-form" onSubmit={updatePassword}>
+          <label>현재 비밀번호<input name="currentPassword"
+                               type="password"
+                               value={passwordForm.currentPassword}
+                               onChange={update(setPasswordForm)}
+                               required /></label>
+          <label>새 비밀번호<input name="updatePassword"
+                              type="password"
+                              value={passwordForm.updatePassword}
+                              onChange={update(setPasswordForm)}
+                              required /></label>
+          <label>새 비밀번호 확인<input name="passwordConfirm"
+                                 type="password"
+                                 value={passwordForm.passwordConfirm}
+                                 onChange={update(setPasswordForm)}
+                                 required /></label>
+          <button type="submit">비밀번호 변경</button>
+        </form>
+      </section>
+      <section className="mypage-panel">
+        <h2>내가 작성한 댓글</h2>
+        {comments.length ? <>
+        {comments.slice(currentCommentPage * COMMENTS_PER_PAGE,
+            (currentCommentPage + 1) * COMMENTS_PER_PAGE).map((comment, index) => {
+          const number = currentCommentPage * COMMENTS_PER_PAGE + index + 1;
+          const eventId = comment.eventId;
+          return <article className="my-comment"
+                          key={getCommentId(comment) || `${eventId}-${comment.createdAt}`}>
+            <div className="my-comment-meta">
+              <span className="my-comment-number">{number}.</span>
+              <span>{comment.createdAt || comment.createdAtAt || comment.created_at || ''}</span>
+              <button type="button"
+                      onClick={() => setCommentToDelete(comment)}>삭제</button>
+            </div>
+            <button type="button"
+                    className="my-comment-event"
+                    onClick={() => eventId && onOpenEvent?.({
+                      id: eventId,
+                      title: eventTitles[String(eventId)] || `이벤트 ${eventId}` })}>
+              {eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`}</button>
+            <p>{comment.content || comment.comment}</p>
+          </article>;
+        })}
+      {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1
+          && <div className="comment-pagination">
+            <button type="button"
+                    disabled={currentCommentPage === 0}
+                    onClick={() => setCommentPage((page) => page - 1)}>이전</button>
+            <span>{currentCommentPage + 1} / {Math.ceil(comments.length / COMMENTS_PER_PAGE)}</span>
+            <button type="button" disabled={currentCommentPage >= Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1}
+                    onClick={() => setCommentPage((page) => page + 1)}>다음</button>
+      </div>}
     </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>
     {commentToDelete &&
         <Modal backdropClassName="confirm-backdrop" onClose={() => setCommentToDelete(null)}>
@@ -148,8 +260,12 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
             <h2 id="my-comment-delete-title">댓글 삭제</h2>
             <p>이 댓글을 삭제하시겠습니까?</p>
             <div className="confirm-dialog-actions">
-              <button type="button" className="confirm-cancel" onClick={() => setCommentToDelete(null)}>취소</button>
-              <button type="button" className="confirm-delete" onClick={() => deleteComment(commentToDelete)}>삭제</button>
+              <button type="button"
+                      className="confirm-cancel"
+                      onClick={() => setCommentToDelete(null)}>취소</button>
+              <button type="button"
+                      className="confirm-delete"
+                      onClick={() => deleteComment(commentToDelete)}>삭제</button>
             </div>
           </div>
         </Modal>
@@ -157,10 +273,16 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     {showQuitModal &&
         <Modal backdropClassName="confirm-backdrop" onClose={closeQuitModal} locked={quitLoading}>
           <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="quit-title">
-            <form onSubmit={handleQuit}><h2 id="quit-title">회원탈퇴</h2>
+            <form onSubmit={handleQuit}>
+              <h2 id="quit-title">회원탈퇴</h2>
               <p>탈퇴하면 계정 정보를 다시 복구할 수 없습니다.
                 <br />계속하려면 비밀번호를 입력해주세요.</p>
-              <input className="confirm-input" type="password" value={quitPassword} onChange={(event) => { setQuitPassword(event.target.value); setQuitError(''); }}
+              <input className="confirm-input" type="password"
+                     value={quitPassword}
+                     onChange={(event) => {
+                       setQuitPassword(event.target.value);
+                       setQuitError('');
+                     }}
                      placeholder="비밀번호"
                      autoComplete="current-password"
                      autoFocus disabled={quitLoading} />

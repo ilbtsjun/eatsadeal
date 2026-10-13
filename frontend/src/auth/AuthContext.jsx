@@ -9,10 +9,10 @@ export function AuthProvider({ children }) {
     const [loggedOut, setLoggedOut] = useState(false);
     const location = useLocation();
 
-    const login = useCallback((u) => {
+    const login = useCallback((userWithToken) => {
+        const profile = handleLogin(userWithToken);
         setLoggedOut(false);
-        handleLogin(u);
-        setUser(u);
+        setUser(profile);
         }, []);
     const logout = useCallback(() => {
         setLoggedOut(true);
@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
         window.addEventListener('auth:expired', onExpired);
         return () => window.removeEventListener('auth:expired', onExpired);
     }, []);
-    useEffect(() => setupTokenTimer(), [user?.token]);
+    useEffect(() => setupTokenTimer(), [user]);
     useEffect(() => { setLoggedOut(false); }, [location.pathname]);
 
     const value = useMemo(() => ({ user, loggedOut, login, logout, updateUser }), [user, loggedOut, login, logout, updateUser]);

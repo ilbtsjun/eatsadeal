@@ -28,7 +28,7 @@ export function useEventList({ activeCategory, activeSort, searchKeyword, page, 
         setLoading(true);
         setError('');
 
-        const favoriteRequest = user && getToken() ? getListFavoriteIds() : Promise.resolve([]);
+        const favoriteRequest = user ? getListFavoriteIds() : Promise.resolve([]);
 
         Promise.all([getListEvents(params), favoriteRequest])
             .then(([data, favoriteIds]) => {

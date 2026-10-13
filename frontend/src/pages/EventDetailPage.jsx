@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { apiRequest } from '../api/client';
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { getFallbackImage } from '../utils/BrandUtil.jsx'
 import { calculateDDay, formatDate } from '../utils/DateUtil.jsx'
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
+import { getEvent, setFavorite } from '@/api/index.js'
 
 function getEventCodeName(eventCodes) {
   if (!eventCodes?.length) return '이벤트';
@@ -18,8 +18,6 @@ function getEventCodeName(eventCodes) {
   return eventCodes.map((code) => names[code] || '이벤트').join(' · ');
 }
 
-async function commentRequest(url, options = {}) { return apiRequest(url, options); }
-
 export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [detailEvent, setDetailEvent] = useState(event);
   const [loaded, setLoaded] = useState(Boolean(event.title));
@@ -29,7 +27,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [favoriteError, setFavoriteError] = useState('');
 
   useEffect(() => {
-    apiRequest(`/api/events/${event.id}`)
+    getEvent(event.id)
         .then((data) => {
           setDetailEvent({ ...data, brand: data.brandName });
           setIsFavorite(Boolean(data.isFavorite));
@@ -49,9 +47,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
     }
     const nextFavorite = !isFavorite;
     try {
-      await apiRequest(`/api/events/${event.id}/favorite`, {
-        method: nextFavorite ? 'POST' : 'DELETE',
-      });
+      await setFavorite(event.id, nextFavorite);
       setIsFavorite(nextFavorite);
       setFavoriteError('');
     } catch (error) {
@@ -87,7 +83,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         </>
     );
   }
-  if (loadError && !detailEvent.title) {   // 404가 아닌 오류(서버 오류, 네트워크 등)
+  if (loadError && !detailEvent.title) {
     return renderStatus(
         <>
           <span className="detail-status-emoji" aria-hidden="true">😵</span>

@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import { apiRequest } from '@/api/client';
 import { runCrawler as run } from '@/api/index.js'
-
-const request = apiRequest;
 
 export function useAdminCrawler(setMessage) {
     const [crawlerLoading, setCrawlerLoading] = useState(false);
