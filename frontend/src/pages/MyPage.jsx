@@ -1,22 +1,18 @@
 import Header from '@/common/components/Header';
 import Modal from '@/common/components/Modal';
 import { useMyPage } from '@/features/account/hooks/useMyPage.js';
+import UserProfile from '@/features/account/components/UserProfile.jsx';
 import './MyPage.css';
 
 export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpdate }) {
   const {
-    profile,
-    profileForm,
-    setProfileForm,
     passwordForm,
     setPasswordForm,
     comments,
-    message,
-    error,
-    editingProfile,
     commentToDelete,
     setCommentToDelete,
     eventTitles,
+    setCommentPage,
     currentCommentPage,
     commentPageCount,
     showQuitModal,
@@ -25,9 +21,6 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     quitError,
     quitLoading,
     update,
-    startEditingProfile,
-    cancelEditingProfile,
-    updateProfile,
     updatePassword,
     openQuitModal,
     closeQuitModal,
@@ -35,16 +28,12 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
     deleteComment,
     getCommentId,
     COMMENTS_PER_PAGE,
-    profileMessage,
-    profileError,
     passwordMessage,
     passwordError,
-    setProfileMessage,
-    setProfileError,
     setPasswordMessage,
     setPasswordError,
     setQuitError,
-  } = useMyPage({ user, onLogout, onBack, onUserUpdate });
+  } = useMyPage({ user, onLogout, onBack });
 
   return <div className="mypage">
     <Header />
@@ -52,92 +41,10 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
       <button type="button" className="mypage-back" onClick={onBack}>← 메인으로</button>
       <h1>마이페이지</h1>
       <p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>
-      <section className="mypage-panel">
-        {(message || error) && (
-            <p
-                className={error ? 'mypage-error' : 'mypage-message'}
-                role="status"
-            >
-              {error || message}
-            </p>
-        )}
-        <h2>회원정보</h2>
-        <form className="mypage-form" onSubmit={updateProfile}>
-          <label>이메일<input value={profile.email || ''} readOnly /></label>
-          <label>닉네임
-            <input
-                name="nickname"
-                value={profileForm.nickname}
-                onChange={update(setProfileForm, () => {
-                  setProfileMessage('');
-                  setProfileError('');
-                })}
-                readOnly={!editingProfile}
-                required
-            />
-          </label>
-          <label>이름
-            <input
-                name="name"
-                value={profileForm.name}
-                onChange={update(setProfileForm, () => {
-                  setProfileMessage('');
-                  setProfileError('');
-                })}
-                readOnly={!editingProfile}
-            />
-          </label>
-          <label>전화번호
-            <input
-                name="phoneNumber"
-                value={profileForm.phoneNumber}
-                onChange={update(setProfileForm, () => {
-                  setProfileMessage('');
-                  setProfileError('');
-                })}
-                readOnly={!editingProfile}
-            />
-          </label>
-          <label>생년월일
-            <input
-                name="birth"
-                type="date"
-                value={profileForm.birth || ''}
-                onChange={update(setProfileForm, () => {
-                  setProfileMessage('');
-                  setProfileError('');
-                })}
-                readOnly={!editingProfile}
-            />
-          </label>
-
-          {(profileMessage || profileError) && (
-              <p
-                  className={profileError ? 'mypage-error' : 'mypage-message'}
-                  role="status"
-              >
-                {profileError || profileMessage}
-              </p>
-          )}
-
-          {editingProfile ? (
-              <div className="mypage-form-actions">
-                <button type="submit">완료</button>
-                <button
-                    type="button"
-                    className="secondary"
-                    onClick={cancelEditingProfile}
-                >
-                  취소
-                </button>
-              </div>
-          ) : (
-              <button type="button" onClick={startEditingProfile}>
-                정보 수정
-              </button>
-          )}
-        </form>
-      </section>
+      <UserProfile
+          user={user}
+          onUserUpdate={onUserUpdate}
+      />
       <section className="mypage-panel">
         <h2>보안 설정</h2>
         <form className="mypage-form" onSubmit={updatePassword}>
@@ -213,13 +120,13 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
             <p>{comment.content || comment.comment}</p>
           </article>;
         })}
-      {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1
+      {commentPageCount > 1
           && <div className="comment-pagination">
             <button type="button"
                     disabled={currentCommentPage === 0}
                     onClick={() => setCommentPage((page) => page - 1)}>이전</button>
-            <span>{currentCommentPage + 1} / {Math.ceil(comments.length / COMMENTS_PER_PAGE)}</span>
-            <button type="button" disabled={currentCommentPage >= Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1}
+            <span>{currentCommentPage + 1} / {commentPageCount}</span>
+            <button type="button" disabled={currentCommentPage >= commentPageCount - 1}
                     onClick={() => setCommentPage((page) => page + 1)}>다음</button>
       </div>}
     </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>

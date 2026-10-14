@@ -3,8 +3,6 @@ import { getEvent,
     deleteComment as deleteCommentRequest,
     getMyComments,
     deleteCurrentUser,
-    getCurrentUser,
-    updateCurrentUser,
     updatePassword as updatePasswordRequest,
 } from '@/api/index.js';
 
@@ -15,12 +13,7 @@ const getCommentId = (comment) => {
     return id === null || id === undefined || id === '' ? null : String(id);
 };
 
-const toProfileForm = (profile = {}) => ({
-    nickname: profile.nickname || '',
-    name: profile.name || '',
-    phoneNumber: profile.phoneNumber || '',
-    birth: profile.birth || '',
-});
+
 
 const INITIAL_PASSWORD_FORM = {
     currentPassword: '',
@@ -28,14 +21,11 @@ const INITIAL_PASSWORD_FORM = {
     passwordConfirm: '',
 };
 
-export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
-    const [profile, setProfile] = useState(user || {});
-    const [profileForm, setProfileForm] = useState(() => toProfileForm(user));
+export function useMyPage({ user, onLogout, onBack }) {
     const [passwordForm, setPasswordForm] = useState(INITIAL_PASSWORD_FORM);
     const [comments, setComments] = useState([]);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [editingProfile, setEditingProfile] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState(null);
     const [eventTitles, setEventTitles] = useState({});
     const [commentPage, setCommentPage] = useState(0);
@@ -43,47 +33,31 @@ export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
     const [quitPassword, setQuitPassword] = useState('');
     const [quitError, setQuitError] = useState('');
     const [quitLoading, setQuitLoading] = useState(false);
-    const [profileMessage, setProfileMessage] = useState('');
-    const [profileError, setProfileError] = useState('');
     const [passwordMessage, setPasswordMessage] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
     useEffect(() => {
         let cancelled = false;
 
-        const loadPageData = async () => {
-            const results = await Promise.allSettled([
-                getCurrentUser(),
-                getMyComments(),
-            ]);
+        const loadComments = async () => {
+            try {
+                const data = await getMyComments();
+                if (cancelled) return;
 
-            if (cancelled) return;
-
-            const [profileResult, commentsResult] = results;
-
-            if (profileResult.status === 'fulfilled') {
-                const data = profileResult.value;
-                setProfile(data);
-                setProfileForm(toProfileForm(data));
-            }
-
-            if (profileResult.status === 'rejected') {
-                setProfileError(profileResult.reason?.message || '회원정보를 불러오지 못했습니다.');
-            }
-
-            if (commentsResult.status === 'fulfilled') {
-                const data = commentsResult.value;
                 const serverComments = Array.isArray(data)
                     ? data
                     : data?.comments || data?.content || [];
+
                 setComments(serverComments);
-            } else {
+            } catch (requestError) {
+                if (cancelled) return;
+
                 setComments([]);
-                setError((current) => current || commentsResult.reason?.message || '댓글을 불러오지 못했습니다.');
+                setError(requestError.message || '댓글을 불러오지 못했습니다.');
             }
         };
 
-        loadPageData();
+        loadComments();
 
         return () => {
             cancelled = true;
@@ -131,47 +105,6 @@ export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
         setError('');
         setMessage('');
         clearLocalFeedback?.();
-    };
-
-    const startEditingProfile = () => {
-        setEditingProfile(true);
-        setProfileMessage('정보를 수정한 뒤 완료를 눌러 저장하세요.');
-        setProfileError('');
-    };
-
-    const cancelEditingProfile = () => {
-        setEditingProfile(false);
-        setProfileForm(toProfileForm(profile));
-        setProfileError('');
-        setProfileMessage('');
-    };
-
-    const updateProfile = async (event) => {
-        event.preventDefault();
-        setProfileError('');
-        setProfileMessage('');
-
-        try {
-            await updateCurrentUser({
-                nickname: profileForm.nickname.trim(),
-                name: profileForm.name.trim(),
-                phoneNumber: profileForm.phoneNumber.trim(),
-                birth: profileForm.birth || null,
-            });
-
-            const saved = await getCurrentUser();
-            setProfile(saved);
-            setProfileForm(toProfileForm(saved));
-
-            if (saved.nickname && saved.nickname !== user?.nickname) {
-                onUserUpdate?.({ nickname: saved.nickname });
-            }
-
-            setEditingProfile(false);
-            setProfileMessage('회원정보가 수정되었습니다.');
-        } catch (requestError) {
-            setProfileError(requestError.message || '회원정보 수정에 실패했습니다.');
-        }
     };
 
     const updatePassword = async (event) => {
@@ -260,22 +193,12 @@ export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
     };
 
     return {
-        profile,
-        profileForm,
-        setProfileForm,
         passwordForm,
         setPasswordForm,
         comments,
-        message,
-        error,
-        setError,
-        setMessage,
-        editingProfile,
-        setEditingProfile,
         commentToDelete,
         setCommentToDelete,
         eventTitles,
-        commentPage,
         setCommentPage,
         currentCommentPage,
         commentPageCount,
@@ -283,11 +206,9 @@ export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
         quitPassword,
         setQuitPassword,
         quitError,
+        setQuitError,
         quitLoading,
         update,
-        startEditingProfile,
-        cancelEditingProfile,
-        updateProfile,
         updatePassword,
         openQuitModal,
         closeQuitModal,
@@ -295,13 +216,8 @@ export function useMyPage({ user, onLogout, onBack, onUserUpdate }) {
         deleteComment,
         getCommentId,
         COMMENTS_PER_PAGE,
-        setQuitError,
-        profileMessage,
-        profileError,
         passwordMessage,
         passwordError,
-        setProfileMessage,
-        setProfileError,
         setPasswordMessage,
         setPasswordError,
     };
