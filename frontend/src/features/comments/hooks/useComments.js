@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import {
     getListComments,
     createComment as requestCreateComment,
@@ -30,20 +30,36 @@ export function useComments(eventId, user, onLoginClick) {
         )
     ), [user]);
 
+    const latestRequestId = useRef(0);
+
     const loadComments = useCallback(async () => {
+        const requestId = ++latestRequestId.current;
+
         try {
             const data = await getListComments(eventId);
-            setComments(Array.isArray(data) ? data : []);
+
+            if (requestId === latestRequestId.current) {
+                setComments(Array.isArray(data) ? data : []);
+                setCommentError('');
+            }
         } catch (error) {
-            setCommentError(error.message);
+            if (requestId === latestRequestId.current) {
+                setCommentError(error.message);
+            }
         } finally {
-            setCommentLoading(false);
+            if (requestId === latestRequestId.current) {
+                setCommentLoading(false);
+            }
         }
     }, [eventId]);
 
     useEffect(() => {
         setCommentLoading(true);
         loadComments();
+
+        return () => {
+            latestRequestId.current += 1;
+        };
     }, [loadComments]);
 
     const createComment = async (content, parentId = null) => {
