@@ -1,154 +1,50 @@
-import { useEffect, useState } from 'react';
 import Header from '@/common/components/Header';
 import Modal from '@/common/components/Modal';
+import { useMyPage } from '@/features/account/hooks/useMyPage.js';
 import './MyPage.css';
-import { getCurrentUser, getMyComments, getEvent, updateCurrentUser, deleteCurrentUser,
-  deleteComment as deleteMyComment,
-  updatePassword as updateMyPassword
-} from '@/api/index.js';
-
-function getCommentId(comment) {
-  const id = comment.id ?? comment.commentId ?? comment.comment_id;
-  return id === null || id === undefined || id === '' ? null : String(id);
-}
 
 export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpdate }) {
-  const [profile, setProfile] = useState(user || {});
-  const [profileForm, setProfileForm] = useState({ nickname: user?.nickname || '', name: user?.name || '', phoneNumber: user?.phoneNumber || '', birth: user?.birth || '' });
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', updatePassword: '', passwordConfirm: '' });
-  const [comments, setComments] = useState([]);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [commentToDelete, setCommentToDelete] = useState(null);
-  const [eventTitles, setEventTitles] = useState({});
-  const [commentPage, setCommentPage] = useState(0);
-  const [showQuitModal, setShowQuitModal] = useState(false);
-  const [quitPassword, setQuitPassword] = useState('');
-  const [quitError, setQuitError] = useState('');
-  const [quitLoading, setQuitLoading] = useState(false);
-  const COMMENTS_PER_PAGE = 10;
-
-  useEffect(() => {
-    getCurrentUser()
-        .then((data) => {
-          setProfile(data);
-          setProfileForm({
-            nickname: data.nickname || '',
-            name: data.name || '',
-            phoneNumber: data.phoneNumber || '',
-            birth: data.birth || '' }); })
-        .catch((e) => setError(e.message));
-    getMyComments()
-        .then((data) => {
-          const serverComments = Array.isArray(data) ? data : (data.comments || data.content || []);
-          setComments(serverComments);
-    }).catch((e) => {
-      setComments([]);
-      setError(e.message);
-    });
-  }, [user]);
-
-  useEffect(() => {
-    const eventIds = [...new Set(comments.map((comment) => comment.eventId).filter(Boolean))];
-    if (!eventIds.length) return;
-
-    Promise.all(eventIds.map(async (eventId) => {
-      try {
-        const event = await getEvent(eventId);
-        return [String(eventId), event.title || `이벤트 ${eventId}`];
-      } catch {
-        return [String(eventId), `이벤트 ${eventId}`];
-      }
-    })).then((entries) => setEventTitles(Object.fromEntries(entries)));
-  }, [comments]);
-
-  const closeQuitModal = () => {
-    setShowQuitModal(false);
-    setQuitPassword('');
-    setQuitError('');
-  };
-
-  const currentCommentPage = Math.min(commentPage, Math.max(0, Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1));
-
-  const updateProfile = async (event) => {
-    event.preventDefault();
-    setError('');
-    try {
-      await updateCurrentUser({
-        nickname: profileForm.nickname.trim(),
-        name: profileForm.name.trim(),
-        phoneNumber: profileForm.phoneNumber.trim(),
-        birth: profileForm.birth || null,
-      });
-
-      const saved = await getCurrentUser();
-      setProfile(saved);
-      setProfileForm({
-        nickname: saved.nickname || '',
-        name: saved.name || '',
-        phoneNumber: saved.phoneNumber || '',
-        birth: saved.birth || '' });
-      if (saved.nickname && saved.nickname !== user?.nickname) onUserUpdate?.({ nickname: saved.nickname });
-      setEditingProfile(false);
-      setMessage('회원정보가 수정되었습니다.');
-    } catch (e) {
-      setError(e.message);
-    }
-  };
-  const updatePassword = async (event) => {
-    event.preventDefault();
-    setError('');
-    if (passwordForm.updatePassword !== passwordForm.passwordConfirm) {
-      setError('새 비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    try {
-      await updateMyPassword(passwordForm);
-      setPasswordForm({ currentPassword: '', updatePassword: '', passwordConfirm: '' });
-      setMessage('비밀번호가 변경되었습니다.');
-    } catch (e) { setError(e.message); } };
-
-  const openQuitModal = () => {
-    setQuitPassword('');
-    setQuitError('');
-    setShowQuitModal(true);
-  };
-  const handleQuit = async (event) => {
-    event.preventDefault();
-    if (!quitPassword) {
-      setQuitError('비밀번호를 입력해주세요.');
-      return;
-    }
-    setQuitLoading(true);
-    setQuitError('');
-    try {
-      await deleteCurrentUser(quitPassword);
-      closeQuitModal();
-      window.alert('회원탈퇴가 완료되었습니다.');
-      onLogout();
-      onBack();
-    } catch (e) {
-      setQuitError(e.message || '회원탈퇴에 실패했습니다.');
-    } finally {
-      setQuitLoading(false);
-    }
-  };
-
-  const deleteComment = async (comment) => {
-    const commentId = getCommentId(comment);
-    if (!commentId) return;
-    try {
-      await deleteMyComment(commentId);
-      setComments((current) => current.filter((item) => getCommentId(item) !== commentId));
-      setMessage('댓글이 삭제되었습니다.');
-    } catch (e) { setError(e.message); }
-    finally { setCommentToDelete(null); }
-  };
-  const update = (setForm) => (event) => {
-    const { name, value } = event.target; // updater 안에서 event.target 을 읽으면 값이 어긋날 수 있어 먼저 꺼냄
-    setForm((current) => ({ ...current, [name]: value }));
-  };
+  const {
+    profile,
+    profileForm,
+    setProfileForm,
+    passwordForm,
+    setPasswordForm,
+    comments,
+    message,
+    error,
+    editingProfile,
+    commentToDelete,
+    setCommentToDelete,
+    eventTitles,
+    currentCommentPage,
+    commentPageCount,
+    showQuitModal,
+    quitPassword,
+    setQuitPassword,
+    quitError,
+    quitLoading,
+    update,
+    startEditingProfile,
+    cancelEditingProfile,
+    updateProfile,
+    updatePassword,
+    openQuitModal,
+    closeQuitModal,
+    handleQuit,
+    deleteComment,
+    getCommentId,
+    COMMENTS_PER_PAGE,
+    profileMessage,
+    profileError,
+    passwordMessage,
+    passwordError,
+    setProfileMessage,
+    setProfileError,
+    setPasswordMessage,
+    setPasswordError,
+    setQuitError,
+  } = useMyPage({ user, onLogout, onBack, onUserUpdate });
 
   return <div className="mypage">
     <Header />
@@ -156,67 +52,140 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
       <button type="button" className="mypage-back" onClick={onBack}>← 메인으로</button>
       <h1>마이페이지</h1>
       <p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>
-      {(message || error) && <p className={error ? 'mypage-error' : 'mypage-message'}>{error || message}</p>}
       <section className="mypage-panel">
+        {(message || error) && (
+            <p
+                className={error ? 'mypage-error' : 'mypage-message'}
+                role="status"
+            >
+              {error || message}
+            </p>
+        )}
         <h2>회원정보</h2>
         <form className="mypage-form" onSubmit={updateProfile}>
           <label>이메일<input value={profile.email || ''} readOnly /></label>
-          <label>닉네임<input name="nickname"
-                           value={profileForm.nickname}
-                           onChange={update(setProfileForm)}
-                           readOnly={!editingProfile}
-                           required /></label>
-          <label>이름<input name="name" value={profileForm.name}
-                          onChange={update(setProfileForm)}
-                          readOnly={!editingProfile} /></label>
-          <label>전화번호<input name="phoneNumber"
-                            value={profileForm.phoneNumber}
-                            onChange={update(setProfileForm)}
-                            readOnly={!editingProfile} /></label>
-          <label>생년월일<input name="birth"
-                            type="date"
-                            value={profileForm.birth || ''}
-                            onChange={update(setProfileForm)}
-                            readOnly={!editingProfile} /></label>
-          {editingProfile ?
+          <label>닉네임
+            <input
+                name="nickname"
+                value={profileForm.nickname}
+                onChange={update(setProfileForm, () => {
+                  setProfileMessage('');
+                  setProfileError('');
+                })}
+                readOnly={!editingProfile}
+                required
+            />
+          </label>
+          <label>이름
+            <input
+                name="name"
+                value={profileForm.name}
+                onChange={update(setProfileForm, () => {
+                  setProfileMessage('');
+                  setProfileError('');
+                })}
+                readOnly={!editingProfile}
+            />
+          </label>
+          <label>전화번호
+            <input
+                name="phoneNumber"
+                value={profileForm.phoneNumber}
+                onChange={update(setProfileForm, () => {
+                  setProfileMessage('');
+                  setProfileError('');
+                })}
+                readOnly={!editingProfile}
+            />
+          </label>
+          <label>생년월일
+            <input
+                name="birth"
+                type="date"
+                value={profileForm.birth || ''}
+                onChange={update(setProfileForm, () => {
+                  setProfileMessage('');
+                  setProfileError('');
+                })}
+                readOnly={!editingProfile}
+            />
+          </label>
+
+          {(profileMessage || profileError) && (
+              <p
+                  className={profileError ? 'mypage-error' : 'mypage-message'}
+                  role="status"
+              >
+                {profileError || profileMessage}
+              </p>
+          )}
+
+          {editingProfile ? (
               <div className="mypage-form-actions">
                 <button type="submit">완료</button>
-                <button type="button"
-                        className="secondary"
-                        onClick={() => {
-                          setEditingProfile(false);
-                          setProfileForm({
-                            nickname: profile.nickname || '',
-                            name: profile.name || '',
-                            phoneNumber: profile.phoneNumber || '',
-                            birth: profile.birth || '' });
-                        }}>취소</button>
-              </div> :
-              <button type="button"
-                      onClick={() => {
-                        setEditingProfile(true);
-                        setMessage('정보를 수정한 뒤 완료를 눌러 저장하세요.');
-                      }}>정보 수정</button>}
+                <button
+                    type="button"
+                    className="secondary"
+                    onClick={cancelEditingProfile}
+                >
+                  취소
+                </button>
+              </div>
+          ) : (
+              <button type="button" onClick={startEditingProfile}>
+                정보 수정
+              </button>
+          )}
         </form>
       </section>
       <section className="mypage-panel">
         <h2>보안 설정</h2>
         <form className="mypage-form" onSubmit={updatePassword}>
-          <label>현재 비밀번호<input name="currentPassword"
-                               type="password"
-                               value={passwordForm.currentPassword}
-                               onChange={update(setPasswordForm)}
-                               required /></label>
-          <label>새 비밀번호<input name="updatePassword"
-                              type="password"
-                              value={passwordForm.updatePassword}
-                              onChange={update(setPasswordForm)}
-                              required /></label>
-          <label>새 비밀번호 확인<input name="passwordConfirm"
-                                 type="password"
-                                 value={passwordForm.passwordConfirm}
-                                 onChange={update(setPasswordForm)}
-                                 required /></label>
+          <label>현재 비밀번호
+            <input
+                name="currentPassword"
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={update(setPasswordForm, () => {
+                  setPasswordMessage('');
+                  setPasswordError('');
+                })}
+                required
+            />
+          </label>
+          <label>새 비밀번호
+            <input
+                name="updatePassword"
+                type="password"
+                value={passwordForm.updatePassword}
+                onChange={update(setPasswordForm, () => {
+                  setPasswordMessage('');
+                  setPasswordError('');
+                })}
+                required
+            />
+          </label>
+          <label>새 비밀번호 확인
+            <input
+                name="passwordConfirm"
+                type="password"
+                value={passwordForm.passwordConfirm}
+                onChange={update(setPasswordForm, () => {
+                  setPasswordMessage('');
+                  setPasswordError('');
+                })}
+                required
+            />
+          </label>
+
+          {(passwordMessage || passwordError) && (
+              <p
+                  className={passwordError ? 'mypage-error' : 'mypage-message'}
+                  role="status"
+              >
+                {passwordError || passwordMessage}
+              </p>
+          )}
           <button type="submit">비밀번호 변경</button>
         </form>
       </section>

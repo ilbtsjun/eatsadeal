@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAdminCatalogForm } from './useAdminCatalogForm.js';
 import {
     getListCategories,
     getListBrands,
     activateBrand,
     deactivateBrand,
     deleteCategory,
-    getBrand,
     createBrand,
     updateBrand,
     createCategory,
@@ -40,8 +40,15 @@ export function useAdminCatalog() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
-    const [form, setForm] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const {
+        form,
+        setForm,
+        openCreate,
+        openEdit,
+        toggleCategory,
+        updateFormField,
+    } = useAdminCatalogForm(setMessage);
 
     const loadLists = useCallback(async () => {
         setLoading(true);
@@ -86,14 +93,14 @@ export function useAdminCatalog() {
         setConfirmDelete(null);
 
         try {
-            if (kind === 'activate') {
+            if (kind === 'activate' && type === 'brand') {
                 await activateBrand(id);
-            } else if (kind === 'deactivate') {
+            } else if (kind === 'deactivate' && type === 'brand') {
                 await deactivateBrand(id);
-            } else if (type === 'brand') {
-                await deactivateBrand(id);
-            } else {
+            } else if (kind === 'delete' && type === 'category') {
                 await deleteCategory(id);
+            } else {
+                throw new Error('지원하지 않는 관리자 작업입니다.');
             }
 
             await loadLists();
@@ -108,87 +115,6 @@ export function useAdminCatalog() {
         } catch (error) {
             setMessage(error.message);
         }
-    };
-
-    const openCreate = (type) => {
-        if (type !== 'brand' && type !== 'category') return;
-
-        setMessage('');
-
-        if (type === 'brand') {
-            setForm({
-                type: 'brand',
-                name: '',
-                url: '',
-                img: '',
-                categoryIds: [],
-            });
-        } else {
-            setForm({
-                type: 'category',
-                name: '',
-                img: '',
-                categoryIds: [],
-            });
-        }
-    };
-
-    const openEdit = async (type, item) => {
-        if (!item || (type !== 'brand' && type !== 'category')) return;
-
-        setMessage('');
-
-        if (type === 'category') {
-            setForm({
-                type: 'category',
-                id: item.id,
-                name: item.name ?? '',
-                img: item.img ?? '',
-                categoryIds: [],
-            });
-            return;
-        }
-
-        try {
-            const detail = await getBrand(item.id);
-            const ids = detail.categoryIds
-                ?? detail.categories?.map((category) => category.id)
-                ?? [];
-
-            setForm({
-                type: 'brand',
-                id: item.id,
-                name: detail.name ?? item.name ?? '',
-                url: detail.url ?? '',
-                img: detail.img ?? item.img ?? '',
-                categoryIds: ids.map(Number).filter(Number.isFinite),
-            });
-        } catch (error) {
-            setMessage(`브랜드 상세 정보를 불러오지 못했습니다: ${error.message}`);
-        }
-    };
-
-    const toggleCategory = (categoryId) => {
-        const id = Number(categoryId);
-
-        setForm((current) => {
-            if (!current) return current;
-
-            const categoryIds = current.categoryIds ?? [];
-
-            return {
-                ...current,
-                categoryIds: categoryIds.includes(id)
-                    ? categoryIds.filter((value) => value !== id)
-                    : [...categoryIds, id],
-            };
-        });
-    };
-
-    const updateFormField = (field, value) => {
-        setForm((current) =>
-            current ? { ...current, [field]: value } : current
-        );
     };
 
     const submitForm = async (event) => {
