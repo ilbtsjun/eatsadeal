@@ -12,7 +12,12 @@ export default function EventCardList({
                                           onSelectEvent,
                                           user,
                                       }) {
-    const { events, setEvents, loading, error, setError, totalPages, totalElements } = useEventList({
+    const { events,
+        loading,
+        error,
+        totalPages,
+        totalElements,
+        toggleFavorite } = useEventList({
         activeCategory,
         activeSort,
         searchKeyword,
@@ -37,9 +42,7 @@ export default function EventCardList({
                         <EventCard
                             key={event.id}
                             event={event}
-                            user={user}
-                            setError={setError}
-                            setEvents={setEvents}
+                            toggleFavorite={toggleFavorite}
                             onSelectEvent={onSelectEvent}
                         />
                     ))}

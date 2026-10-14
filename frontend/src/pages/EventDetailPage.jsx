@@ -6,17 +6,7 @@ import { getFallbackImage } from '../utils/BrandUtil.jsx'
 import { calculateDDay, formatDate } from '../utils/DateUtil.jsx'
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
 import { getEvent, setFavorite } from '@/api/index.js'
-
-function getEventCodeName(eventCodes) {
-  if (!eventCodes?.length) return '이벤트';
-  const names = {
-    DISCOUNT_PRICE: '정액 할인', DISCOUNT_RATE: '정률 할인',
-    BUY_ONE_GET_ONE: '1+1', BUY_N_GET_N: 'N+1', TAKE_OUT: '포장 할인',
-    DELIVERY_FREE: '배달비 무료', GIFT_PROMO: '사은품', PAYMENT_PROMO: '결제 할인',
-    MEMBERSHIP: '멤버십', TIME_SALE: '타임세일',
-  };
-  return eventCodes.map((code) => names[code] || '이벤트').join(' · ');
-}
+import { getEventCodeName } from '@/features/events/utils/eventDisplay.js'
 
 export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
   const [detailEvent, setDetailEvent] = useState(event);

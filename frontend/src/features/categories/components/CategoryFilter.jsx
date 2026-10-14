@@ -1,8 +1,6 @@
 import { useCategories } from '../hooks/useCategories.js';
 import './CategoryFilter.css';
 
-const ALL = { id: 'all', name: '전체' };
-
 export default function CategoryFilter({ activeCategory, onCategoryChange, activeSort, onSortChange }) {
     const { categories } = useCategories();
     return (

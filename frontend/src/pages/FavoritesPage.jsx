@@ -1,53 +1,16 @@
-import { useEffect, useState } from 'react';
 import Header from '@/common/components/Header';
-import { apiRequest } from '../api/client';
 import './FavoritesPage.css';
-import { getListFavoriteIds, setFavorite, getEvent } from '@/api/index.js';
+import { useFavoriteList } from '@/features/favorites/hooks/useFavoriteList.js';
 
 export default function FavoritesPage({ user, onBack, onOpenEvent }) {
-    const [favorites, setFavorites] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [toggleError, setToggleError] = useState('');
-    const [pendingId, setPendingId] = useState(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        getListFavoriteIds()
-            .then(async (data) => {
-                const rawFavorites = Array.isArray(data) ? data : data?.favorites || data?.content || [];
-                const ids = rawFavorites
-                    .map((item) => (typeof item === 'object' ? item.id || item.eventId : item))
-                    .filter(Boolean);
-                const details = await Promise.allSettled(ids.map((id) => getEvent(id)));
-                if (!cancelled) {
-                    setFavorites(details
-                        .filter((result) => result.status === 'fulfilled')
-                        .map((result) => ({ ...result.value, isFavorite: true })));
-                }
-            })
-            .catch((requestError) => { if (!cancelled) setError(requestError.message); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-        return () => { cancelled = true; };
-    }, [user]);
-
-    const toggleFavorite = async (event) => {
-        if (pendingId === event.id) return;
-        const nextFavorite = !event.isFavorite;
-        setPendingId(event.id);
-        setToggleError('');
-        try {
-            await setFavorite(event.id, nextFavorite);
-            setFavorites((current) => current.map((item) => (
-                item.id === event.id ? { ...item, isFavorite: nextFavorite } : item
-            )));
-        } catch (requestError) {
-            setToggleError(requestError.message);
-        } finally {
-            setPendingId(null);
-        }
-    };
+    const {
+        favorites,
+        loading,
+        error,
+        toggleError,
+        pendingId,
+        toggleFavorite,
+    } = useFavoriteList(user);
 
     return (
         <div className="favorites-page">

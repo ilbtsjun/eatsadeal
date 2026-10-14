@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getToken } from '@/auth/Token.jsx';
-import { getListEvents, getListFavoriteIds } from '@/api/index.js';
+import { getListEvents, getListFavoriteIds, setFavorite } from '@/api/index.js';
 
 const PAGE_SIZE = 20;
 
@@ -61,13 +60,32 @@ export function useEventList({ activeCategory, activeSort, searchKeyword, page, 
         }
     }, [loading, totalPages, page, onPageChange]);
 
+    const toggleFavorite = async (event) => {
+        if (!user) {
+            window.alert('찜하기 기능을 사용하려면 로그인해주세요.');
+            return;
+        }
+
+        const nextFavorite = !event.isFavorite;
+
+        try {
+            await setFavorite(event.id, nextFavorite);
+            setEvents((current) => current.map((item) => (
+                item.id === event.id
+                    ? { ...item, isFavorite: nextFavorite }
+                    : item
+            )));
+        } catch (requestError) {
+            setError(requestError.message);
+        }
+    };
+
     return {
         events,
-        setEvents,
         loading,
         error,
-        setError,
         totalPages,
         totalElements,
+        toggleFavorite,
     };
 }
