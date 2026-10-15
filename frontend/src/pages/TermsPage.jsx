@@ -67,7 +67,7 @@ export default function TermsPage({ onBack, onPrivacy, backLabel = '메인으로
                 <h2>부칙</h2>
                 <p>이 약관은 2026년 9월 22일부터 적용합니다.</p>
             </section>
-            <p className="legal-page__footer">문의: [eatsadealtemp@gmail.com] · 본 페이지는 포트폴리오용 임시 작성된 약관입니다.</p>
+            <p className="legal-page__footer">문의: eatsadealtemp@gmail.com · 본 페이지는 포트폴리오용 임시 작성된 약관입니다.</p>
 
         </main>
     </div>;

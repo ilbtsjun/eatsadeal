@@ -1,16 +1,15 @@
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
+import { Navigate, useLocation, useParams } from 'react-router';
 import EventDetailPage from '../pages/EventDetailPage.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { useHeaderProps } from '../hooks/useHeaderProps.jsx'
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { useGoLogin } from '@/common/hooks/useGoLogin.js';
 
 export default function EventDetailRoute() {
     const { eventId } = useParams();
     const location = useLocation();
-    const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const goBack = useGoBack('/');
-    const header = useHeaderProps();
+    const goLogin = useGoLogin();
 
     const id = Number(eventId);
     if (!Number.isInteger(id))
@@ -23,7 +22,8 @@ export default function EventDetailRoute() {
         <EventDetailPage
             key={id}
             event={event}
-            {...header}
+            user={user}
+            onLoginClick={goLogin}
             onBack={goBack}
         />
     );

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router';
 import MyPage from '../pages/MyPage.jsx';
 import FavoritesPage from '../pages/FavoritesPage.jsx';
 import AdminPage from '../pages/AdminPage.jsx';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { useAuth } from '../auth/AuthContext.jsx'
 
 const openEvent = (navigate) => (event) => navigate(`/events/${event.id}`, { state: { event } });
@@ -22,7 +22,6 @@ export function FavoritesRoute() {
     return <FavoritesPage user={user}
                           onBack={() => navigate('/')}
                           onOpenEvent={openEvent(navigate)} />;
-    return <AdminPage user={user} onBack={() => navigate('/')} />
 }
 
 export function AdminRoute() {

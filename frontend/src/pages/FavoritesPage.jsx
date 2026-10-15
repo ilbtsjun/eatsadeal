@@ -1,56 +1,16 @@
-import { useEffect, useState } from 'react';
-import Header from '../components/Header';
-import { apiRequest } from '../api/client';
+import Header from '@/common/components/Header';
 import './FavoritesPage.css';
+import { useFavoriteList } from '@/features/favorites/hooks/useFavoriteList.js';
 
 export default function FavoritesPage({ user, onBack, onOpenEvent }) {
-    const [favorites, setFavorites] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [toggleError, setToggleError] = useState('');
-    const [pendingId, setPendingId] = useState(null); // 찜 토글 요청 중인 이벤트 id (중복 클릭 방지)
-
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        apiRequest('/api/user/me/favorites')
-            .then(async (data) => {
-                const rawFavorites = Array.isArray(data) ? data : data?.favorites || data?.content || [];
-                const ids = rawFavorites
-                    .map((item) => (typeof item === 'object' ? item.id || item.eventId : item))
-                    .filter(Boolean);
-                const details = await Promise.allSettled(ids.map((id) => apiRequest(`/api/events/${id}`)));
-                if (!cancelled) {
-                    setFavorites(details
-                        .filter((result) => result.status === 'fulfilled')
-                        .map((result) => ({ ...result.value, isFavorite: true })));
-                }
-            })
-            .catch((requestError) => { if (!cancelled) setError(requestError.message); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-        return () => { cancelled = true; };
-    }, [user]);
-
-    // 찜 해제해도 목록에서 바로 사라지지 않고 하트만 비워둠 → 실수로 눌렀을 때 다시 찜할 수 있음.
-    // (페이지를 다시 열면 해제된 이벤트는 목록에서 빠집니다)
-    const toggleFavorite = async (event) => {
-        if (pendingId === event.id) return;
-        const nextFavorite = !event.isFavorite;
-        setPendingId(event.id);
-        setToggleError('');
-        try {
-            await apiRequest(`/api/events/${event.id}/favorite`, {
-                method: nextFavorite ? 'POST' : 'DELETE',
-            });
-            setFavorites((current) => current.map((item) => (
-                item.id === event.id ? { ...item, isFavorite: nextFavorite } : item
-            )));
-        } catch (requestError) {
-            setToggleError(requestError.message);
-        } finally {
-            setPendingId(null);
-        }
-    };
+    const {
+        favorites,
+        loading,
+        error,
+        toggleError,
+        pendingId,
+        toggleFavorite,
+    } = useFavoriteList(user);
 
     return (
         <div className="favorites-page">
@@ -65,7 +25,6 @@ export default function FavoritesPage({ user, onBack, onOpenEvent }) {
                 {!loading && !error && (favorites.length ? (
                     <div className="favorites-list">
                         {favorites.map((event) => (
-                            // 버튼 안에 버튼을 넣을 수 없으므로, 카드 버튼과 찜 버튼을 형제로 두고 겹쳐서 배치
                             <div className="favorite-event-row" key={event.id}>
                                 <button
                                     type="button"

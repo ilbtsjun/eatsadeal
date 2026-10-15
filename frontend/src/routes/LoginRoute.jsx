@@ -1,8 +1,8 @@
 import { useLocation, useNavigate } from 'react-router';
 import LoginPage from '../pages/LoginPage.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
 export default function LoginRoute() {
     const navigate = useNavigate();

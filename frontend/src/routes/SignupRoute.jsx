@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router';
 import SignupPage from '../pages/SignupPage.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
 export default function SignupRoute() {
     const navigate = useNavigate();
@@ -10,7 +10,6 @@ export default function SignupRoute() {
 
     return (
         <>
-            {/* 하위 라우트(약관)가 바뀌어도 이 요소는 unmount되지 않아 입력값과 체크 상태가 유지됨 */}
             <SignupPage
                 onBack={goBack}
                 onLoginClick={() => navigate('/login', { replace: true })}
