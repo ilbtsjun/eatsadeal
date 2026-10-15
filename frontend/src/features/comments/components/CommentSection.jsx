@@ -1,6 +1,6 @@
 import { useComments } from '../hooks/useComments.js';
 import { buildCommentTree, getCommentId, isHiddenComment, isDeletedComment,} from '../utils/commentTree.js';
-import { formatDateTime } from '@/utils/DateUtil.js';
+import { formatDateTime } from '@/common/utils/DateUtil.js';
 
 const COMMENT_MAX = 300;
 const SUPPORTS_REPLIES = false;

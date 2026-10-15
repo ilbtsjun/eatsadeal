@@ -1,5 +1,5 @@
 import { logout } from '@/api/index.js';
-import { getToken, setToken, removeToken, getTokenExp } from "./Token.jsx"
+import { getToken, setToken, removeToken, getTokenExp } from "./TokenUtil.js"
 
 const SAVED_USER_KEY = 'eats-a-deal-user';
 
@@ -9,6 +9,10 @@ function withoutToken(user) {
     const profile = { ...user };
     delete profile.token;
     return profile;
+}
+
+export function loginUser(token){
+    setToken(token);
 }
 
 export function getSavedUser() {
