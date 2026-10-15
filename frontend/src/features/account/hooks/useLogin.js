@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { login, getCurrentUser } from '@/api/index.js';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
-import { handleLogin } from '@/auth/AuthUtil.js';
+import { loginUser } from '@/auth/AuthUtil.js';
 
 function getLoginErrorMessage(error) {
     const data = error.response?.data ?? error.data ?? {};
