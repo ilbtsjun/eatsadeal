@@ -1,4 +1,4 @@
-import { useProfile } from './useProfile.js';
+import { useProfile } from '../hooks/useProfile.js';
 
 export default function Profile({ user, onUserUpdate }) {
     const {
