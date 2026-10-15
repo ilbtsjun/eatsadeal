@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
-import { getSavedUser, handleLogin, handleLogout, handleUpdateUser, setupTokenTimer, clearSession } from './AuthUtil.jsx'
+import { getSavedUser, handleLogin, handleLogout, handleUpdateUser, setupTokenTimer, clearSession } from './AuthUtil.js'
 import { useLocation } from 'react-router';
 
 const AuthContext = createContext(null);

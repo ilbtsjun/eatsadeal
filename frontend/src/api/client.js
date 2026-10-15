@@ -1,4 +1,4 @@
-import { getToken, isTokenExpired } from "../auth/Token.jsx"
+import { getToken, isTokenExpired } from "../auth/TokenUtil.js"
 
 export async function apiRequest(url, options = {}) {
   const { skipAuth = false, body, headers: extraHeaders, ...rest } = options;
