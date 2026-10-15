@@ -1,6 +1,6 @@
 import { usePasswordChange } from '../hooks/usePasswordChange.js';
 
-export default function PasswordChange({}){
+export default function PasswordChange(){
     const{
         updatePassword,
         passwordForm,

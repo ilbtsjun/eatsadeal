@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import {
-    deleteCurrentUser
-} from '@/api/index.js';
+import { deleteCurrentUser } from '@/api/index.js';
 
-export function useMyPage({ onLogout, onBack }) {
+export function useUserQuit({ onLogout, onBack }){
     const [showQuitModal, setShowQuitModal] = useState(false);
     const [quitPassword, setQuitPassword] = useState('');
     const [quitError, setQuitError] = useState('');
@@ -55,6 +53,6 @@ export function useMyPage({ onLogout, onBack }) {
         quitLoading,
         openQuitModal,
         closeQuitModal,
-        handleQuit,
-    };
+        handleQuit
+    }
 }
