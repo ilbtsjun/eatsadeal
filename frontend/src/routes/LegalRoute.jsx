@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router';
 import TermsPage from '../pages/TermsPage.jsx';
 import PrivacyPage from '../pages/PrivacyPage.jsx';
-import { useGoBack } from '../hooks/useGoBack.jsx';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import { useGoBack } from '@/common/hooks/useGoBack.js';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
 export default function LegalRoute({ kind }) {
     const navigate = useNavigate();

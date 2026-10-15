@@ -1,182 +1,39 @@
-import { useState } from 'react';
+import { useSignup } from '@/features/account/hooks/useSignup.js';
 import './SignupPage.css';
 
-const INITIAL_FORM = {
-  nickname: '',
-  email: '',
-  password: '',
-  passwordConfirm: '',
-  name: '',
-  phoneNumber: '',
-  userGender: 'UNSPECIFIED',
-  birth: '',
-};
-
-async function checkDuplicate(url) {
-  const response = await fetch(url);
-  const text = await response.text();
-
-  if (!response.ok) {
-    throw new Error(`중복확인에 실패했습니다. (HTTP ${response.status})`);
-  }
-
-  if (!text.trim()) {
-    throw new Error('중복확인 응답이 비어 있습니다.');
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('중복확인 API 응답이 JSON 형식이 아닙니다.');
-  }
-}
-
-export default function SignupPage({ onLoginClick, onBack, onSignupSuccess, onOpenTerms, onOpenPrivacy }) {
-  const [step, setStep] = useState(1);
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [emailChecked, setEmailChecked] = useState(false);
-  const [nicknameChecked, setNicknameChecked] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [nicknameMessage, setNicknameMessage] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [authCode, setAuthCode] = useState('');
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
-
-  const allAgreed = agreeTerms && agreePrivacy;
-
-  const updateField = (event) => {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
-    if (name === 'email') {
-      setEmailChecked(false);
-      setEmailMessage('');
-      setShowLoginPrompt(false);
-    }
-    if (name === 'nickname') {
-      setNicknameChecked(false);
-      setNicknameMessage('');
-    }
-    setError('');
-  };
-
-  const handleAgreeAll = (event) => {
-    const checked = event.target.checked;
-    setAgreeTerms(checked);
-    setAgreePrivacy(checked);
-    setError('');
-  };
-
-  const handleEmailCheck = async () => {
-    if (!form.email.trim()) {
-      setEmailMessage('이메일을 입력해주세요.');
-      return;
-    }
-    try {
-      const exists = await checkDuplicate(`/api/user/email-availability?emailID=${encodeURIComponent(form.email.trim())}`);
-      setEmailChecked(!exists);
-      setShowLoginPrompt(exists);
-      setEmailMessage(exists ? '이미 가입된 이메일입니다.' : '사용 가능한 이메일입니다.');
-    } catch (requestError) {
-      setEmailChecked(false);
-      setShowLoginPrompt(false);
-      setEmailMessage(requestError.message);
-    }
-  };
-
-  const handleNicknameCheck = async () => {
-    if (!form.nickname.trim()) {
-      setNicknameMessage('닉네임을 입력해주세요.');
-      return;
-    }
-    try {
-      const exists = await checkDuplicate(`/api/user/nickname-availability?nickname=${encodeURIComponent(form.nickname.trim())}`);
-      setNicknameChecked(!exists);
-      setNicknameMessage(exists ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.');
-    } catch (requestError) {
-      setNicknameChecked(false);
-      setNicknameMessage(requestError.message);
-    }
-  };
-
-  const handleNext = (event) => {
-    event.preventDefault();
-    setError('');
-    if (!nicknameChecked || !emailChecked) {
-      setError('닉네임과 이메일 중복확인을 완료해주세요.');
-      return;
-    }
-    if (form.password !== form.passwordConfirm) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    if (!agreeTerms || !agreePrivacy) {
-      setError('이용약관과 개인정보처리방침에 모두 동의해주세요.');
-      return;
-    }
-    setStep(2);
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          nickname: form.nickname.trim(),
-          phoneNumber: form.phoneNumber.trim() || null,
-          userGender: form.userGender || 'UNSPECIFIED',
-          birth: form.birth || null,
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const duplicateEmail = `${result.msg || ''} ${result.message || ''}`.includes('이메일');
-        if (duplicateEmail) {
-          setStep(1);
-          setEmailChecked(false);
-          setEmailMessage('이미 가입된 이메일입니다.');
-          setShowLoginPrompt(true);
-          throw new Error('이미 가입된 이메일입니다.');
-        }
-        throw new Error(result.msg || result.message || '회원가입에 실패했습니다.');
-      }
-      setStep(3);
-      setError('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
-    } catch (requestError) {
-      setError(requestError.message || '회원가입에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async (event) => {
-    event.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const response = await fetch('/api/auth/email-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email.trim(), inputCode: authCode.trim() }),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.msg || result.message || '이메일 인증에 실패했습니다.');
-      onSignupSuccess();
-    } catch (requestError) {
-      setError(requestError.message || '이메일 인증에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function SignupPage({
+                                     onLoginClick,
+                                     onBack,
+                                     onSignupSuccess,
+                                     onOpenTerms,
+                                     onOpenPrivacy }) {
+  const {
+    step,
+    setStep,
+    form,
+    emailChecked,
+    nicknameChecked,
+    emailMessage,
+    showLoginPrompt,
+    nicknameMessage,
+    error,
+    loading,
+    authCode,
+    setAuthCode,
+    agreeTerms,
+    setAgreeTerms,
+    agreePrivacy,
+    setAgreePrivacy,
+    allAgreed,
+    updateField,
+    handleAgreeAll,
+    handleEmailCheck,
+    handleNicknameCheck,
+    handleNext,
+    handleSubmit,
+    handleVerify,
+    setError,
+  } = useSignup({ onSignupSuccess });
 
   return (
       <main className="signup-page">

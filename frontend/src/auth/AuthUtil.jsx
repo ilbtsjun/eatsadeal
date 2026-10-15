@@ -1,16 +1,26 @@
-import {apiRequest} from "../api/client.js"
+import { logout } from '@/api/index.js';
 import { getToken, setToken, removeToken, getTokenExp } from "./Token.jsx"
 
 const SAVED_USER_KEY = 'eats-a-deal-user';
 
+function withoutToken(user) {
+    if (!user || typeof user !== 'object')
+        return user;
+    const profile = { ...user };
+    delete profile.token;
+    return profile;
+}
+
 export function getSavedUser() {
     try {
-        const u = JSON.parse(localStorage.getItem(SAVED_USER_KEY));
+        const savedUser = JSON.parse(localStorage.getItem(SAVED_USER_KEY));
         const token = getToken();
-
-        if (u && token && getTokenExp(token) > Date.now())
-            return { ...u, token };
-    } catch { /* */ }
+        if (savedUser && token && getTokenExp(token) > Date.now()) {
+            const profile = withoutToken(savedUser);
+            localStorage.setItem(SAVED_USER_KEY, JSON.stringify(profile));
+            return profile;
+        }
+    } catch {/* */ }
     clearSession();
     return null;
 }
@@ -25,37 +35,40 @@ export function expireSession(){
     window.dispatchEvent(new Event('auth:expired'));
 }
 
-export const handleLogin = (u) => {
-    const { token, ...user } = u;
-    localStorage.setItem(SAVED_USER_KEY, JSON.stringify(user));
+export function handleLogin(userWithToken) {
+    const { token, ...profile } = userWithToken;
+    if (!token)
+        throw new Error('로그인 응답에 인증 토큰이 없습니다.');
+    localStorage.setItem(SAVED_USER_KEY, JSON.stringify(profile));
     setToken(token);
-};
+    return profile;
+}
 
-export const handleUpdateUser = (patch, setUser) => {
-    setUser((cur) => {
-        if (!cur) return cur;
-        const next = { ...cur, ...patch };
+export function handleUpdateUser(patch, setUser) {
+    setUser((current) => {
+        if (!current) return current;
+        const next = withoutToken({ ...current, ...patch });
         localStorage.setItem(SAVED_USER_KEY, JSON.stringify(next));
         return next;
     });
-};
+}
 
-export const handleLogout = (setUser) => {
-    const token = getToken();
-    if (token) {
-        apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => {});
+export function handleLogout(setUser) {
+    if (getToken()) {
+        logout().catch(() => {});
     }
     clearSession();
     setUser(null);
-};
+}
 
 export function setupTokenTimer() {
     const token = getToken();
-    if (!token) return undefined;
+    if (!token)
+        return undefined;
 
     const remain = getTokenExp(token) - Date.now();
     if (remain <= 0) {
-        clearSession();
+        expireSession();
         return undefined;
     }
     const timer = setTimeout(expireSession, Math.min(remain, 2 ** 31 - 1));

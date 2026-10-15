@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
-import Header from '../components/Header';
-import { usePageTitle } from '../hooks/usePageTitle.jsx';
+import Header from '@/common/components/Header';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import './NotFoundPage.css';
 
 export default function NotFoundPage() {
