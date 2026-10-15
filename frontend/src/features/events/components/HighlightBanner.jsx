@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getHighlight } from '@/api/index.js';
 import './HighlightBanner.css';
-import { calculateDDay } from '@/utils/DateUtil.jsx'
+import { calculateDDay } from '@/utils/DateUtil.js'
 
 
 export default function HighlightBanner({ onSelectEvent }) {

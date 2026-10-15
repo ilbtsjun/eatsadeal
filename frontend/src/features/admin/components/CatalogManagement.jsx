@@ -1,4 +1,4 @@
-import { getFallbackImage } from '@/utils/BrandUtil.jsx';
+import { getFallbackImage } from '@/utils/BrandUtil.js';
 
 export default function CatalogManagement({
                                               tab,

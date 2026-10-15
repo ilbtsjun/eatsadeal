@@ -1,5 +1,5 @@
-import { getFallbackImage } from '@/utils/BrandUtil.jsx';
-import { calculateDDay } from '@/utils/DateUtil.jsx';
+import { getFallbackImage } from '@/utils/BrandUtil.js';
+import { calculateDDay } from '@/utils/DateUtil.js';
 import { getEventCodeName } from '../utils/eventDisplay.js';
 
 export default function EventCard({ event, toggleFavorite, onSelectEvent }) {

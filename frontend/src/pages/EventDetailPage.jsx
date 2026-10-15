@@ -1,8 +1,8 @@
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
-import { getFallbackImage } from '../utils/BrandUtil.jsx';
-import { calculateDDay, formatDate } from '../utils/DateUtil.jsx';
+import { getFallbackImage } from '../utils/BrandUtil.js';
+import { calculateDDay, formatDate } from '../utils/DateUtil.js';
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
 import { getEventCodeName } from '@/features/events/utils/eventDisplay.js';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
