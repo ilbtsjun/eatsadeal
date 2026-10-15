@@ -2,25 +2,21 @@ import Header from '@/common/components/Header';
 import Modal from '@/common/components/Modal';
 import { useMyPage } from '@/features/account/hooks/useMyPage.js';
 import UserProfile from '@/features/account/components/UserProfile.jsx';
+import PasswordChange from '@/features/account/components/PasswordChange.jsx';
 import UserComments from '@/features/account/components/UserComments.jsx';
 import './MyPage.css';
 
 export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpdate }) {
   const {
-    passwordForm,
     showQuitModal,
     quitPassword,
     setQuitPassword,
     quitError,
+    setQuitError,
     quitLoading,
-    updatePassword,
     openQuitModal,
     closeQuitModal,
     handleQuit,
-    passwordMessage,
-    passwordError,
-    setQuitError,
-    handlePasswordChange,
   } = useMyPage({ onLogout, onBack });
 
   return <div className="mypage">
@@ -30,48 +26,7 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
       <h1>마이페이지</h1>
       <p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>
       <UserProfile user={user} onUserUpdate={onUserUpdate}/>
-      <section className="mypage-panel">
-        <h2>보안 설정</h2>
-        <form className="mypage-form" onSubmit={updatePassword}>
-          <label>현재 비밀번호
-            <input
-                name="currentPassword"
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={handlePasswordChange}
-                required
-            />
-          </label>
-          <label>새 비밀번호
-            <input
-                name="updatePassword"
-                type="password"
-                value={passwordForm.updatePassword}
-                onChange={handlePasswordChange}
-                required
-            />
-          </label>
-          <label>새 비밀번호 확인
-            <input
-                name="passwordConfirm"
-                type="password"
-                value={passwordForm.passwordConfirm}
-                onChange={handlePasswordChange}
-                required
-            />
-          </label>
-
-          {(passwordMessage || passwordError) && (
-              <p
-                  className={passwordError ? 'mypage-error' : 'mypage-message'}
-                  role="status"
-              >
-                {passwordError || passwordMessage}
-              </p>
-          )}
-          <button type="submit">비밀번호 변경</button>
-        </form>
-      </section>
+      <PasswordChange />
       <UserComments user={user} onOpenEvent={onOpenEvent}/>
     {showQuitModal &&
         <Modal backdropClassName="confirm-backdrop" onClose={closeQuitModal} locked={quitLoading}>
