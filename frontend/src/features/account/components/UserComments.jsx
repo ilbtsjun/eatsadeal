@@ -1,5 +1,5 @@
 import { useUserComments } from '../hooks/useUserComments.js'
-import { formatDateTime } from '@/utils/Dateutil.js';
+import { formatDateTime } from '@/common/utils/DateUtil.js';
 import Modal from '@/common/components/Modal.jsx';
 
 export default function UserComments({ user, onOpenEvent }){
