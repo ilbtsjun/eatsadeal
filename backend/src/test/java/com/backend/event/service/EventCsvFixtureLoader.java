@@ -1,4 +1,3 @@
-
 package com.backend.event.service;
 
 import org.apache.commons.csv.CSVFormat;
@@ -12,10 +11,13 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Component
 public class EventCsvFixtureLoader {
+    private static final LocalDate CSV_REFERENCE_DATE = LocalDate.of(2026, 10, 16);
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -33,9 +35,8 @@ public class EventCsvFixtureLoader {
             return;
         }
 
-        var resource = new ClassPathResource(
-                "testdata/events.csv"
-        );
+        long shiftDays = ChronoUnit.DAYS.between(CSV_REFERENCE_DATE, LocalDate.now());
+        var resource = new ClassPathResource("testdata/events.csv");
 
         try (Reader reader = new InputStreamReader(
                 resource.getInputStream(),
@@ -69,10 +70,8 @@ public class EventCsvFixtureLoader {
                         emptyToNull(record.get("description")),
                         record.get("url"),
                         record.get("img"),
-                        Timestamp.valueOf(
-                                parseDate(record.get("start_date"))
-                        ),
-                        nullableTimestamp(record.get("end_date")),
+                        Timestamp.valueOf(parseDate(record.get("start_date")).plusDays(shiftDays)),
+                        nullableTimestamp(record.get("end_date"), shiftDays),
                         Long.parseLong(record.get("view_count")),
                         parseBoolean(record.get("is_active")),
                         brandId
@@ -81,24 +80,25 @@ public class EventCsvFixtureLoader {
         }
     }
 
+    private static boolean isNullLiteral(String value) {
+        return value == null
+                || value.isBlank()
+                || value.trim().equalsIgnoreCase("NULL");
+    }
+
     private static String emptyToNull(String value) {
-        return value == null || value.isBlank()
-                ? null
-                : value;
+        return isNullLiteral(value) ? null : value;
     }
 
     private static LocalDateTime parseDate(String value) {
-        return LocalDateTime.parse(
-                value.trim().replace(' ', 'T')
-        );
+        return LocalDateTime.parse(value.trim().replace(' ', 'T'));
     }
 
-    private static Timestamp nullableTimestamp(String value) {
-        if (value == null || value.isBlank()) {
+    private static Timestamp nullableTimestamp(String value, long shiftDays) {
+        if (isNullLiteral(value)) {
             return null;
         }
-
-        return Timestamp.valueOf(parseDate(value));
+        return Timestamp.valueOf(parseDate(value).plusDays(shiftDays));
     }
 
     private static boolean parseBoolean(String value) {
@@ -111,7 +111,6 @@ public class EventCsvFixtureLoader {
             normalized = normalized.substring(1);
         }
 
-        return normalized.equals("1")
-                || normalized.equals("true");
+        return normalized.equals("1") || normalized.equals("true");
     }
 }
