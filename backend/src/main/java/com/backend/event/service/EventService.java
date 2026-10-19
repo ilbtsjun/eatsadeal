@@ -4,6 +4,7 @@ import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
+import com.backend.common.log.QueryTrace;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -103,6 +104,7 @@ public class EventService {
 
 
     @Transactional(readOnly = true)
+    @QueryTrace("searchEvents")
     public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
         Pageable pageable = createPageable(request.sort(), request.page(), request.size());
         String normalizedKeyword = StringUtils.hasText(request.keyword())
