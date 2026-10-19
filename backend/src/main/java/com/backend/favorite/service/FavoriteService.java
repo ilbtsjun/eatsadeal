@@ -32,7 +32,7 @@ public class FavoriteService {
     public void addFavorite(Long eventId) {
         User user = currentUserService.getRequiredUser();
 
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findVisibleById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         Optional<Favorite> favoriteOptional = favoriteRepository.findByUserAndEvent(user, event);
@@ -72,11 +72,6 @@ public class FavoriteService {
     @Transactional(readOnly = true)
     public List<Long> getFavoriteList() {
         User user = currentUserService.getRequiredUser();
-        List<Favorite> favoriteList = favoriteRepository.findByUser(user);
-        List<Long> eventList = new ArrayList<>();
-        for(Favorite favorite : favoriteList){
-            eventList.add(favorite.getEvent().getId());
-        }
-        return eventList;
+        return favoriteRepository.findVisibleEventIdsByUser(user);
     }
 }

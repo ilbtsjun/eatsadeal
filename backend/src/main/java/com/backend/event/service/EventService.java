@@ -124,7 +124,7 @@ public class EventService {
     @Transactional
     public GetEventResponse getEvent(Long eventId) {
         User user = currentUserService.getOptionalUser();
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findVisibleById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         increaseViewCount(eventId);
         return toDetailResponse(user, event);

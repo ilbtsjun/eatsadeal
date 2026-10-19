@@ -483,7 +483,7 @@ class EventServiceTests {
         void firstViewIncreasesCount() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
 
@@ -497,7 +497,7 @@ class EventServiceTests {
         void repeatedViewDoesNotIncreaseCount() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, false);
 
@@ -511,7 +511,7 @@ class EventServiceTests {
         void viewKeyIsScopedByEventAndIp() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             when(valueOperations.setIfAbsent(anyString(), eq("1"), eq(Duration.ofHours(3)))).thenReturn(true);
 
@@ -526,7 +526,7 @@ class EventServiceTests {
             User user = mock(User.class);
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.of(mock(Favorite.class)));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
@@ -544,7 +544,7 @@ class EventServiceTests {
             User user = mock(User.class);
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.empty());
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
@@ -559,7 +559,7 @@ class EventServiceTests {
         void anonymousUser() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
 
@@ -574,7 +574,7 @@ class EventServiceTests {
         void redisFailureStillIncreasesCountAndReturnsEvent() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(currentUserService.getClientIp()).thenReturn(CLIENT_IP);
             when(redisTemplate.opsForValue()).thenThrow(new RedisConnectionFailureException("연결 실패"));
 
@@ -587,7 +587,7 @@ class EventServiceTests {
         @Test
         @DisplayName("실패: 존재하지 않는 이벤트면 NOT_FOUND, 조회수/IP 조회 모두 하지 않는다")
         void eventNotFound() {
-            when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+            when(eventRepository.findVisibleById(999L)).thenReturn(Optional.empty());
 
             assertBusinessException(() -> eventService.getEvent(999L), ErrorCode.NOT_FOUND);
 
