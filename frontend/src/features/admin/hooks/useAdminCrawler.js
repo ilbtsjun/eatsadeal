@@ -10,12 +10,14 @@ export function useAdminCrawler(setMessage) {
 
         try {
             const result = await run(path);
-            const count = Array.isArray(result)
-                ? ` ${result.length}건을 수집했습니다.`
-                : ' 완료되었습니다.';
+            const { saved = 0, skipped = [], failed = [] } = result ?? {};
+
+            const parts = [`${saved}건 수집`];
+            if (skipped.length) parts.push(`건너뜀(비활성 브랜드): ${skipped.join(', ')}`);
+            if (failed.length) parts.push(`실패: ${failed.join(', ')}`);
 
             window.dispatchEvent(new CustomEvent('eatsadeal:events-updated'));
-            setMessage(`${label} 크롤링${count} 이벤트 목록에서 확인할 수 있습니다.`);
+            setMessage(`${label} 크롤링 완료 - ${parts.join(' / ')}`);
         } catch (error) {
             setMessage(`${label} 크롤링에 실패했습니다: ${error.message}`);
         } finally {
