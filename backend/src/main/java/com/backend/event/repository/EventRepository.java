@@ -16,8 +16,43 @@ import java.util.Optional;
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
     boolean existsByUrl(String url);
-    @Query("""
+    @Query(
+    value = """
     SELECT e
+    FROM Event e
+    JOIN FETCH e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND (
+          e.endDate IS NULL
+          OR e.endDate >= :now
+      )
+      AND (
+          :brandId IS NULL
+          OR b.id = :brandId
+      )
+      AND (
+          :categoryId IS NULL
+          OR EXISTS (
+              SELECT bc
+              FROM BrandCategory bc
+              WHERE bc.brand = b
+                AND bc.category.id = :categoryId
+          )
+      )
+      AND (
+          :eventCode IS NULL
+          OR :eventCode MEMBER OF e.eventCodes
+      )
+      AND (
+          :keyword IS NULL
+          OR LOWER(e.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      )
+""", countQuery =
+            """
+    SELECT COUNT(e)
     FROM Event e
     JOIN e.brand b
     WHERE b.isActive = true

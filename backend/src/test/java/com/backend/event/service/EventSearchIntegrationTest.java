@@ -1,5 +1,6 @@
 package com.backend.event.service;
 
+import com.backend.common.log.QueryCounter;
 import com.backend.event.dto.EventSearchRequest;
 import com.backend.event.dto.GetEventListResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,6 +47,7 @@ class EventSearchIntegrationTest {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("app.query-trace.enabled", () -> "true");
     }
 
     @Autowired
@@ -206,6 +209,26 @@ class EventSearchIntegrationTest {
             mockMvc.perform(get("/api/events/{id}", eventId)).andExpect(status().isNotFound());
         } finally {
             setBrandActive(brandId, true);
+        }
+    }
+
+    @Test
+    void searchEvents_queryCount_doesNotGrowWithPageSize() {
+        eventService.searchEvents(request(0, 12)); // 워밍업(최초 로딩 쿼리 제외)
+
+        for (int size : new int[]{5, 12, 20}) {
+            QueryCounter.begin();
+            Page<GetEventListResponse> page;
+            Map<String, Integer> executed;
+            try {
+                page = eventService.searchEvents(request(0, size));
+            } finally {
+                executed = QueryCounter.end();
+            }
+
+            assertEquals(size, page.getContent().size());
+            assertTrue(QueryCounter.total(executed) <= 3,
+                    "size=" + size + " 쿼리 수가 3개를 넘으면 안 됩니다: " + executed);
         }
     }
 }
