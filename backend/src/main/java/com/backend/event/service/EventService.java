@@ -243,7 +243,7 @@ public class EventService {
                 event.getIsActive(),
                 brand.getId(),
                 brand.getName(),
-                event.getEventCodes()
+                Set.copyOf(event.getEventCodes())
         );
     }
 
