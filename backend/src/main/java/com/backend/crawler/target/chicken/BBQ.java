@@ -2,6 +2,7 @@ package com.backend.crawler.target.chicken;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
@@ -30,13 +30,10 @@ public class BBQ implements Crawler {
     private static final int PAGE_SIZE = 50;
     private static final DateTimeFormatter DATE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final String SEARCH_TYPE_ONGOING = "OPEN";
     private static final String SEARCH_TYPE_CLOSED = "CLOSED";
-
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -63,9 +60,8 @@ public class BBQ implements Crawler {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                         .GET()
                         .header("Accept", "application/json")
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() != 200) {
                     log.error("[BBQ] {} 목록 조회 실패(page={}): status={}", searchType, page, response.statusCode());

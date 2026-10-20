@@ -2,6 +2,7 @@ package com.backend.crawler.target.chicken;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
@@ -32,10 +32,7 @@ public class Pelicana implements Crawler {
     private static final String DETAIL_URL_PREFIX = "https://www.pelicana.co.kr/community/event_detail?id=";
     private static final int CONTENT_SIZE = 20;
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -74,9 +71,8 @@ public class Pelicana implements Crawler {
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                         .header("Content-Type", "application/json")
                         .header("Accept", "application/json")
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() != 200) {
                     log.error("[Pelicana] 목록 조회 실패(pageNum={}): status={}", pageNum, response.statusCode());
@@ -105,9 +101,8 @@ public class Pelicana implements Crawler {
         HttpRequest request = HttpRequest.newBuilder(URI.create(DETAIL_API_URL + eventSeq))
                 .GET()
                 .header("Accept", "application/json")
-                .header("User-Agent", USER_AGENT)
                 .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             log.error("[Pelicana] 상세 조회 실패(eventSeq={}): status={}", eventSeq, response.statusCode());

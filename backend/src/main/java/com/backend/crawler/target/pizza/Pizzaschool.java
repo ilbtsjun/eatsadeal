@@ -2,6 +2,7 @@ package com.backend.crawler.target.pizza;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -29,9 +30,6 @@ public class Pizzaschool implements Crawler {
     private static final String LIST_URL = BASE_URL + "/%EC%9D%B4%EB%B2%A4%ED%8A%B8/";
     private static final int PAGES_TO_FETCH = 50;
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final Pattern ARTICLE_PATTERN =
             Pattern.compile("<article class=['\"]slide-entry[^'\"]*['\"][^>]*>(.*?)</article>", Pattern.DOTALL);
     private static final Pattern HREF_PATTERN =
@@ -40,7 +38,7 @@ public class Pizzaschool implements Crawler {
     private static final Pattern TITLE_PATTERN =
             Pattern.compile("<h3 class=['\"]slide-entry-title entry-title[^'\"]*['\"][^>]*><a[^>]*>([^<]+)</a></h3>");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -58,9 +56,8 @@ public class Pizzaschool implements Crawler {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                         .GET()
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[피자스쿨] 목록 조회 실패(url={}): status={}", url, response.statusCode());
                     break;

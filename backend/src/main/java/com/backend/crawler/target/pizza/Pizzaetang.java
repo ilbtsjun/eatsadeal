@@ -2,6 +2,7 @@ package com.backend.crawler.target.pizza;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -10,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
@@ -33,9 +33,6 @@ public class Pizzaetang implements Crawler {
     private static final String LIST_URL =
             BASE_URL + "/shop1/front/php/b/board_list.php?board_no=12&is_pcver=T";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final int MAX_PAGES = 50; // 무한 루프 방지 안전장치
     private static final DateTimeFormatter REG_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -47,7 +44,7 @@ public class Pizzaetang implements Crawler {
     // 제목의 "N월"에서 월 숫자를 뽑아내기 위한 패턴 (예: "9월 할인 프로모션" -> 9)
     private static final Pattern MONTH_IN_TITLE_PATTERN = Pattern.compile("(\\d{1,2})월");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -65,9 +62,8 @@ public class Pizzaetang implements Crawler {
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                     .GET()
-                    .header("User-Agent", USER_AGENT)
                     .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 log.error("[피자에땅] 목록 조회 실패(url={}): status={}", url, response.statusCode());
             }

@@ -2,6 +2,7 @@ package com.backend.crawler.target.hamburger;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 public class KFC implements Crawler {
 
     private final BrandRepository brandRepository;
+    private final CrawlHttpClient http;
 
     private static final String BASE_URL = "https://www.kfckorea.com";
     private static final String ONGOING_URL = BASE_URL + "/promotion/promotionList/A801";
@@ -164,21 +165,17 @@ public class KFC implements Crawler {
     }
 
     private String request(String url) throws Exception {
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .header("User-Agent", "Mozilla/5.0")
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .GET()
                 .build();
 
-        HttpResponse<String> response = client.send(
-                request,
-                HttpResponse.BodyHandlers.ofString()
-        );
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("HTTP status=" + response.statusCode() + ", url=" + url);
+        }
 
         return response.body();
     }

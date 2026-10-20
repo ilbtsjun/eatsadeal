@@ -2,6 +2,7 @@ package com.backend.crawler.target.hamburger;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -34,9 +34,6 @@ public class Frankburger implements Crawler {
 
     private static final String BASE_URL = "https://frankburger.co.kr";
     private static final String EVENT_LIST_URL = BASE_URL + "/board/index.php?board=event_01&tab=3&type=list";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 20;
 
@@ -77,7 +74,7 @@ public class Frankburger implements Crawler {
             Pattern.CASE_INSENSITIVE
     );
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -122,11 +119,10 @@ public class Frankburger implements Crawler {
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .GET()
-                .header("User-Agent", USER_AGENT)
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .build();
 
-        HttpResponse<String> response = httpClient.send(
+        HttpResponse<String> response = http.send(
                 request,
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
         );

@@ -2,6 +2,7 @@ package com.backend.crawler.target.chicken;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
@@ -31,13 +31,10 @@ public class Goobne implements Crawler {
     private static final String IMG_BASE_URL = "https://www.goobne.co.kr";
     private static final String DETAIL_URL_PREFIX = "https://www.goobne.co.kr/brd/event/view_p?seq=";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
-    private static final int LIST_COUNT = 50; // 한 번에 최대한 크게 요청해서 페이지 요청 횟수를 줄임
+    private static final int LIST_COUNT = 50;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -75,9 +72,8 @@ public class Goobne implements Crawler {
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                         .header("Content-Type", "application/json")
                         .header("Accept", "application/json")
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() != 200) {
                     log.error("[굽네] {} 목록 조회 실패(pageNum={}): status={}", eventGb, pageNum, response.statusCode());

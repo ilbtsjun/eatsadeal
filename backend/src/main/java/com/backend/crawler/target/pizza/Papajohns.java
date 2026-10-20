@@ -2,6 +2,7 @@ package com.backend.crawler.target.pizza;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
@@ -34,9 +34,6 @@ public class Papajohns implements Crawler {
     private static final String ONGOING_URL = BASE_URL + "/event/ongoing";
     private static final String PAST_URL = BASE_URL + "/event/past-event";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final int MAX_PAGES = 50; // 무한 루프 방지 안전장치
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
     private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
@@ -44,7 +41,7 @@ public class Papajohns implements Crawler {
     private static final Pattern CARD_PATTERN = Pattern.compile(
             "<a\\s+[^>]*href=\"(/event/(?:ongoing|past-event)/\\d+)\"[^>]*>(.*?)</a>", Pattern.DOTALL);
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -70,9 +67,8 @@ public class Papajohns implements Crawler {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                         .GET()
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[파파존스] 목록 조회 실패(url={}): status={}", url, response.statusCode());
                     break;

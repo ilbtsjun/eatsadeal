@@ -2,6 +2,7 @@ package com.backend.crawler.target.pizza;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -10,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
@@ -37,9 +37,6 @@ public class Dominos implements Crawler {
 
     private static final Charset SITE_CHARSET = Charset.forName("EUC-KR");
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final Pattern ITEM_PATTERN = Pattern.compile(
             "<a\\s+href=\"([^\"]+)\"[^>]*>\\s*<img([^>]*)>", Pattern.DOTALL);
     private static final Pattern SRC_PATTERN = Pattern.compile("\\bsrc=\"([^\"]+)\"");
@@ -53,7 +50,7 @@ public class Dominos implements Crawler {
             Pattern.compile("<p class=\"date\">(.*?)</p>", Pattern.DOTALL);
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -85,9 +82,8 @@ public class Dominos implements Crawler {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(AJAX_URL))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .header("Content-Type", "application/x-www-form-urlencoded")
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200 || response.body().isBlank()) {
                     break;
                 }
@@ -279,9 +275,8 @@ public class Dominos implements Crawler {
     private String fetchAsString(String url) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .GET()
-                .header("User-Agent", USER_AGENT)
                 .build();
-        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
         if (response.statusCode() != 200) {
             throw new IllegalStateException("HTTP " + response.statusCode());
         }

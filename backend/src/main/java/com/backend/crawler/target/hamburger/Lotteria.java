@@ -2,6 +2,7 @@ package com.backend.crawler.target.hamburger;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -34,9 +34,6 @@ public class Lotteria implements Crawler {
 
     private static final String BASE_URL = "https://www.lotteeatz.com";
     private static final String EVENT_LIST_API = BASE_URL + "/event/main/eventListAjax";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 50;
 
@@ -77,7 +74,7 @@ public class Lotteria implements Crawler {
             Pattern.DOTALL
     );
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -180,14 +177,13 @@ public class Lotteria implements Crawler {
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(EVENT_LIST_API))
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-                .header("User-Agent", USER_AGENT)
                 .header("Accept", "*/*")
                 .header("Content-Type", "application/json; charset=UTF-8")
                 .header("Origin", BASE_URL)
                 .header("Referer", BASE_URL + "/event/main")
                 .build();
 
-        HttpResponse<String> response = httpClient.send(
+        HttpResponse<String> response = http.send(
                 request,
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
         );

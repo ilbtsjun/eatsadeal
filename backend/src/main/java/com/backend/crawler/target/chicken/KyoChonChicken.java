@@ -2,6 +2,7 @@ package com.backend.crawler.target.chicken;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -9,9 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.CookieManager;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
@@ -33,9 +32,6 @@ public class KyoChonChicken implements Crawler {
     private static final String ONGOING_URL = DIR_URL + "ing.asp";
     private static final String ENDED_URL = DIR_URL + "end.asp";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final int MAX_PAGES = 200;
 
     private static final Pattern LIST_BLOCK_PATTERN =
@@ -47,7 +43,7 @@ public class KyoChonChicken implements Crawler {
     private static final Pattern PERIOD_PATTERN = Pattern.compile("<dd>(.*?)</dd>", Pattern.DOTALL);
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
-    private final HttpClient httpClient = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -73,9 +69,8 @@ public class KyoChonChicken implements Crawler {
             try {
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                         .GET()
-                        .header("User-Agent", USER_AGENT)
                         .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[교촌] 목록 조회 실패(url={}): status={}", url, response.statusCode());
                     break;

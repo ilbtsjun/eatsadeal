@@ -2,6 +2,7 @@ package com.backend.crawler.target.chicken;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
@@ -26,13 +26,11 @@ public class BHC implements Crawler {
     private final BrandRepository brandRepository;
 
     private static final String API_URL = "https://www.bhc.co.kr/api/v1/web/events/list";
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final String ACTIVE_DETAIL_URL_PREFIX = "https://www.bhc.co.kr/event/currentEvent/";
     private static final String ENDED_LIST_URL = "https://www.bhc.co.kr/event/endedEvent/";
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -48,9 +46,8 @@ public class BHC implements Crawler {
             HttpRequest request = HttpRequest.newBuilder(URI.create(API_URL))
                     .GET()
                     .header("Accept", "application/json")
-                    .header("User-Agent", USER_AGENT)
                     .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
                 log.error("[BHC] 이벤트 목록 조회 실패: status={}", response.statusCode());

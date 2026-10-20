@@ -2,6 +2,7 @@ package com.backend.crawler.target.hamburger;
 
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.backend.brand.repository.BrandRepository;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
@@ -35,15 +35,12 @@ public class Burgerking implements Crawler {
 
     private static final String EVENT_API = BASE_URL + "/burgerking/BKR0608.json";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final int MAX_PAGES = 50;
     private static final int PAGE_COUNT = 20;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -165,7 +162,6 @@ public class Burgerking implements Crawler {
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(EVENT_API))
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .header("User-Agent", USER_AGENT)
                 .header("Accept", "*/*")
                 .header(
                         "Content-Type",
@@ -182,7 +178,7 @@ public class Burgerking implements Crawler {
                 )
                 .build();
 
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new IllegalStateException("HTTP status=" + response.statusCode() + ", body=" + response.body());
