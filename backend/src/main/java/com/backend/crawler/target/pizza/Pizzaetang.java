@@ -1,11 +1,9 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,8 +25,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Pizzaetang implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://pizzaetang.com";
     private static final String LIST_URL =
             BASE_URL + "/shop1/front/php/b/board_list.php?board_no=12&is_pcver=T";
@@ -52,7 +48,7 @@ public class Pizzaetang implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -81,7 +77,7 @@ public class Pizzaetang implements Crawler {
                 continue; // 이미 수집한 항목 (마지막 페이지를 넘어가서 반복되는 경우)
             }
             try {
-                result.add(toCreateEvent(href, cardHtml));
+                result.add(toCreateEvent(href, cardHtml, brand.getId()));
             } catch (Exception e) {
                 log.error("[피자에땅] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
             }
@@ -91,7 +87,7 @@ public class Pizzaetang implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String href, String cardHtml) {
+    private CreateEvent toCreateEvent(String href, String cardHtml, Long brandId) {
         String linkUrl = href.startsWith("http") ? href : BASE_URL + href;
 
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
@@ -123,10 +119,6 @@ public class Pizzaetang implements Crawler {
         LocalDateTime endDate = yearMonth.atEndOfMonth().atTime(23, 59, 59);
         LocalDateTime now = LocalDateTime.now();
         boolean isActive = !now.isBefore(startDate) && !now.isAfter(endDate);
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

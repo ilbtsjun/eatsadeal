@@ -1,11 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,8 +27,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Frankburger implements Crawler {
-
-    private final BrandRepository brandRepository;
 
     private static final String BASE_URL = "https://frankburger.co.kr";
     private static final String EVENT_LIST_URL = BASE_URL + "/board/index.php?board=event_01&tab=3&type=list";
@@ -82,18 +78,14 @@ public class Frankburger implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
         Set<String> seenIds = new HashSet<>();
 
         for (int page = 1; page <= MAX_PAGES; page++) {
             try {
                 String html = requestEventList(page);
-                List<CreateEvent> pageEvents = parseEvents(html, brandId, seenIds);
+                List<CreateEvent> pageEvents = parseEvents(html, brand.getId(), seenIds);
 
                 if (pageEvents.isEmpty()) {
                     break;

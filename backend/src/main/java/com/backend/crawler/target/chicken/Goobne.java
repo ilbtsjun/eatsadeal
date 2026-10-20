@@ -1,11 +1,9 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -25,7 +23,6 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class Goobne implements Crawler {
-    private final BrandRepository brandRepository;
 
     private static final String API_URL = "https://www.goobne.co.kr/brd/event/srch_list_p";
     private static final String IMG_BASE_URL = "https://www.goobne.co.kr";
@@ -43,18 +40,15 @@ public class Goobne implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll("now_date", true));
-        eventList.addAll(fetchAll("end_date", false));
+        eventList.addAll(fetchAll("now_date", true, brand.getId()));
+        eventList.addAll(fetchAll("end_date", false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String eventGb, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String eventGb, boolean isOngoing, Long brandId) {
         List<CreateEvent> result = new ArrayList<>();
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
         int pageNum = 1;
         int totalCnt = Integer.MAX_VALUE;
 

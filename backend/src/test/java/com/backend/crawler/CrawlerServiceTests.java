@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,7 +46,7 @@ class CrawlerServiceTests {
         for (CrawlTarget target : CrawlTarget.values()) {
             Crawler crawler = mock(Crawler.class);
             lenient().when(crawler.getName()).thenReturn(target.getBrandName());
-            lenient().when(crawler.crawl()).thenReturn(List.of(EVENT));
+            lenient().when(crawler.crawl(any())).thenReturn(List.of(EVENT));
             crawlers.put(target, crawler);
         }
         crawlerService = new CrawlerService(eventService, brandRepository,
@@ -84,14 +85,14 @@ class CrawlerServiceTests {
     }
 
     @Test
-    @DisplayName("전체 크롤링: 비활성 브랜드는 crawl()을 호출하지 않고 skipped에 담는다")
+    @DisplayName("전체 크롤링: 비활성 브랜드는 crawl(any())을 호출하지 않고 skipped에 담는다")
     void crawlAll_skipsInactiveBrand() {
         givenBrands(CrawlTarget.BHC);
 
         CrawlReport report = crawlerService.crawlAll();
 
-        verify(crawler(CrawlTarget.BHC), never()).crawl();
-        verify(crawler(CrawlTarget.BBQ)).crawl();
+        verify(crawler(CrawlTarget.BHC), never()).crawl(any());
+        verify(crawler(CrawlTarget.BBQ)).crawl(any());
         assertEquals(14, report.saved());
         assertEquals(List.of("bhc"), report.skipped());
         assertTrue(report.failed().isEmpty());
@@ -105,9 +106,9 @@ class CrawlerServiceTests {
 
         CrawlReport report = crawlerService.crawlGroup("hamburger");
 
-        verify(crawler(CrawlTarget.LOTTERIA), never()).crawl();
-        verify(crawler(CrawlTarget.BURGERKING)).crawl();
-        verify(crawler(CrawlTarget.BHC), never()).crawl();
+        verify(crawler(CrawlTarget.LOTTERIA), never()).crawl(any());
+        verify(crawler(CrawlTarget.BURGERKING)).crawl(any());
+        verify(crawler(CrawlTarget.BHC), never()).crawl(any());
         assertEquals(4, report.saved());
         assertEquals(List.of("lotteria"), report.skipped());
     }
@@ -121,7 +122,7 @@ class CrawlerServiceTests {
                 () -> crawlerService.crawlOne(CrawlTarget.LOTTERIA));
 
         assertEquals(ErrorCode.INVALID_STATUS, e.getErrorCode());
-        verify(crawler(CrawlTarget.LOTTERIA), never()).crawl();
+        verify(crawler(CrawlTarget.LOTTERIA), never()).crawl(any());
     }
 
     @Test
@@ -133,7 +134,7 @@ class CrawlerServiceTests {
                 () -> crawlerService.crawlOne(CrawlTarget.BHC));
 
         assertEquals(ErrorCode.NOT_FOUND, e.getErrorCode());
-        verify(crawler(CrawlTarget.BHC), never()).crawl();
+        verify(crawler(CrawlTarget.BHC), never()).crawl(any());
     }
 
     @Test
@@ -153,12 +154,34 @@ class CrawlerServiceTests {
     @DisplayName("한 브랜드가 예외를 던져도 나머지는 계속 수집하고 failed에 담는다")
     void crawlAll_failureIsIsolated() {
         givenBrands();
-        when(crawler(CrawlTarget.BHC).crawl()).thenThrow(new RuntimeException("boom"));
+        when(crawler(CrawlTarget.BHC).crawl(any())).thenThrow(new RuntimeException("boom"));
 
         CrawlReport report = crawlerService.crawlAll();
 
         assertEquals(14, report.saved());
         assertEquals(List.of("bhc"), report.failed());
         assertTrue(report.skipped().isEmpty());
+    }
+
+    @Test
+    @DisplayName("크롤러에는 해당 브랜드의 Brand가 전달된다")
+    void crawlOne_passesMatchingBrand() {
+        givenBrands();
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        ArgumentCaptor<Brand> captor = ArgumentCaptor.forClass(Brand.class);
+        verify(crawler(CrawlTarget.BHC)).crawl(captor.capture());
+        assertEquals("BHC", captor.getValue().getName());
+    }
+
+    @Test
+    @DisplayName("전체 크롤링: 브랜드 조회는 실행당 1번만 한다")
+    void crawlAll_loadsBrandsOnce() {
+        givenBrands();
+
+        crawlerService.crawlAll();
+
+        verify(brandRepository, times(1)).findAll();
     }
 }

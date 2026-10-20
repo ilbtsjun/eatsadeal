@@ -1,11 +1,9 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -23,8 +21,6 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class BHC implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String API_URL = "https://www.bhc.co.kr/api/v1/web/events/list";
 
     private static final String ACTIVE_DETAIL_URL_PREFIX = "https://www.bhc.co.kr/event/currentEvent/";
@@ -39,7 +35,7 @@ public class BHC implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
 
         try {
@@ -58,7 +54,7 @@ public class BHC implements Crawler {
             // 응답 형식: {"status":"success","code":200,"body":[ {...}, ... ]}
             for (JsonNode node : root.path("body")) {
                 try {
-                    eventList.add(toCreateEvent(node));
+                    eventList.add(toCreateEvent(node, brand.getId()));
                 } catch (Exception e) {
                     log.error("[BHC] 개별 항목 파싱 오류: {}", e.getMessage());
                 }
@@ -72,7 +68,7 @@ public class BHC implements Crawler {
         return eventList;
     }
 
-    private CreateEvent toCreateEvent(JsonNode node) {
+    private CreateEvent toCreateEvent(JsonNode node, Long brandId) {
         String title = node.get("eventNm").asText().trim();
         String imgUrl = node.get("thumbnail").asText();
         boolean isActive = "ACTIVE".equalsIgnoreCase(node.get("eventStatus").asText());
@@ -82,10 +78,6 @@ public class BHC implements Crawler {
 
         LocalDateTime startDate = LocalDateTime.parse(node.get("startDate").asText());
         LocalDateTime endDate = LocalDateTime.parse(node.get("endDate").asText());
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

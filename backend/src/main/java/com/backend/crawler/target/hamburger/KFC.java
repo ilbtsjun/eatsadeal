@@ -1,11 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -26,8 +24,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class KFC implements Crawler {
-
-    private final BrandRepository brandRepository;
     private final CrawlHttpClient http;
 
     private static final String BASE_URL = "https://www.kfckorea.com";
@@ -52,16 +48,12 @@ public class KFC implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> events = new ArrayList<>();
 
         try {
-            Long brandId = brandRepository.findByName(getName())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                    .getId();
-
-            events.addAll(crawlList(ONGOING_URL, brandId, true));
-            events.addAll(crawlList(ENDED_URL, brandId, false));
+            events.addAll(crawlList(ONGOING_URL, brand.getId(), true));
+            events.addAll(crawlList(ENDED_URL, brand.getId(), false));
         } catch (Exception e) {
             log.error("KFC 이벤트 크롤링 실패", e);
         }

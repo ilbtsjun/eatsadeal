@@ -56,7 +56,7 @@ public class CrawlerService {
     }
 
     public CrawlReport crawlOne(CrawlTarget target) {
-        BrandState state = stateOf(target, loadBrandActive());
+        BrandState state = stateOf(loadBrands().get(target.getBrandName()));
         if (state == BrandState.MISSING) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "브랜드 정보를 찾을 수 없습니다: " + target.getKey());
         }
@@ -76,9 +76,10 @@ public class CrawlerService {
         List<String> skipped = new ArrayList<>();
         List<String> failed = new ArrayList<>();
         try {
-            Map<String, Boolean> brandActive = loadBrandActive();
+            Map<String, Brand> brands = loadBrands();
             for (CrawlTarget target : targets) {
-                BrandState state = stateOf(target, brandActive);
+                Brand brand = brands.get(target.getBrandName());
+                BrandState state = stateOf(brand);
                 if (state == BrandState.INACTIVE) {
                     skipped.add(target.getKey());
                     log.info("[CRAWL SKIP] brand={} reason=inactive", target.getKey());
@@ -90,7 +91,7 @@ public class CrawlerService {
                     continue;
                 }
                 try {
-                    saved += crawlAndSave(target);
+                    saved += crawlAndSave(target, brand);
                 } catch (Exception e) {
                     failed.add(target.getKey());
                     log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.getMessage(), e);
@@ -104,8 +105,8 @@ public class CrawlerService {
         }
     }
 
-    private int crawlAndSave(CrawlTarget target) {
-        List<CreateEvent> list = registry.get(target).crawl();
+    private int crawlAndSave(CrawlTarget target, Brand brand) {
+        List<CreateEvent> list = registry.get(target).crawl(brand);
         if (list == null) {
             return 0;
         }
@@ -116,19 +117,18 @@ public class CrawlerService {
         return list.size();
     }
 
-    private Map<String, Boolean> loadBrandActive() {
-        Map<String, Boolean> map = new HashMap<>();
+    private Map<String, Brand> loadBrands() {
+        Map<String, Brand> map = new HashMap<>();
         for (Brand brand : brandRepository.findAll()) {
-            map.put(brand.getName(), Boolean.TRUE.equals(brand.getIsActive()));
+            map.put(brand.getName(), brand);
         }
         return map;
     }
 
-    private BrandState stateOf(CrawlTarget target, Map<String, Boolean> brandActive) {
-        Boolean active = brandActive.get(target.getBrandName());
-        if (active == null) {
+    private BrandState stateOf(Brand brand) {
+        if (brand == null) {
             return BrandState.MISSING;
         }
-        return active ? BrandState.ACTIVE : BrandState.INACTIVE;
+        return Boolean.TRUE.equals(brand.getIsActive()) ? BrandState.ACTIVE : BrandState.INACTIVE;
     }
 }

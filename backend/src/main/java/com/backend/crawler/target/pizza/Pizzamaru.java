@@ -1,11 +1,9 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,8 +24,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Pizzamaru implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://www.pizzamaru.co.kr";
     private static final String ONGOING_URL = BASE_URL + "/event/01/";
     private static final String ENDED_URL = BASE_URL + "/event/01/?endchk=1";
@@ -50,14 +46,14 @@ public class Pizzamaru implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true));
-        eventList.addAll(fetchAll(ENDED_URL, false));
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId()));
+        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing, Long brandId) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
         String joinChar = baseUrl.contains("?") ? "&" : "?";
@@ -91,7 +87,7 @@ public class Pizzamaru implements Crawler {
                 }
                 foundNew = true;
                 try {
-                    result.add(toCreateEvent(href, cardMatcher.group(2), isOngoing));
+                    result.add(toCreateEvent(href, cardMatcher.group(2), isOngoing, brandId));
                 } catch (Exception e) {
                     log.error("[피자마루] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
                 }
@@ -106,7 +102,7 @@ public class Pizzamaru implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String href, String cardHtml, boolean isOngoing) {
+    private CreateEvent toCreateEvent(String href, String cardHtml, boolean isOngoing, Long brandId) {
         String linkUrl = href.startsWith("http") ? href : BASE_URL + href;
 
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
@@ -132,10 +128,6 @@ public class Pizzamaru implements Crawler {
 
         LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
         LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

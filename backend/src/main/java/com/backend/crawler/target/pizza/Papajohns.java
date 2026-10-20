@@ -1,11 +1,9 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,8 +26,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Papajohns implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://pji.co.kr";
     private static final String ONGOING_URL = BASE_URL + "/event/ongoing";
     private static final String PAST_URL = BASE_URL + "/event/past-event";
@@ -49,14 +45,14 @@ public class Papajohns implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true));
-        eventList.addAll(fetchAll(PAST_URL, false));
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId()));
+        eventList.addAll(fetchAll(PAST_URL, false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing, Long brandId) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -91,10 +87,10 @@ public class Papajohns implements Crawler {
                 foundNew = true;
                 try {
                     if(isOngoing) {
-                        result.add(toCreateEventOngoing(href, cardMatcher.group(2), isOngoing));
+                        result.add(toCreateEventOngoing(href, cardMatcher.group(2), isOngoing, brandId));
                     }
                     else{
-                        result.add(toCreateEventPast(href, cardMatcher.group(2), isOngoing));
+                        result.add(toCreateEventPast(href, cardMatcher.group(2), isOngoing, brandId));
                     }
                 } catch (Exception e) {
                     log.error("[파파존스] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
@@ -110,7 +106,7 @@ public class Papajohns implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEventOngoing(String href, String cardHtml, boolean isActive) {
+    private CreateEvent toCreateEventOngoing(String href, String cardHtml, boolean isActive, Long brandId) {
         String linkUrl = BASE_URL + href;
 
        Pattern TITLE_PATTERN = Pattern.compile(
@@ -159,10 +155,6 @@ public class Papajohns implements Crawler {
 
         LocalDateTime now = LocalDateTime.now();
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
         return new CreateEvent(
                 title,
                 null,
@@ -177,7 +169,7 @@ public class Papajohns implements Crawler {
 
     private static final Pattern FLEXIBLE_DATE_PATTERN = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
 
-    private CreateEvent toCreateEventPast(String href, String listHtml, boolean isActive) {
+    private CreateEvent toCreateEventPast(String href, String listHtml, boolean isActive, Long brandId) {
         String linkUrl = BASE_URL + href;
 
         // 1. 제목 추출 패턴 (font-semibold 기준 또는 단순 텍스트 추출)
@@ -223,10 +215,6 @@ public class Papajohns implements Crawler {
         if (startDate == null) {
             startDate = LocalDate.now().atStartOfDay();
         }
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

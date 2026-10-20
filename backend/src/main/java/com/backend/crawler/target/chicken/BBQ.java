@@ -1,11 +1,9 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -24,8 +22,6 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class BBQ implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String API_URL = "https://bbq.co.kr/api/delivery/content/event";
     private static final int PAGE_SIZE = 50;
     private static final DateTimeFormatter DATE_TIME_FORMAT =
@@ -42,14 +38,14 @@ public class BBQ implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(SEARCH_TYPE_ONGOING, true));
-        eventList.addAll(fetchAll(SEARCH_TYPE_CLOSED, false));
+        eventList.addAll(fetchAll(SEARCH_TYPE_ONGOING, true, brand.getId()));
+        eventList.addAll(fetchAll(SEARCH_TYPE_CLOSED, false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String searchType, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String searchType, boolean isOngoing, Long brandId) {
         List<CreateEvent> result = new ArrayList<>();
         int page = 0;
         boolean last = false;
@@ -71,7 +67,7 @@ public class BBQ implements Crawler {
                 JsonNode root = objectMapper.readTree(response.body());
                 for (JsonNode node : root.get("content")) {
                     try {
-                        result.add(toCreateEvent(node, isOngoing));
+                        result.add(toCreateEvent(node, isOngoing, brandId));
                     } catch (Exception e) {
                         log.error("[BBQ] 개별 항목 파싱 오류: {}", e.getMessage());
                     }
@@ -89,7 +85,7 @@ public class BBQ implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(JsonNode node, boolean isOngoing) {
+    private CreateEvent toCreateEvent(JsonNode node, boolean isOngoing, Long brandId) {
         String title = node.get("title").asText();
         String linkUrl = "https://bbq.co.kr/events/" + node.get("id").asText();
         String imgUrl = node.get("thumbnailImageUrl").asText();
@@ -97,10 +93,6 @@ public class BBQ implements Crawler {
 
         LocalDateTime startDate = LocalDateTime.parse(node.get("startsAt").asText(), DATE_TIME_FORMAT);
         LocalDateTime endDate = LocalDateTime.parse(node.get("endsAt").asText(), DATE_TIME_FORMAT);
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

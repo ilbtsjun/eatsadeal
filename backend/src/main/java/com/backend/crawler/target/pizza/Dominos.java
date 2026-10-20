@@ -1,11 +1,9 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,8 +25,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Dominos implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://web.dominos.co.kr";
     private static final String LIST_URL = BASE_URL + "/event/list?gubun=E0200";
     private static final String ENDED_LIST_URL = BASE_URL + "/event/endlist";
@@ -58,14 +54,14 @@ public class Dominos implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(LIST_URL, "E0200", true));
-        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false));
+        eventList.addAll(fetchAll(LIST_URL, "E0200", true, brand.getId()));
+        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing, Long brandId) {
         Map<String, String[]> items = new LinkedHashMap<>();
 
         try {
@@ -105,7 +101,7 @@ public class Dominos implements Crawler {
         List<CreateEvent> result = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : items.entrySet()) {
             try {
-                CreateEvent event = fetchDetail(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2], isOngoing);
+                CreateEvent event = fetchDetail(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2], isOngoing, brandId);
                 if (event != null) {
                     result.add(event);
                 }
@@ -223,7 +219,8 @@ public class Dominos implements Crawler {
         return m.find() ? m.group(1) : defaultValue;
     }
 
-    private CreateEvent fetchDetail(String detailUrl, String imgUrl, String fallbackTitle, boolean isOngoing) throws Exception {
+    private CreateEvent fetchDetail(String detailUrl, String imgUrl, String fallbackTitle, boolean isOngoing, Long brandId)
+            throws Exception {
         String html = fetchAsString(detailUrl);
 
         Matcher titleMatcher = TITLE_PATTERN.matcher(html);
@@ -255,10 +252,6 @@ public class Dominos implements Crawler {
             endDate = now;
             isActive = true;
         }
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

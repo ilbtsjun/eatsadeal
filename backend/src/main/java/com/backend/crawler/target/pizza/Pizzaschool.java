@@ -1,11 +1,9 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,8 +21,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Pizzaschool implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "http://pizzaschool.net";
     private static final String LIST_URL = BASE_URL + "/%EC%9D%B4%EB%B2%A4%ED%8A%B8/";
     private static final int PAGES_TO_FETCH = 50;
@@ -45,7 +41,7 @@ public class Pizzaschool implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> result = new ArrayList<>();
 
         for (int page = 1; page <= PAGES_TO_FETCH; page++) {
@@ -71,7 +67,7 @@ public class Pizzaschool implements Crawler {
             while (articleMatcher.find()) {
                 String articleHtml = articleMatcher.group(1);
                 try {
-                    result.add(toCreateEvent(articleHtml));
+                    result.add(toCreateEvent(articleHtml, brand.getId()));
                 } catch (Exception e) {
                     log.error("[피자스쿨] 개별 항목 파싱 오류: {}", e.getMessage());
                 }
@@ -82,7 +78,7 @@ public class Pizzaschool implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String articleHtml) {
+    private CreateEvent toCreateEvent(String articleHtml, Long brandId) {
         Matcher hrefMatcher = HREF_PATTERN.matcher(articleHtml);
         if (!hrefMatcher.find()) {
             throw new IllegalArgumentException("링크 파싱 실패");
@@ -98,10 +94,6 @@ public class Pizzaschool implements Crawler {
             throw new IllegalArgumentException("제목 파싱 실패");
         }
         LocalDateTime now = LocalDateTime.now();
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

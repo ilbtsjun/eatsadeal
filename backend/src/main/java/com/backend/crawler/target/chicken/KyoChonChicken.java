@@ -1,11 +1,9 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -26,8 +24,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class KyoChonChicken implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String DIR_URL = "https://www.kyochon.com/event/";
     private static final String ONGOING_URL = DIR_URL + "ing.asp";
     private static final String ENDED_URL = DIR_URL + "end.asp";
@@ -51,14 +47,14 @@ public class KyoChonChicken implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true));
-        eventList.addAll(fetchAll(ENDED_URL, false));
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId()));
+        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId()));
         return eventList;
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing, Long brandId) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -103,7 +99,7 @@ public class KyoChonChicken implements Crawler {
                         continue;
                     }
                     foundNew = true;
-                    result.add(toCreateEvent(itemHtml, linkUrl, isOngoing));
+                    result.add(toCreateEvent(itemHtml, linkUrl, isOngoing, brandId));
                 } catch (Exception e) {
                     log.error("[교촌] 개별 항목 파싱 오류: {}", e.getMessage());
                 }
@@ -118,7 +114,7 @@ public class KyoChonChicken implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String itemHtml, String linkUrl, boolean isOngoing) {
+    private CreateEvent toCreateEvent(String itemHtml, String linkUrl, boolean isOngoing, Long brandId) {
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(itemHtml);
         Matcher titleMatcher = TITLE_PATTERN.matcher(itemHtml);
         Matcher periodMatcher = PERIOD_PATTERN.matcher(itemHtml);
@@ -141,10 +137,6 @@ public class KyoChonChicken implements Crawler {
 
         LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
         LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

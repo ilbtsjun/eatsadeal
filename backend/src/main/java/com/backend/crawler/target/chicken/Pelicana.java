@@ -1,11 +1,9 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -24,8 +22,6 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class Pelicana implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String LIST_API_URL = "https://www.pelicana.co.kr/api/common/event";
     private static final String DETAIL_API_URL = "https://www.pelicana.co.kr/api/common/event?event_seq=";
     private static final String IMG_BASE_URL = "https://www.pelicana.co.kr";
@@ -41,12 +37,12 @@ public class Pelicana implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
 
         for (long eventSeq : fetchAllEventSeqs()) {
             try {
-                CreateEvent event = fetchDetail(eventSeq);
+                CreateEvent event = fetchDetail(eventSeq, brand.getId());
                 if (event != null) {
                     eventList.add(event);
                 }
@@ -97,7 +93,7 @@ public class Pelicana implements Crawler {
         return seqList;
     }
 
-    private CreateEvent fetchDetail(long eventSeq) throws Exception {
+    private CreateEvent fetchDetail(long eventSeq, Long brandId) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(DETAIL_API_URL + eventSeq))
                 .GET()
                 .header("Accept", "application/json")
@@ -136,10 +132,6 @@ public class Pelicana implements Crawler {
             endDate = end.atTime(23, 59, 59);
             isActive = !today.isBefore(start) && !today.isAfter(end);
         }
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
 
         return new CreateEvent(
                 title,

@@ -1,11 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -28,7 +26,6 @@ import java.util.Set;
 @AllArgsConstructor
 public class Burgerking implements Crawler {
 
-    private final BrandRepository brandRepository;
     private final ObjectMapper objectMapper;
 
     private static final String BASE_URL = "https://www.burgerking.co.kr";
@@ -48,14 +45,11 @@ public class Burgerking implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public List<CreateEvent> crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-        eventList.addAll(fetchAll("C", true, brandId));
-        eventList.addAll(fetchAll("E", false, brandId));
+        eventList.addAll(fetchAll("C", true, brand.getId()));
+        eventList.addAll(fetchAll("E", false, brand.getId()));
         log.info("[버거킹] 총 이벤트 개수: {}", eventList.size());
         return eventList;
     }
