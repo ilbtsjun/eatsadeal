@@ -52,7 +52,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       )
 """, countQuery =
             """
-    SELECT COUNT(e) 
+    SELECT COUNT(e)
     FROM Event e
     JOIN e.brand b
     WHERE b.isActive = true
