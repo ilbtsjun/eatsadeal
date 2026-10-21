@@ -23,6 +23,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     JOIN FETCH e.brand b
     WHERE b.isActive = true
       AND e.isActive = true
+      AND e.hidden = false
       AND (
           e.endDate IS NULL
           OR e.endDate >= :now
@@ -57,6 +58,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     JOIN e.brand b
     WHERE b.isActive = true
       AND e.isActive = true
+      AND e.hidden = false
       AND (
           e.endDate IS NULL
           OR e.endDate >= :now
@@ -100,8 +102,17 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     JOIN e.brand b
     WHERE e.id = :eventId
       AND b.isActive = true
+      AND e.hidden = false
 """)
     Optional<Event> findVisibleById(@Param("eventId") Long eventId);
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    JOIN e.brand b
+    WHERE e.id = :eventId
+""")
+    Optional<Event> findAnyById(@Param("eventId") Long eventId);
 
     @Modifying
     @Query("""

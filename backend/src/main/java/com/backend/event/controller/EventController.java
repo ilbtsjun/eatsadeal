@@ -82,6 +82,30 @@ public class EventController {
     }
 
     @Operation(
+            summary = "이벤트 숨김 변경",
+            description = "이벤트를 사용자 화면에서 숨기거나 다시 보이게 합니다."
+    )
+    @PatchMapping("/{eventId}/hidden")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse updateHidden(@PathVariable Long eventId,
+                                    @Valid @RequestBody UpdateEventHidden request) {
+        eventService.changeHidden(eventId, request.hidden());
+        return new MsgResponse("숨김 상태가 변경되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "이벤트 크롤러 잠금 변경",
+            description = "잠금을 켜면 크롤러가 이 이벤트를 덮어쓰지 않습니다."
+    )
+    @PatchMapping("/{eventId}/lock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public MsgResponse updateLock(@PathVariable Long eventId,
+                                  @Valid @RequestBody UpdateEventLock request) {
+        eventService.changeAdminLocked(eventId, request.adminLocked());
+        return new MsgResponse("잠금 상태가 변경되었습니다.", "200");
+    }
+
+    @Operation(
             summary = "이벤트 코드 목록 조회",
             description = "이벤트 코드 목록을 반환합니다.."
     )

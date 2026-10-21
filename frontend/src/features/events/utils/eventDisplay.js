@@ -1,4 +1,4 @@
-const EVENT_CODE_NAMES = {
+export const EVENT_CODE_NAMES = {
     DISCOUNT_PRICE: '정액 할인',
     DISCOUNT_RATE: '정률 할인',
     BUY_ONE_GET_ONE: '1+1',

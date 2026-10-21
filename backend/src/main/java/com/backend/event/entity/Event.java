@@ -49,6 +49,12 @@ public class Event {
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    @Column(nullable = false)
+    private boolean hidden = false;
+
+    @Column(nullable = false)
+    private boolean adminLocked = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand", nullable = false)
     private Brand brand;
@@ -156,6 +162,14 @@ public class Event {
 
     public void deactivate() {
         this.isActive = false;
+    }
+
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public void changeAdminLocked(boolean adminLocked) {
+        this.adminLocked = adminLocked;
     }
 
 }

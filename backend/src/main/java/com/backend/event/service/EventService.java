@@ -1,6 +1,7 @@
 package com.backend.event.service;
 
 import com.backend.auth.service.CurrentUserService;
+import com.backend.common.dto.UserRole;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
@@ -58,6 +59,7 @@ public class EventService {
                 .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
+        event.changeAdminLocked(true);
         eventRepository.save(event);
     }
 
@@ -73,6 +75,10 @@ public class EventService {
 
         if (optionalEvent.isPresent()) {
             Event event = optionalEvent.get();
+
+            if (event.isAdminLocked()) {
+                return UpsertResult.UNCHANGED;
+            }
 
             if (datesUnknown) {
                 boolean contentChanged = event.updateContent(
@@ -148,7 +154,10 @@ public class EventService {
     @Transactional
     public GetEventResponse getEvent(Long eventId) {
         User user = currentUserService.getOptionalUser();
-        Event event = eventRepository.findVisibleById(eventId)
+        boolean isAdmin = user != null && user.getRole() == UserRole.ADMIN;
+        Event event = (isAdmin
+                ? eventRepository.findAnyById(eventId)
+                : eventRepository.findVisibleById(eventId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         increaseViewCount(eventId);
         return toDetailResponse(user, event);
@@ -188,6 +197,7 @@ public class EventService {
 
         validateDateRange(newStartDate, newEndDate);
 
+        event.changeAdminLocked(true);
         event.update(newTitle, newDescription, newUrl, newImg, newStartDate, newEndDate, newIsActive);
 
         if (request.eventCodes() != null) {
@@ -210,6 +220,23 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         event.deactivate();
+        event.changeAdminLocked(true);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 숨김 변경")
+    public void changeHidden(Long eventId, boolean hidden){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        event.changeHidden(hidden);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 크롤러 잠금 변경")
+    public void changeAdminLocked(Long eventId, boolean adminLocked){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        event.changeAdminLocked(adminLocked);
     }
 
     @Transactional(readOnly = true)
@@ -291,7 +318,9 @@ public class EventService {
                 brand.getName(),
                 brand.getImg(),
                 event.getEventCodes(),
-                isFavorite
+                isFavorite,
+                event.isHidden(),
+                event.isAdminLocked()
         );
     }
 

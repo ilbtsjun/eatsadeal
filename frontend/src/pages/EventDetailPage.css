@@ -82,3 +82,9 @@
 @media (max-width: 480px) { .comment-replies { margin-left: 8px; padding-left: 10px; } }
 
 .comment-delete-button{margin-left:auto;padding:4px 8px;border:1px solid #ffd1d5;border-radius:5px;color:#e84118;background:#fff;cursor:pointer;font-size:11px}.comment-delete-button:hover{background:#fff1f2}.comment-error{margin:12px 0;color:#e84118;font-size:13px}
+
+/* ===== 관리자 수정 ===== */
+.detail-admin-bar { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.detail-edit-button { padding: 7px 13px; border: 1px solid #dfe4ea; border-radius: 7px; color: #57606f; background: #fff; cursor: pointer; font-size: 13px; font-weight: 700; }
+.detail-edit-button:hover { color: #ff4757; border-color: #ff4757; }
+.detail-admin-badge { padding: 3px 8px; border-radius: 4px; color: #e84118; background: #fff1f2; font-size: 11px; font-weight: 700; }

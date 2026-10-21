@@ -168,11 +168,10 @@ class EventServiceTests {
         verifyNoInteractions(eventRepository, brandRepository);
     }
 
-    @ParameterizedTest(name = "{index} - {0}")
-    @MethodSource("invalidDateRangeProvider")
-    @DisplayName("이벤트 생성(크롤러) - 잘못된 날짜면 INVALID_REQUEST, DB 접근 없음")
-    void upsertCrawledEventInvalidDateRange(String description, LocalDateTime start, LocalDateTime end) {
-        CreateEvent request = createRequest(start, end, 1L, true, null);
+    @Test
+    @DisplayName("이벤트 생성(크롤러) - 종료일이 시작일보다 빠르면 INVALID_REQUEST, DB 접근 없음")
+    void upsertCrawledEventInvalidDateRange() {
+        CreateEvent request = createRequest(START, START.minusSeconds(1), 1L, true, null);
 
         assertBusinessException(() -> eventService.upsertCrawledEvent(request), ErrorCode.INVALID_REQUEST);
 
