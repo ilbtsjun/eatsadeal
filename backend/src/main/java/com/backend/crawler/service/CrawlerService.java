@@ -13,6 +13,7 @@ import com.backend.crawler.entity.CrawlRun;
 import com.backend.crawler.entity.CrawlStatus;
 import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.event.dto.CreateEvent;
+import com.backend.event.dto.UpsertResult;
 import com.backend.event.service.EventService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -132,11 +133,11 @@ public class CrawlerService {
         BrandState state = stateOf(brand);
         if (state == BrandState.INACTIVE) {
             log.info("[CRAWL SKIP] brand={} reason=inactive", target.getKey());
-            return new CrawlOutcome(CrawlStatus.SKIPPED_INACTIVE, 0, 0, 0, null);
+            return new CrawlOutcome(CrawlStatus.SKIPPED_INACTIVE, 0, 0, 0, null, null, null, null);
         }
         if (state == BrandState.MISSING) {
             log.warn("[CRAWL FAIL] brand={} reason=brand not found", target.getKey());
-            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0, "brand not found");
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0, "brand not found", null, null, null);
         }
         try {
             CrawlResult result = registry.get(target).crawl(brand);
@@ -144,11 +145,19 @@ public class CrawlerService {
             int collected = list.size();
             int crawlErrors = result.errors();
             int saveErrors = 0;
+            int created = 0;
+            int updated = 0;
+            int unchanged = 0;
             String firstError = result.firstError();
 
             for (CreateEvent event : list) {
                 try {
-                    eventService.upsertCrawledEvent(event);
+                    UpsertResult upsert = eventService.upsertCrawledEvent(event);
+                    switch (upsert) {
+                        case CREATED -> created++;
+                        case UPDATED -> updated++;
+                        case UNCHANGED -> unchanged++;
+                    }
                 } catch (Exception e) {
                     saveErrors++;
                     if (firstError == null) {
@@ -169,29 +178,34 @@ public class CrawlerService {
             if (status == CrawlStatus.EMPTY) {
                 log.warn("[CRAWL EMPTY] brand={} reason=no events collected", target.getKey());
             }
-            log.info("[CRAWL OK] brand={} count={} status={} crawlErrors={} saveErrors={}",
-                    target.getKey(), collected, status, crawlErrors, saveErrors);
-            return new CrawlOutcome(status, collected, saveErrors, crawlErrors, firstError);
+            log.info("[CRAWL OK] brand={} count={} status={} created={} updated={} unchanged={} crawlErrors={} saveErrors={}",
+                    target.getKey(), collected, status, created, updated, unchanged, crawlErrors, saveErrors);
+            return new CrawlOutcome(status, collected, saveErrors, crawlErrors, firstError,
+                    created, updated, unchanged);
         } catch (Exception e) {
             log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.toString(), e);
-            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0, e.getClass().getSimpleName() + ": " + e.getMessage());
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0,
+                    e.getClass().getSimpleName() + ": " + e.getMessage(), null, null, null);
         }
     }
 
     private void saveHistory(String runId, CrawlTarget target, Brand brand,
                              CrawlOutcome outcome, LocalDateTime startedAt) {
         try {
-            crawlRunRepository.save(CrawlRun.of(runId,
+            CrawlRun run = CrawlRun.of(runId,
                     brand == null ? null : brand.getId(),
                     target.getKey(), outcome.status(),
                     outcome.collected(), outcome.errors(), outcome.message(),
-                    startedAt, LocalDateTime.now()));
+                    startedAt, LocalDateTime.now());
+            run.recordCounts(outcome.created(), outcome.updated(), outcome.unchanged());
+            crawlRunRepository.save(run);
         } catch (Exception e) {
             log.warn("[CRAWL RUN SAVE FAIL] brand={} reason={}", target.getKey(), e.getMessage());
         }
     }
 
-    private record CrawlOutcome(CrawlStatus status, int collected, int saveErrors, int crawlErrors, String message) {
+    private record CrawlOutcome(CrawlStatus status, int collected, int saveErrors, int crawlErrors, String message,
+                                Integer created, Integer updated, Integer unchanged) {
         int saved() {
             return collected - saveErrors;
         }

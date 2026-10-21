@@ -52,6 +52,12 @@ public class CrawlRun {
     @Column(nullable = false)
     private long elapsedMs;
 
+    public void recordCounts(Integer created, Integer updated, Integer unchanged) {
+        this.createdCount = created;
+        this.updatedCount = updated;
+        this.unchangedCount = unchanged;
+    }
+
     public static CrawlRun of(String runId, Long brandId, String brandKey, CrawlStatus status,
                               int collectedCount, int errorCount, String message,
                               LocalDateTime startedAt, LocalDateTime finishedAt) {

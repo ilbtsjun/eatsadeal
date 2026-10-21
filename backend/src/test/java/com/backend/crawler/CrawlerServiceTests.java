@@ -15,6 +15,7 @@ import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.crawler.scheduler.CrawlerScheduler;
 import com.backend.crawler.service.CrawlerService;
 import com.backend.event.dto.CreateEvent;
+import com.backend.event.dto.UpsertResult;
 import com.backend.event.service.EventService;
 import com.backend.mail.service.MailService;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +64,7 @@ class CrawlerServiceTests {
         }
         crawlerService = new CrawlerService(eventService, brandRepository, crawlRunRepository,
                 new ArrayList<>(crawlers.values()));
+        lenient().when(eventService.upsertCrawledEvent(any(CreateEvent.class))).thenReturn(UpsertResult.CREATED);
         scheduler = new CrawlerScheduler(crawlerService, mailService);
         ReflectionTestUtils.setField(scheduler, "alertEnabled", true);
     }
@@ -346,5 +348,38 @@ class CrawlerServiceTests {
 
         verify(mailService, never()).sendCrawlErrorMessage(any());
         verify(mailService, never()).sendCrawlAlertMessage(any(), any());
+    }
+
+    @Test
+    @DisplayName("이력에 신규·변경·동일 건수를 기록한다")
+    void crawlOne_recordsUpsertCounts() {
+        givenBrands();
+        when(crawler(CrawlTarget.BHC).crawl(any())).thenReturn(
+                new CrawlResult(List.of(EVENT, EVENT, EVENT), 0, null));
+        when(eventService.upsertCrawledEvent(any(CreateEvent.class)))
+                .thenReturn(UpsertResult.CREATED, UpsertResult.UPDATED, UpsertResult.UNCHANGED);
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        ArgumentCaptor<CrawlRun> captor = ArgumentCaptor.forClass(CrawlRun.class);
+        verify(crawlRunRepository).save(captor.capture());
+        assertEquals(1, captor.getValue().getCreatedCount());
+        assertEquals(1, captor.getValue().getUpdatedCount());
+        assertEquals(1, captor.getValue().getUnchangedCount());
+    }
+
+    @Test
+    @DisplayName("건너뛴 브랜드의 이력에는 건수를 기록하지 않는다")
+    void crawlAll_skippedBrand_hasNoUpsertCounts() {
+        givenBrands(CrawlTarget.LOTTERIA);
+
+        crawlerService.crawlAll();
+
+        ArgumentCaptor<CrawlRun> captor = ArgumentCaptor.forClass(CrawlRun.class);
+        verify(crawlRunRepository, times(15)).save(captor.capture());
+        CrawlRun skipped = captor.getAllValues().stream()
+                .filter(run -> run.getBrandKey().equals(CrawlTarget.LOTTERIA.getKey()))
+                .findFirst().orElseThrow();
+        assertNull(skipped.getCreatedCount());
     }
 }

@@ -11,6 +11,7 @@ import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Getter
@@ -92,8 +93,18 @@ public class Event {
         this.eventCodes.remove(eventCode);
     }
 
-    public void update(String title, String description, String url,
-                       String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
+    public boolean update(String title, String description, String url,
+                          String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
+        boolean changed = !Objects.equals(this.title, title)
+                || !Objects.equals(this.description, description)
+                || !Objects.equals(this.url, url)
+                || !Objects.equals(this.img, img)
+                || !Objects.equals(this.startDate, startDate)
+                || !Objects.equals(this.endDate, endDate)
+                || !Objects.equals(this.isActive, isActive);
+        if (!changed) {
+            return false;
+        }
         this.title = title;
         this.description = description;
         this.url = url;
@@ -101,6 +112,7 @@ public class Event {
         this.startDate = startDate;
         this.endDate = endDate;
         this.isActive = isActive;
+        return true;
     }
 
     public void deactivate() {

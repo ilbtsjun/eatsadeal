@@ -63,7 +63,7 @@ public class EventService {
 
     @Transactional
     @CudLogging("이벤트 생성(크롤러)")
-    public void upsertCrawledEvent(CreateEvent request) {
+    public UpsertResult upsertCrawledEvent(CreateEvent request) {
         validateDateRange(request.startDate(), request.endDate());
 
         Optional<Event> optionalEvent = eventRepository.findByUrl(request.url());
@@ -71,7 +71,7 @@ public class EventService {
         if (optionalEvent.isPresent()) {
             Event event = optionalEvent.get();
 
-            event.update(
+            boolean changed = event.update(
                     request.title(),
                     request.description(),
                     request.url(),
@@ -81,7 +81,7 @@ public class EventService {
                     request.isActive()
             );
 
-            return;
+            return changed ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
         }
 
         Brand brand = brandRepository.findById(request.brandId())
@@ -100,6 +100,7 @@ public class EventService {
                 .build();
 
         eventRepository.save(event);
+        return UpsertResult.CREATED;
     }
 
 

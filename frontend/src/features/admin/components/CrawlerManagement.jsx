@@ -28,6 +28,9 @@ function CrawlRunTable({ runs, showTime }) {
                         <th>브랜드</th>
                         <th>상태</th>
                         <th>수집</th>
+                        <th>신규</th>
+                        <th>변경</th>
+                        <th>동일</th>
                         <th>오류</th>
                         <th>소요(초)</th>
                         <th>메시지</th>
@@ -40,6 +43,9 @@ function CrawlRunTable({ runs, showTime }) {
                             <td>{run.brandKey}</td>
                             <td><StatusBadge status={run.status} /></td>
                             <td>{run.collectedCount}</td>
+                            <td>{run.createdCount ?? '-'}</td>
+                            <td>{run.updatedCount ?? '-'}</td>
+                            <td>{run.unchangedCount ?? '-'}</td>
                             <td>{run.errorCount}</td>
                             <td>{(run.elapsedMs / 1000).toFixed(1)}</td>
                             <td className="crawl-run-message">{run.message ?? ''}</td>
