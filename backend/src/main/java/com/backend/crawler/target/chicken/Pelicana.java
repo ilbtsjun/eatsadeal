@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,9 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -45,10 +43,7 @@ public class Pelicana implements Crawler {
 
         for (long eventSeq : fetchAllEventSeqs(errors)) {
             try {
-                CreateEvent event = fetchDetail(eventSeq, brand.getId(), errors);
-                if (event != null) {
-                    eventList.add(event);
-                }
+                eventList.add(fetchDetail(eventSeq, brand.getId()));
             } catch (Exception e) {
                 log.error("[Pelicana] 상세 조회 오류(eventSeq={}): {}", eventSeq, e.toString());
                 errors.add("상세 조회 eventSeq=" + eventSeq, e);
@@ -67,20 +62,8 @@ public class Pelicana implements Crawler {
         while (!last) {
             try {
                 String requestBody = "{\"contentSize\":" + CONTENT_SIZE + ",\"pageNum\":" + pageNum + "}";
-                HttpRequest request = HttpRequest.newBuilder(URI.create(LIST_API_URL))
-                        .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                        .header("Content-Type", "application/json")
-                        .header("Accept", "application/json")
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() != 200) {
-                    log.error("[Pelicana] 목록 조회 실패(pageNum={}): status={}", pageNum, response.statusCode());
-                    errors.add("목록 조회 status=" + response.statusCode());
-                    break;
-                }
-
-                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode root = objectMapper.readTree(
+                        http.postString(LIST_API_URL, "application/json", requestBody, "Accept", "application/json"));
                 JsonNode resultData = root.path("result_data");
 
                 for (JsonNode node : resultData.path("content")) {
@@ -99,20 +82,9 @@ public class Pelicana implements Crawler {
         return seqList;
     }
 
-    private CreateEvent fetchDetail(long eventSeq, Long brandId, CrawlErrors errors) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(DETAIL_API_URL + eventSeq))
-                .GET()
-                .header("Accept", "application/json")
-                .build();
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            log.error("[Pelicana] 상세 조회 실패(eventSeq={}): status={}", eventSeq, response.statusCode());
-            errors.add("상세 조회 eventSeq=" + eventSeq + " status=" + response.statusCode());
-            return null;
-        }
-
-        JsonNode node = objectMapper.readTree(response.body()).path("result_data");
+    private CreateEvent fetchDetail(long eventSeq, Long brandId) throws Exception {
+        String body = http.getString(DETAIL_API_URL + eventSeq, "Accept", "application/json");
+        JsonNode node = objectMapper.readTree(body).path("result_data");
 
         String title = node.get("eventTitle").asText().trim();
         String linkUrl = DETAIL_URL_PREFIX + eventSeq;
@@ -134,20 +106,11 @@ public class Pelicana implements Crawler {
             LocalDate end = LocalDate.parse(endDateStr);
             LocalDate today = LocalDate.now();
 
-            startDate = start.atStartOfDay();
-            endDate = end.atTime(23, 59, 59);
+            startDate = CrawlerUtil.startOfDay(start);
+            endDate = CrawlerUtil.endOfDay(end);
             isActive = !today.isBefore(start) && !today.isAfter(end);
         }
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 }

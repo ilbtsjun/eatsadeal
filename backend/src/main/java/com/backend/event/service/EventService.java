@@ -41,7 +41,8 @@ public class EventService {
 
     @Transactional
     @CudLogging("이벤트 생성")
-    public void createEvent(CreateEvent request){
+    public void createEvent(CreateEvent rawRequest){
+        CreateEvent request = withNormalizedUrl(rawRequest);
         validateDateRange(request.startDate(), request.endDate());
         if(eventRepository.existsByUrl(request.url())){
             throw new BusinessException(ErrorCode.ALREADY_EXISTS);
@@ -65,13 +66,17 @@ public class EventService {
 
     @Transactional
     @CudLogging("이벤트 생성(크롤러)")
-    public UpsertResult upsertCrawledEvent(CreateEvent request) {
+    public UpsertResult upsertCrawledEvent(CreateEvent rawRequest) {
+        CreateEvent request = withNormalizedUrl(rawRequest);
         boolean datesUnknown = request.startDate() == null;
         if (!datesUnknown) {
             validateDateRange(request.startDate(), request.endDate());
         }
 
         Optional<Event> optionalEvent = eventRepository.findByUrl(request.url());
+        if (optionalEvent.isEmpty() && !request.url().equals(rawRequest.url())) {
+            optionalEvent = eventRepository.findByUrl(rawRequest.url());
+        }
 
         if (optionalEvent.isPresent()) {
             Event event = optionalEvent.get();
@@ -322,6 +327,17 @@ public class EventService {
                 event.isHidden(),
                 event.isAdminLocked()
         );
+    }
+
+    private CreateEvent withNormalizedUrl(CreateEvent request) {
+        String normalizedUrl = EventUrlNormalizer.normalize(request.url());
+        if (normalizedUrl == null || normalizedUrl.equals(request.url())) {
+            return request;
+        }
+        return new CreateEvent(
+                request.title(), request.description(), normalizedUrl, request.img(),
+                request.startDate(), request.endDate(), request.brandId(),
+                request.isActive(), request.eventCodes());
     }
 
     private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate) {

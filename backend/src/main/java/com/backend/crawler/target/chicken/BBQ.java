@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,9 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -56,19 +54,7 @@ public class BBQ implements Crawler {
         while (!last) {
             try {
                 String url = API_URL + "?searchType=" + searchType + "&page=" + page + "&size=" + PAGE_SIZE;
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .header("Accept", "application/json")
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() != 200) {
-                    log.error("[BBQ] {} 목록 조회 실패(page={}): status={}", searchType, page, response.statusCode());
-                    errors.add(searchType + " 목록 조회 status=" + response.statusCode());
-                    break;
-                }
-
-                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode root = objectMapper.readTree(http.getString(url, "Accept", "application/json"));
                 for (JsonNode node : root.get("content")) {
                     try {
                         result.add(toCreateEvent(node, isOngoing, brandId));
@@ -100,15 +86,6 @@ public class BBQ implements Crawler {
         LocalDateTime startDate = LocalDateTime.parse(node.get("startsAt").asText(), DATE_TIME_FORMAT);
         LocalDateTime endDate = LocalDateTime.parse(node.get("endsAt").asText(), DATE_TIME_FORMAT);
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isOngoing);
     }
 }

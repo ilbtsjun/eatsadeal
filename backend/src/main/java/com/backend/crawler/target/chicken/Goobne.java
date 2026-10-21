@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,11 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,20 +62,8 @@ public class Goobne implements Crawler {
                         + "\"cont10\":\"PC\""
                         + "}";
 
-                HttpRequest request = HttpRequest.newBuilder(URI.create(API_URL))
-                        .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                        .header("Content-Type", "application/json")
-                        .header("Accept", "application/json")
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() != 200) {
-                    log.error("[굽네] {} 목록 조회 실패(pageNum={}): status={}", eventGb, pageNum, response.statusCode());
-                    errors.add(eventGb + " 목록 조회 status=" + response.statusCode());
-                    break;
-                }
-
-                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode root = objectMapper.readTree(
+                        http.postString(API_URL, "application/json", requestBody, "Accept", "application/json"));
                 JsonNode brdList = root.path("result").path("brdList");
 
                 if (!brdList.isArray() || brdList.isEmpty()) {
@@ -116,18 +101,8 @@ public class Goobne implements Crawler {
 
         LocalDate start = LocalDate.parse(node.get("s_time").asText(), DATE_FORMAT);
         LocalDate end = LocalDate.parse(node.get("e_time").asText(), DATE_FORMAT);
-        LocalDateTime startDate = start.atStartOfDay();
-        LocalDateTime endDate = end.atTime(23, 59, 59);
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl,
+                CrawlerUtil.startOfDay(start), CrawlerUtil.endOfDay(end), brandId, isOngoing);
     }
 }

@@ -4,16 +4,13 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.HtmlUtils;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,7 +33,6 @@ public class Frankburger implements Crawler {
     private static final int MAX_PAGES = 20;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
-    private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
             "<li[^>]*>(.*?)</li>",
@@ -111,25 +107,8 @@ public class Frankburger implements Crawler {
     }
 
     private String requestEventList(int page) throws Exception {
-        String url = EVENT_LIST_URL + "&page=" + page;
-
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .GET()
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .build();
-
-        HttpResponse<String> response = http.send(
-                request,
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-        );
-
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException(
-                    "HTTP status=" + response.statusCode()
-            );
-        }
-
-        return response.body();
+        return http.getString(EVENT_LIST_URL + "&page=" + page, StandardCharsets.UTF_8,
+                "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
     }
 
     private List<CreateEvent> parseEvents(String html, Long brandId, Set<String> seenIds, CrawlErrors errors) {
@@ -165,53 +144,33 @@ public class Frankburger implements Crawler {
     }
 
     private CreateEvent toCreateEvent(String href, String itemHtml, Long brandId) {
-        String linkUrl = href.startsWith("http")
-                ? href
-                : BASE_URL + href;
+        String linkUrl = CrawlerUtil.absoluteUrl(BASE_URL, href);
 
         String title = extractTitle(itemHtml);
         String imgUrl = extractImage(itemHtml);
 
-        Matcher dateMatcher = DATE_PATTERN.matcher(cleanText(itemHtml));
-
-        LocalDateTime startDate;
-        LocalDateTime endDate;
-
-        if (dateMatcher.find()) {
-            startDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atStartOfDay();
-            endDate = dateMatcher.group(2) == null
-                    ? OPEN_ENDED_DATE.atTime(23, 59, 59)
-                    : LocalDate.parse(dateMatcher.group(2), DATE_FORMAT).atTime(23, 59, 59);
-        } else {
-            startDate = null;
-            endDate = OPEN_ENDED_DATE.atTime(23, 59, 59);
-        }
-
-        if (startDate == null) {
+        Matcher dateMatcher = DATE_PATTERN.matcher(CrawlerUtil.cleanText(itemHtml));
+        if (!dateMatcher.find()) {
             throw new IllegalArgumentException("시작일 파싱 실패");
         }
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                endDate.isAfter(LocalDateTime.now()),
-                null
-        );
+        LocalDateTime startDate = CrawlerUtil.startOfDay(LocalDate.parse(dateMatcher.group(1), DATE_FORMAT));
+        LocalDateTime endDate = dateMatcher.group(2) == null
+                ? CrawlerUtil.openEndedEnd()
+                : CrawlerUtil.endOfDay(LocalDate.parse(dateMatcher.group(2), DATE_FORMAT));
+
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId,
+                endDate.isAfter(LocalDateTime.now()));
     }
 
     private String extractTitle(String itemHtml) {
         Matcher titleMatcher = TITLE_PATTERN.matcher(itemHtml);
 
         if (titleMatcher.find()) {
-            return cleanText(titleMatcher.group(1));
+            return CrawlerUtil.cleanText(titleMatcher.group(1));
         }
 
-        String text = cleanText(itemHtml);
+        String text = CrawlerUtil.cleanText(itemHtml);
         Matcher dateMatcher = DATE_PATTERN.matcher(text);
 
         if (dateMatcher.find()) {
@@ -225,42 +184,15 @@ public class Frankburger implements Crawler {
         Matcher styleMatcher = STYLE_BG_PATTERN.matcher(itemHtml);
 
         if (styleMatcher.find()) {
-            return normalizeImageUrl(styleMatcher.group(1));
+            return CrawlerUtil.absoluteUrl(BASE_URL, styleMatcher.group(1));
         }
 
         Matcher imgMatcher = IMG_PATTERN.matcher(itemHtml);
 
         if (imgMatcher.find()) {
-            return normalizeImageUrl(imgMatcher.group(1));
+            return CrawlerUtil.absoluteUrl(BASE_URL, imgMatcher.group(1));
         }
 
         return "";
-    }
-
-    private String normalizeImageUrl(String imgUrl) {
-        if (imgUrl == null || imgUrl.isBlank()) {
-            return "";
-        }
-
-        if (imgUrl.startsWith("//")) {
-            return "https:" + imgUrl;
-        }
-
-        if (imgUrl.startsWith("/")) {
-            return BASE_URL + imgUrl;
-        }
-
-        if (imgUrl.startsWith("http")) {
-            return imgUrl;
-        }
-
-        return BASE_URL + "/" + imgUrl;
-    }
-
-    private String cleanText(String html) {
-        if (html == null) return "";
-        String noTags = html.replaceAll("<[^>]*>", " ");
-        String unescaped = HtmlUtils.htmlUnescape(noTags);
-        return unescaped.replaceAll("\\s+", " ").trim();
     }
 }

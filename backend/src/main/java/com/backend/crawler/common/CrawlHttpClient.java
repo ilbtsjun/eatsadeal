@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.net.CookieManager;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -70,6 +73,61 @@ public class CrawlHttpClient {
             attempt++;
             Thread.sleep(backoffMs * (1L << (attempt - 1)));
         }
+    }
+
+    /** GET으로 본문을 받는다. headers는 이름, 값 순서의 쌍이다. 200이 아니면 CrawlHttpException을 던진다. */
+    public String getString(String url, String... headers) throws IOException, InterruptedException {
+        HttpRequest request = requestBuilder(url, headers).GET().build();
+        return okBody(url, send(request, HttpResponse.BodyHandlers.ofString()));
+    }
+
+    /** 응답 헤더와 상관없이 지정한 문자셋으로 읽는다. */
+    public String getString(String url, Charset charset, String... headers) throws IOException, InterruptedException {
+        HttpRequest request = requestBuilder(url, headers).GET().build();
+        return okBody(url, send(request, HttpResponse.BodyHandlers.ofString(charset)));
+    }
+
+    public byte[] getBytes(String url, String... headers) throws IOException, InterruptedException {
+        HttpRequest request = requestBuilder(url, headers).GET().build();
+        return okBody(url, send(request, HttpResponse.BodyHandlers.ofByteArray()));
+    }
+
+    /** POST로 본문을 받는다. 200이 아니면 CrawlHttpException을 던진다. */
+    public String postString(String url, String contentType, String body, String... headers)
+            throws IOException, InterruptedException {
+        HttpRequest request = postRequest(url, contentType, body, headers);
+        return okBody(url, send(request, HttpResponse.BodyHandlers.ofString()));
+    }
+
+    public String postString(String url, Charset charset, String contentType, String body, String... headers)
+            throws IOException, InterruptedException {
+        HttpRequest request = postRequest(url, contentType, body, headers);
+        return okBody(url, send(request, HttpResponse.BodyHandlers.ofString(charset)));
+    }
+
+    private HttpRequest postRequest(String url, String contentType, String body, String... headers) {
+        return requestBuilder(url, headers)
+                .header("Content-Type", contentType)
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
+    }
+
+    private HttpRequest.Builder requestBuilder(String url, String... headers) {
+        if (headers.length % 2 != 0) {
+            throw new IllegalArgumentException("headers는 이름, 값 쌍이어야 합니다.");
+        }
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url));
+        for (int i = 0; i < headers.length; i += 2) {
+            builder.header(headers[i], headers[i + 1]);
+        }
+        return builder;
+    }
+
+    private <T> T okBody(String url, HttpResponse<T> response) throws CrawlHttpException {
+        if (response.statusCode() != 200) {
+            throw new CrawlHttpException(response.statusCode(), url);
+        }
+        return response.body();
     }
 
     // User-Agent는 공통 값으로 교체하고, 타임아웃이 없는 요청에만 기본 타임아웃을 붙인다

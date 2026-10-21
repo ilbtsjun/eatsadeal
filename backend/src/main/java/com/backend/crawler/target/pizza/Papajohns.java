@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -11,9 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.HtmlUtils;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,10 +32,19 @@ public class Papajohns implements Crawler {
 
     private static final int MAX_PAGES = 50; // 무한 루프 방지 안전장치
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-    private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
 
     private static final Pattern CARD_PATTERN = Pattern.compile(
             "<a\\s+[^>]*href=\"(/event/(?:ongoing|past-event)/\\d+)\"[^>]*>(.*?)</a>", Pattern.DOTALL);
+
+    private static final Pattern ONGOING_TITLE_PATTERN = Pattern.compile(
+            "<span[^>]*class=\"[^\"]*line-clamp-2[^\"]*\"[^>]*>([^<]+)</span>");
+    private static final Pattern DATE_CONTAINER_PATTERN = Pattern.compile(
+            "<span[^>]*class=\"[^\"]*text-bg-neutral-default[^\"]*\"[^>]*>(.*?)</span>", Pattern.DOTALL);
+    private static final Pattern IMG_SRC_PATTERN = Pattern.compile("<img[^>]*src=\"([^\"]+)\"");
+    private static final Pattern DATE_PATTERN = Pattern.compile("(\\d{4}\\.\\d{2}\\.\\d{2})");
+    private static final Pattern PAST_TITLE_PATTERN = Pattern.compile(
+            "<span[^>]*class=\"[^\"]*font-semibold[^\"]*\"[^>]*>([^<]+)</span>");
+    private static final Pattern FLEXIBLE_DATE_PATTERN = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
 
     private final CrawlHttpClient http;
 
@@ -64,16 +71,7 @@ public class Papajohns implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[파파존스] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
-                    break;
-                }
-                html = response.body();
+                html = http.getString(url);
             } catch (Exception e) {
                 log.error("[파파존스] 목록 조회 오류(url={}): {}", url, e.toString());
                 errors.add("목록 조회 url=" + url, e);
@@ -85,7 +83,6 @@ public class Papajohns implements Crawler {
 
             while (cardMatcher.find()) {
                 String href = cardMatcher.group(1);
-                log.warn(href);
                 if (!seenHrefs.add(href)) {
                     continue;
                 }
@@ -115,23 +112,16 @@ public class Papajohns implements Crawler {
     private CreateEvent toCreateEventOngoing(String href, String cardHtml, boolean isActive, Long brandId) {
         String linkUrl = BASE_URL + href;
 
-       Pattern TITLE_PATTERN = Pattern.compile(
-                "<span[^>]*class=\"[^\"]*line-clamp-2[^\"]*\"[^>]*>([^<]+)</span>");
-        Pattern DATE_CONTAINER_PATTERN = Pattern.compile(
-                "<span[^>]*class=\"[^\"]*text-bg-neutral-default[^\"]*\"[^>]*>(.*?)</span>", Pattern.DOTALL);
-        Pattern IMG_SRC_PATTERN = Pattern.compile("<img[^>]*src=\"([^\"]+)\"");
-        Pattern DATE_PATTERN = Pattern.compile("(\\d{4}\\.\\d{2}\\.\\d{2})");
-
         // 이미지 경로 추출
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
         String imgUrl = imgMatcher.find() ? imgMatcher.group(1) : "";
 
         // 제목 추출 (HTML 엔티티 해제)
-        Matcher titleMatcher = TITLE_PATTERN.matcher(cardHtml);
+        Matcher titleMatcher = ONGOING_TITLE_PATTERN.matcher(cardHtml);
         if (!titleMatcher.find()) {
             throw new IllegalArgumentException("제목 파싱 실패");
         }
-        String title = unescapeHtml(titleMatcher.group(1).trim());
+        String title = HtmlUtils.htmlUnescape(titleMatcher.group(1).trim());
 
         // 날짜 영역 추출 및 주석(<!-- -->) 제거
         Matcher dateContainerMatcher = DATE_CONTAINER_PATTERN.matcher(cardHtml);
@@ -146,54 +136,33 @@ public class Papajohns implements Crawler {
         LocalDateTime endDate = null;
 
         if (dateMatcher.find()) {
-            startDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atStartOfDay();
+            startDate = CrawlerUtil.startOfDay(LocalDate.parse(dateMatcher.group(1), DATE_FORMAT));
         }
         if (dateMatcher.find()) {
-            endDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atTime(23, 59, 59);
+            endDate = CrawlerUtil.endOfDay(LocalDate.parse(dateMatcher.group(1), DATE_FORMAT));
         } else {
             // 종료일이 없는 상시 이벤트
-            endDate = OPEN_ENDED_DATE.atTime(23, 59, 59);
+            endDate = CrawlerUtil.openEndedEnd();
         }
 
         if (startDate == null) {
             throw new IllegalArgumentException("시작일 파싱 실패");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
-
-    private static final Pattern FLEXIBLE_DATE_PATTERN = Pattern.compile("(\\d{4})[./-](\\d{1,2})[./-](\\d{1,2})");
 
     private CreateEvent toCreateEventPast(String href, String listHtml, boolean isActive, Long brandId) {
         String linkUrl = BASE_URL + href;
 
-        // 1. 제목 추출 패턴 (font-semibold 기준 또는 단순 텍스트 추출)
-        Pattern TITLE_PATTERN = Pattern.compile(
-                "<span[^>]*class=\"[^\"]*font-semibold[^\"]*\"[^>]*>([^<]+)</span>");
-
         // 이미지 경로 (지난 이벤트 리스트는 이미지 없음)
         String imgUrl = "";
 
-        // 제목 추출
-        Matcher titleMatcher = TITLE_PATTERN.matcher(listHtml);
-        String title;
-        if (titleMatcher.find()) {
-            title = unescapeHtml(titleMatcher.group(1).trim());
-        } else {
-            // 만약 클래스명이 다를 경우 태그를 제거하고 첫 줄을 제목으로 사용
-            title = unescapeHtml(listHtml.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim());
-        }
+        // 제목 추출 (font-semibold 기준, 없으면 태그를 지운 전체 텍스트)
+        Matcher titleMatcher = PAST_TITLE_PATTERN.matcher(listHtml);
+        String title = titleMatcher.find()
+                ? HtmlUtils.htmlUnescape(titleMatcher.group(1).trim())
+                : CrawlerUtil.cleanText(listHtml);
 
         // 2. 유연한 날짜 파싱 (2026.09.01, 2026-9-1 등 모두 대응)
         Matcher dateMatcher = FLEXIBLE_DATE_PATTERN.matcher(listHtml);
@@ -201,41 +170,26 @@ public class Papajohns implements Crawler {
         LocalDateTime endDate = null;
 
         if (dateMatcher.find()) {
-            int year = Integer.parseInt(dateMatcher.group(1));
-            int month = Integer.parseInt(dateMatcher.group(2));
-            int day = Integer.parseInt(dateMatcher.group(3));
-            startDate = LocalDate.of(year, month, day).atStartOfDay();
+            startDate = CrawlerUtil.startOfDay(toDate(dateMatcher));
         }
 
         if (dateMatcher.find()) {
-            int year = Integer.parseInt(dateMatcher.group(1));
-            int month = Integer.parseInt(dateMatcher.group(2));
-            int day = Integer.parseInt(dateMatcher.group(3));
-            endDate = LocalDate.of(year, month, day).atTime(23, 59, 59);
+            endDate = CrawlerUtil.endOfDay(toDate(dateMatcher));
         } else {
             // 종료일이 없는 경우
-            endDate = OPEN_ENDED_DATE.atTime(23, 59, 59);
+            endDate = CrawlerUtil.openEndedEnd();
         }
 
-        // 날짜가 아예 없는 예외 케이스 방어 (크롤링 중단 방지)
+        // 날짜가 아예 없으면 오늘 날짜를 넣지 않고 null로 넘겨 기존 날짜를 유지한다(매일 "변경"으로 잡히지 않게)
         if (startDate == null) {
-            startDate = LocalDate.now().atStartOfDay();
+            return CrawlerUtil.event(title, linkUrl, imgUrl, null, null, brandId, isActive);
         }
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 
-    private String unescapeHtml(String s) {
-        if (s == null) return "";
-        return HtmlUtils.htmlUnescape(s);
+    private LocalDate toDate(Matcher matcher) {
+        return LocalDate.of(Integer.parseInt(matcher.group(1)),
+                Integer.parseInt(matcher.group(2)), Integer.parseInt(matcher.group(3)));
     }
 }

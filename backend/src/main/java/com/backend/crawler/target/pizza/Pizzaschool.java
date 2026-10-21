@@ -4,15 +4,13 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -58,16 +56,7 @@ public class Pizzaschool implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[피자스쿨] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
-                    break;
-                }
-                html = response.body();
+                html = http.getString(url);
             } catch (Exception e) {
                 log.error("[피자스쿨] 목록 조회 오류(url={}): {}", url, e.toString());
                 errors.add("목록 조회 url=" + url, e);
@@ -108,21 +97,13 @@ public class Pizzaschool implements Crawler {
 
         LocalDate posted = postedDate(articleHtml, title);
         if (posted == null) {
-            return new CreateEvent(title, null, linkUrl, imgUrl, null, null, brandId, true, null);
+            return CrawlerUtil.event(title, linkUrl, imgUrl, null, null, brandId, true);
         }
-        LocalDateTime startDate = posted.atStartOfDay();
-        LocalDateTime endDate = posted.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS).atTime(23, 59, 59);
+        LocalDateTime startDate = CrawlerUtil.startOfDay(posted);
+        LocalDateTime endDate = CrawlerUtil.endOfDay(posted.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS));
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                endDate.isAfter(LocalDateTime.now()),
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId,
+                endDate.isAfter(LocalDateTime.now()));
     }
 
     private LocalDate postedDate(String articleHtml, String title) {

@@ -4,15 +4,13 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -66,16 +64,7 @@ public class Pizzamaru implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[피자마루] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
-                    break;
-                }
-                html = response.body();
+                html = http.getString(url);
             } catch (Exception e) {
                 log.error("[피자마루] 목록 조회 오류(url={}): {}", url, e.toString());
                 errors.add("목록 조회 url=" + url, e);
@@ -112,11 +101,11 @@ public class Pizzamaru implements Crawler {
     }
 
     private CreateEvent toCreateEvent(String href, String cardHtml, boolean isOngoing, Long brandId) {
-        String linkUrl = href.startsWith("http") ? href : BASE_URL + href;
+        String linkUrl = CrawlerUtil.absoluteUrl(BASE_URL, href);
 
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
         String imgSrc = imgMatcher.find() ? imgMatcher.group(1) : "";
-        String imgUrl = imgSrc.startsWith("http") ? imgSrc : BASE_URL + imgSrc;
+        String imgUrl = CrawlerUtil.absoluteUrl(BASE_URL, imgSrc);
 
         Matcher titleMatcher = TITLE_PATTERN.matcher(cardHtml);
         String title = titleMatcher.find() ? titleMatcher.group(1).trim() : "";
@@ -135,18 +124,9 @@ public class Pizzamaru implements Crawler {
             throw new IllegalArgumentException("기간 파싱 실패: " + dateLineMatcher.group(1));
         }
 
-        LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
-        LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
+        LocalDateTime startDate = CrawlerUtil.startOfDay(LocalDate.parse(startDateStr));
+        LocalDateTime endDate = CrawlerUtil.endOfDay(LocalDate.parse(endDateStr));
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isOngoing);
     }
 }

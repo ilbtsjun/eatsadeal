@@ -4,15 +4,13 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -87,20 +85,12 @@ public class Dominos implements Crawler {
         while (true) {
             try {
                 String body = "gubun=" + gubun + "&pageNo=" + pageNo;
-                HttpRequest request = HttpRequest.newBuilder(URI.create(AJAX_URL))
-                        .POST(HttpRequest.BodyPublishers.ofString(body))
-                        .header("Content-Type", "application/x-www-form-urlencoded")
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    errors.add("AJAX 목록 조회 pageNo=" + pageNo + " status=" + response.statusCode());
-                    break;
-                }
-                if (response.body().isBlank()) {
+                String json = http.postString(AJAX_URL, "application/x-www-form-urlencoded", body);
+                if (json.isBlank()) {
                     break;
                 }
                 int before = items.size();
-                parseAjaxJson(response.body(), gubun, items);
+                parseAjaxJson(json, gubun, items);
                 if (items.size() == before) {
                     break;
                 }
@@ -155,7 +145,7 @@ public class Dominos implements Crawler {
 
     private String resolveDetailUrl(String rawHref) {
         if (!rawHref.startsWith("javascript:")) {
-            return rawHref.startsWith("http") ? rawHref : BASE_URL + rawHref;
+            return CrawlerUtil.absoluteUrl(BASE_URL, rawHref);
         }
 
         Matcher callMatcher = JS_CALL_PATTERN.matcher(rawHref);
@@ -175,7 +165,7 @@ public class Dominos implements Crawler {
                 return BASE_URL + "/event/view?seq=" + args[1] + "&gubun=" + args[2];
             case "goLinkView": {
                 String linkUrl = args[2];
-                return linkUrl.startsWith("http") ? linkUrl : BASE_URL + linkUrl;
+                return CrawlerUtil.absoluteUrl(BASE_URL, linkUrl);
             }
             default:
                 return null;
@@ -219,7 +209,7 @@ public class Dominos implements Crawler {
                 if (linkUrl.contains(".html")) {
                     detailUrl = BASE_URL + "/event/viewHtml?seq=" + seq + "&gubun=" + itemGubun;
                 } else {
-                    detailUrl = linkUrl.startsWith("http") ? linkUrl : BASE_URL + linkUrl;
+                    detailUrl = CrawlerUtil.absoluteUrl(BASE_URL, linkUrl);
                 }
             } else {
                 detailUrl = BASE_URL + "/event/view?seq=" + seq + "&gubun=" + itemGubun;
@@ -264,8 +254,8 @@ public class Dominos implements Crawler {
         }
 
         if (startDateStr != null && endDateStr != null) {
-            startDate = LocalDate.parse(startDateStr).atStartOfDay();
-            endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
+            startDate = CrawlerUtil.startOfDay(LocalDate.parse(startDateStr));
+            endDate = CrawlerUtil.endOfDay(LocalDate.parse(endDateStr));
             isActive = isOngoing;
         } else {
             startDate = null;
@@ -273,26 +263,10 @@ public class Dominos implements Crawler {
             isActive = true;
         }
 
-        return new CreateEvent(
-                title,
-                null,
-                detailUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, detailUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 
     private String fetchAsString(String url) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .GET()
-                .build();
-        HttpResponse<byte[]> response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP " + response.statusCode());
-        }
-        return new String(response.body(), SITE_CHARSET);
+        return new String(http.getBytes(url), SITE_CHARSET);
     }
 }

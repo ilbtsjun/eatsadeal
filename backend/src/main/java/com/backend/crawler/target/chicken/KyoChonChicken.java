@@ -3,18 +3,16 @@ package com.backend.crawler.target.chicken;
 import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlHttpException;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -68,18 +66,13 @@ public class KyoChonChicken implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .build();
-                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[교촌] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    if (pageNum == 1) {
-                        errors.add("목록 조회 status=" + response.statusCode());
-                    }
-                    break;
+                html = http.getString(url);
+            } catch (CrawlHttpException e) {
+                log.error("[교촌] 목록 조회 실패(url={}): status={}", url, e.status());
+                if (pageNum == 1) {
+                    errors.add("목록 조회 status=" + e.status());
                 }
-                html = response.body();
+                break;
             } catch (Exception e) {
                 log.error("[교촌] 목록 조회 오류(url={}): {}", url, e.toString());
                 errors.add("목록 조회", e);
@@ -142,7 +135,7 @@ public class KyoChonChicken implements Crawler {
             throw new IllegalArgumentException("필수 요소 누락");
         }
 
-        String imgUrl = "https://www.kyochon.com" + imgMatcher.group(1);
+        String imgUrl = CrawlerUtil.absoluteUrl("https://www.kyochon.com", imgMatcher.group(1));
         String title = titleMatcher.group(1).trim();
         String periodText = periodMatcher.group(1).trim();
 
@@ -165,25 +158,14 @@ public class KyoChonChicken implements Crawler {
             return null;
         }
         if (start != null && end == null) {
-            end = LocalDate.of(2099, 12, 31);
+            end = CrawlerUtil.OPEN_ENDED_DATE;
         }
 
         if (title.isBlank() || start == null || end == null) {
             throw new IllegalArgumentException("제목/기간 파싱 실패: title=" + title + ", period=" + periodText);
         }
 
-        LocalDateTime startDate = start.atStartOfDay();
-        LocalDateTime endDate = end.atTime(23, 59, 59);
-
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl,
+                CrawlerUtil.startOfDay(start), CrawlerUtil.endOfDay(end), brandId, isOngoing);
     }
 }

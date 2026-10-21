@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,9 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -69,7 +67,7 @@ public class KFC implements Crawler {
         List<CreateEvent> events = new ArrayList<>();
 
         try {
-            String html = request(url);
+            String html = http.getString(url, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             Matcher matcher = INITIAL_STATE_PATTERN.matcher(html);
 
             if (!matcher.find()) {
@@ -130,7 +128,7 @@ public class KFC implements Crawler {
             }
 
             if (endDate == null || endDate.getYear() >= 9999) {
-                endDate = LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+                endDate = CrawlerUtil.openEndedEnd();
             }
 
             String imgUrl = getText(row, "event_web_list_img");
@@ -139,44 +137,18 @@ public class KFC implements Crawler {
                 imgUrl = getText(row, "event_web_img");
             }
 
-            if (imgUrl != null && imgUrl.startsWith("/")) {
-                imgUrl = BASE_URL + imgUrl;
+            if (imgUrl != null) {
+                imgUrl = CrawlerUtil.absoluteUrl(BASE_URL, imgUrl);
             }
 
             String linkUrl = (isActive ? DETAIL_URL : ENDED_DETAIL_URL) + eventIndex;
 
-            return new CreateEvent(
-                    title,
-                    null,
-                    linkUrl,
-                    imgUrl,
-                    startDate,
-                    endDate,
-                    brandId,
-                    isActive,
-                    null
-            );
+            return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
         } catch (Exception e) {
             log.error("KFC 이벤트 변환 실패. row={}", row, e);
             errors.add("이벤트 변환", e);
             return null;
         }
-    }
-
-    private String request(String url) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP status=" + response.statusCode() + ", url=" + url);
-        }
-
-        return response.body();
     }
 
     private String getText(JsonNode node, String field) {

@@ -9,6 +9,7 @@ import com.backend.event.dto.*;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.event.service.EventService;
+import com.backend.event.service.EventUrlNormalizer;
 import com.backend.favorite.entity.Favorite;
 import com.backend.favorite.repository.FavoriteRepository;
 import com.backend.user.entity.User;
@@ -43,6 +44,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -882,6 +884,229 @@ class EventServiceTests {
             when(eventRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertBusinessException(() -> eventService.deactivateEvent(999L), ErrorCode.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("hidden / adminLocked")
+    class HiddenAndAdminLockedTests {
+
+        @Test
+        @DisplayName("createEvent: 관리자가 만든 이벤트는 잠긴 상태로 저장된다")
+        void createEventIsLocked() {
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.existsByUrl(request.url())).thenReturn(false);
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            eventService.createEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertTrue(captor.getValue().isAdminLocked());
+            assertFalse(captor.getValue().isHidden());
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 잠긴 이벤트는 덮어쓰지 않고 UNCHANGED를 반환한다")
+        void upsertSkipsLockedEvent() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeAdminLocked(true);
+            CreateEvent request = createRequest(START.plusDays(1), END.plusDays(1), 1L, false, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertEquals("기존 제목", existing.getTitle());
+            assertEquals(START, existing.getStartDate());
+            assertTrue(existing.getIsActive());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 날짜를 모르는 요청도 잠긴 이벤트는 건드리지 않는다")
+        void upsertSkipsLockedEventWithUnknownDates() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeAdminLocked(true);
+            CreateEvent request = createRequest(null, null, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertEquals("기존 제목", existing.getTitle());
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 숨긴 이벤트라도 잠기지 않았다면 내용은 갱신하되 숨김은 유지된다")
+        void upsertKeepsHidden() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeHidden(true);
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            eventService.upsertCrawledEvent(request);
+
+            assertEquals(request.title(), existing.getTitle());
+            assertTrue(existing.isHidden());
+        }
+
+        @Test
+        @DisplayName("updateEvent: 관리자가 수정하면 크롤러가 덮어쓰지 못하도록 잠긴다")
+        void updateEventLocks() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            assertFalse(event.isAdminLocked());
+
+            eventService.updateEvent(1L, updateRequest("수정 제목", null, null, null, null, null, null, null));
+
+            assertEquals("수정 제목", event.getTitle());
+            assertTrue(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("deactivateEvent: 비활성화하면 잠겨서 크롤러가 되살리지 못한다")
+        void deactivateEventLocks() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.deactivateEvent(1L);
+
+            assertFalse(event.getIsActive());
+            assertTrue(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("changeHidden: 숨김과 해제가 반영된다")
+        void changeHiddenToggles() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.changeHidden(1L, true);
+            assertTrue(event.isHidden());
+
+            eventService.changeHidden(1L, false);
+            assertFalse(event.isHidden());
+        }
+
+        @Test
+        @DisplayName("changeAdminLocked: 잠금과 해제가 반영된다")
+        void changeAdminLockedToggles() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.changeAdminLocked(1L, true);
+            assertTrue(event.isAdminLocked());
+
+            eventService.changeAdminLocked(1L, false);
+            assertFalse(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("실패: 존재하지 않는 이벤트면 NOT_FOUND")
+        void eventNotFound() {
+            when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertBusinessException(() -> eventService.changeHidden(999L, true), ErrorCode.NOT_FOUND);
+            assertBusinessException(() -> eventService.changeAdminLocked(999L, true), ErrorCode.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("URL 정규화")
+    class UrlNormalizationTests {
+
+        @ParameterizedTest(name = "{index} - {0}")
+        @CsvSource(delimiter = '|', value = {
+                "호스트와 스킴은 소문자로|HTTPS://WWW.BHC.CO.KR/event/currentEvent/33|https://www.bhc.co.kr/event/currentEvent/33",
+                "경로의 대소문자는 유지|https://example.com/Event/ABC|https://example.com/Event/ABC",
+                "fragment 제거|https://example.com/event/1#comments|https://example.com/event/1",
+                "경로 끝 슬래시 제거|https://example.com/event/1/|https://example.com/event/1",
+                "기본 포트 제거|https://example.com:443/event/1|https://example.com/event/1",
+                "기본이 아닌 포트는 유지|https://example.com:8443/event/1|https://example.com:8443/event/1",
+                "추적 파라미터 제거|https://example.com/event/1?utm_source=a&utm_medium=b&fbclid=x|https://example.com/event/1",
+                "식별 파라미터는 값과 순서를 유지|https://web.dominos.co.kr/event/viewHtml?seq=2100&gubun=E0200|https://web.dominos.co.kr/event/viewHtml?seq=2100&gubun=E0200",
+                "추적 파라미터만 골라 제거|https://example.com/view?id=5&utm_campaign=z|https://example.com/view?id=5",
+                "루트 경로|https://example.com/|https://example.com"
+        })
+        @DisplayName("EventUrlNormalizer.normalize")
+        void normalize(String description, String input, String expected) {
+            assertEquals(expected, EventUrlNormalizer.normalize(input));
+        }
+
+        @Test
+        @DisplayName("null은 null, URL이 아닌 값은 그대로 둔다")
+        void edgeCases() {
+            assertNull(EventUrlNormalizer.normalize(null));
+            assertEquals("not a url", EventUrlNormalizer.normalize("not a url"));
+            assertEquals("/relative/path", EventUrlNormalizer.normalize("/relative/path"));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 추적 파라미터가 붙은 URL도 같은 이벤트로 보고 갱신한다")
+        void upsertMatchesNormalizedUrl() {
+            Event existing = buildEvent(mock(Brand.class));
+            String normalized = existing.getUrl();
+            CreateEvent request = new CreateEvent("새 제목", null, normalized + "?utm_source=ad", "https://image.url/old.png",
+                    START, END, 1L, true, null);
+            when(eventRepository.findByUrl(normalized)).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UPDATED, result);
+            assertEquals("새 제목", existing.getTitle());
+            assertEquals(normalized, existing.getUrl());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 정규화 전 형태로 저장된 기존 이벤트는 찾아서 URL을 정규화한다")
+        void upsertMigratesLegacyUrl() {
+            Event legacy = Event.builder()
+                    .title("기존 제목").description("기존 설명")
+                    .url("https://example.com/event/1/").img("https://image.url/old.png")
+                    .startDate(START).endDate(END).brand(mock(Brand.class)).isActive(true).build();
+            CreateEvent request = new CreateEvent("기존 제목", "기존 설명", "https://example.com/event/1/",
+                    "https://image.url/old.png", START, END, 1L, true, null);
+            when(eventRepository.findByUrl("https://example.com/event/1")).thenReturn(Optional.empty());
+            when(eventRepository.findByUrl("https://example.com/event/1/")).thenReturn(Optional.of(legacy));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UPDATED, result);
+            assertEquals("https://example.com/event/1", legacy.getUrl());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 새 이벤트는 정규화된 URL로 저장한다")
+        void upsertInsertsNormalizedUrl() {
+            CreateEvent request = new CreateEvent("제목", null, "HTTPS://Example.com/event/9/#top",
+                    "https://image.url/9.png", START, END, 1L, true, null);
+            when(eventRepository.findByUrl(anyString())).thenReturn(Optional.empty());
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.CREATED, result);
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals("https://example.com/event/9", captor.getValue().getUrl());
+        }
+
+        @Test
+        @DisplayName("createEvent: 관리자가 넣은 URL도 정규화해서 중복을 검사하고 저장한다")
+        void createEventNormalizesUrl() {
+            CreateEvent request = new CreateEvent("제목", null, "https://example.com/event/5/?utm_source=x",
+                    "https://image.url/5.png", START, END, 1L, true, null);
+            when(eventRepository.existsByUrl("https://example.com/event/5")).thenReturn(false);
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            eventService.createEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals("https://example.com/event/5", captor.getValue().getUrl());
         }
     }
 

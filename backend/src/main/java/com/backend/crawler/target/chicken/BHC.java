@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
 import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,9 +13,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,19 +40,7 @@ public class BHC implements Crawler {
         CrawlErrors errors = new CrawlErrors();
 
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(API_URL))
-                    .GET()
-                    .header("Accept", "application/json")
-                    .build();
-            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("[BHC] 이벤트 목록 조회 실패: status={}", response.statusCode());
-                errors.add("목록 조회 status=" + response.statusCode());
-                return CrawlResult.of(eventList, errors);
-            }
-
-            JsonNode root = objectMapper.readTree(response.body());
+            JsonNode root = objectMapper.readTree(http.getString(API_URL, "Accept", "application/json"));
             // 응답 형식: {"status":"success","code":200,"body":[ {...}, ... ]}
             for (JsonNode node : root.path("body")) {
                 try {
@@ -85,15 +71,6 @@ public class BHC implements Crawler {
         LocalDateTime startDate = LocalDateTime.parse(node.get("startDate").asText());
         LocalDateTime endDate = LocalDateTime.parse(node.get("endDate").asText());
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 }
