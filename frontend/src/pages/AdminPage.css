@@ -76,3 +76,23 @@
 .row-actions .activate:hover { color: #20bf6b; border-color: #20bf6b; background: #f0fbf5; }
 .confirm-actions .primary-confirm { color: #fff; border-color: #20bf6b; background: #20bf6b; }
 .confirm-actions .primary-confirm:hover { background: #1aa85c; }
+
+/* ===== 크롤링 실행 결과 ===== */
+.crawl-run-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid #edf0f2; }
+.crawl-run-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.crawl-run-heading h3 { margin: 0; font-size: 16px; }
+.crawl-run-heading button { padding: 7px 12px; border: 1px solid #dfe4ea; border-radius: 6px; color: #57606f; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; }
+.crawl-run-heading button:disabled { opacity: .55; cursor: wait; }
+.crawl-run-summary { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.crawl-run-section summary { cursor: pointer; color: #57606f; font-weight: 700; }
+.crawl-run-table-wrap { margin-top: 12px; overflow-x: auto; }
+.crawl-run-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.crawl-run-table th, .crawl-run-table td { padding: 9px 10px; border-bottom: 1px solid #f1f2f6; text-align: left; white-space: nowrap; }
+.crawl-run-table th { color: #747d8c; font-size: 12px; }
+.crawl-run-table .crawl-run-message { max-width: 420px; overflow: hidden; text-overflow: ellipsis; color: #747d8c; }
+.crawl-status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.crawl-status-success { color: #20bf6b; background: #eafaf1; }
+.crawl-status-partial { color: #e58e26; background: #fff5e6; }
+.crawl-status-empty { color: #747d8c; background: #f1f2f6; }
+.crawl-status-failed { color: #e84118; background: #fff1f2; }
+.crawl-status-skipped_inactive { color: #a4b0be; background: #f1f2f6; }

@@ -1,3 +1,56 @@
+import { useEffect } from 'react';
+
+const STATUS_LABEL = {
+    SUCCESS: '성공',
+    PARTIAL: '일부 실패',
+    EMPTY: '수집 0건',
+    FAILED: '실패',
+    SKIPPED_INACTIVE: '건너뜀(비활성)',
+};
+
+const formatTime = (value) => (value ? new Date(value).toLocaleString('ko-KR') : '-');
+
+function StatusBadge({ status }) {
+    return (
+        <span className={`crawl-status crawl-status-${String(status).toLowerCase()}`}>
+            {STATUS_LABEL[status] ?? status}
+        </span>
+    );
+}
+
+function CrawlRunTable({ runs, showTime }) {
+    return (
+        <div className="crawl-run-table-wrap">
+            <table className="crawl-run-table">
+                <thead>
+                    <tr>
+                        {showTime && <th>시각</th>}
+                        <th>브랜드</th>
+                        <th>상태</th>
+                        <th>수집</th>
+                        <th>오류</th>
+                        <th>소요(초)</th>
+                        <th>메시지</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {runs.map((run) => (
+                        <tr key={run.id}>
+                            {showTime && <td>{formatTime(run.startedAt)}</td>}
+                            <td>{run.brandKey}</td>
+                            <td><StatusBadge status={run.status} /></td>
+                            <td>{run.collectedCount}</td>
+                            <td>{run.errorCount}</td>
+                            <td>{(run.elapsedMs / 1000).toFixed(1)}</td>
+                            <td className="crawl-run-message">{run.message ?? ''}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 const CRAWL_ALL = { path: '/api/crawl', label: '전체' };
 const CRAWL_GROUPS = [
     {
@@ -38,7 +91,25 @@ const CRAWL_GROUPS = [
     },
 ];
 
-export default function CrwalerManagement({crawlerLoading, onRunCrawler,}){
+export default function CrwalerManagement({
+    crawlerLoading,
+    onRunCrawler,
+    latestRuns = [],
+    recentRuns = [],
+    runsLoading = false,
+    onLoadRuns,
+}){
+    useEffect(() => {
+        onLoadRuns?.();
+    }, [onLoadRuns]);
+
+    const counts = latestRuns.reduce((acc, run) => {
+        acc[run.status] = (acc[run.status] ?? 0) + 1;
+        return acc;
+    }, {});
+    const firstRun = latestRuns[0];
+    const lastRun = latestRuns[latestRuns.length - 1];
+
     return(
         <section className="admin-panel">
             <div className="panel-heading">
@@ -85,6 +156,44 @@ export default function CrwalerManagement({crawlerLoading, onRunCrawler,}){
                 <p className="admin-empty">
                     크롤링 중입니다. 완료될 때까지 잠시 기다려주세요.
                 </p>
+            )}
+
+            <div className="crawl-run-section">
+                <div className="crawl-run-heading">
+                    <h3>최근 실행 결과</h3>
+                    <button type="button" disabled={runsLoading} onClick={onLoadRuns}>
+                        새로고침
+                    </button>
+                </div>
+
+                {latestRuns.length === 0 ? (
+                    <p className="admin-empty">
+                        {runsLoading ? '불러오는 중입니다...' : '아직 기록된 크롤링이 없습니다.'}
+                    </p>
+                ) : (
+                    <>
+                        <p className="panel-description">
+                            {formatTime(firstRun.startedAt)} ~ {formatTime(lastRun.finishedAt)}
+                        </p>
+                        <div className="crawl-run-summary">
+                            {Object.keys(STATUS_LABEL).map((status) => (
+                                counts[status] ? (
+                                    <span key={status} className={`crawl-status crawl-status-${status.toLowerCase()}`}>
+                                        {STATUS_LABEL[status]} {counts[status]}
+                                    </span>
+                                ) : null
+                            ))}
+                        </div>
+                        <CrawlRunTable runs={latestRuns} />
+                    </>
+                )}
+            </div>
+
+            {recentRuns.length > 0 && (
+                <details className="crawl-run-section">
+                    <summary>실행 이력 (최근 {recentRuns.length}건)</summary>
+                    <CrawlRunTable runs={recentRuns} showTime />
+                </details>
             )}
         </section>
     )

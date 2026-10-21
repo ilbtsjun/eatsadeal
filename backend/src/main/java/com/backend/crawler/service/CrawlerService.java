@@ -7,6 +7,7 @@ import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
+import com.backend.crawler.dto.CrawlRunResponse;
 import com.backend.crawler.dto.CrawlTarget;
 import com.backend.crawler.entity.CrawlRun;
 import com.backend.crawler.entity.CrawlStatus;
@@ -14,6 +15,7 @@ import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -71,6 +73,21 @@ public class CrawlerService {
             throw new BusinessException(ErrorCode.INVALID_STATUS, "비활성화된 브랜드는 크롤링할 수 없습니다: " + target.getKey());
         }
         return runExclusive(target.getKey(), List.of(target));
+    }
+
+    public List<CrawlRunResponse> getLatestRuns() {
+        return crawlRunRepository.findTopByOrderByIdDesc()
+                .map(last -> crawlRunRepository.findByRunIdOrderByIdAsc(last.getRunId()).stream()
+                        .map(CrawlRunResponse::from)
+                        .toList())
+                .orElseGet(List::of);
+    }
+
+    public List<CrawlRunResponse> getRecentRuns(int limit) {
+        int size = Math.min(Math.max(limit, 1), 200);
+        return crawlRunRepository.findAllByOrderByIdDesc(PageRequest.of(0, size)).stream()
+                .map(CrawlRunResponse::from)
+                .toList();
     }
 
     private CrawlReport runExclusive(String label, List<CrawlTarget> targets) {
