@@ -126,9 +126,8 @@ public class Pelicana implements Crawler {
         boolean isActive;
 
         if (startDateStr.isBlank() || endDateStr.isBlank()) {
-            LocalDateTime now = LocalDateTime.now();
-            startDate = now;
-            endDate = now;
+            startDate = null;
+            endDate = null;
             isActive = false;
         } else {
             LocalDate start = LocalDate.parse(startDateStr);

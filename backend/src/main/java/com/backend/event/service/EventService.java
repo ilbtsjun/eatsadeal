@@ -64,13 +64,30 @@ public class EventService {
     @Transactional
     @CudLogging("이벤트 생성(크롤러)")
     public UpsertResult upsertCrawledEvent(CreateEvent request) {
-        validateDateRange(request.startDate(), request.endDate());
+        boolean datesUnknown = request.startDate() == null;
+        if (!datesUnknown) {
+            validateDateRange(request.startDate(), request.endDate());
+        }
 
         Optional<Event> optionalEvent = eventRepository.findByUrl(request.url());
 
         if (optionalEvent.isPresent()) {
             Event event = optionalEvent.get();
 
+            if (datesUnknown) {
+                boolean contentChanged = event.updateContent(
+                        request.title(),
+                        request.description(),
+                        request.url(),
+                        request.img());
+                boolean periodChanged = event.applyDefaultPeriod(
+                        CreateEvent.DEFAULT_PERIOD_DAYS, request.isActive());
+                return contentChanged || periodChanged ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
+            }
+
+            List<String> changedFields = event.changedFields(
+                    request.title(), request.description(), request.url(), request.img(),
+                    request.startDate(), request.endDate(), request.isActive());
             boolean changed = event.update(
                     request.title(),
                     request.description(),
@@ -80,6 +97,9 @@ public class EventService {
                     request.endDate(),
                     request.isActive()
             );
+            if (changed) {
+                log.info("[EVENT UPDATED] url={} fields={}", request.url(), changedFields);
+            }
 
             return changed ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
         }
@@ -87,13 +107,16 @@ public class EventService {
         Brand brand = brandRepository.findById(request.brandId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
+        LocalDateTime startDate = datesUnknown ? LocalDateTime.now() : request.startDate();
+        LocalDateTime endDate = datesUnknown ? startDate.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS) : request.endDate();
+
         Event event = Event.builder()
                 .title(request.title())
                 .description(request.description())
                 .url(request.url())
                 .img(request.img())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
+                .startDate(startDate)
+                .endDate(endDate)
                 .brand(brand)
                 .isActive(request.isActive())
                 .eventCodes(request.eventCodes())

@@ -10,7 +10,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -93,6 +95,19 @@ public class Event {
         this.eventCodes.remove(eventCode);
     }
 
+    public List<String> changedFields(String title, String description, String url,
+                                      String img, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive) {
+        List<String> fields = new ArrayList<>();
+        if (!Objects.equals(this.title, title)) fields.add("title");
+        if (!Objects.equals(this.description, description)) fields.add("description");
+        if (!Objects.equals(this.url, url)) fields.add("url");
+        if (!Objects.equals(this.img, img)) fields.add("img");
+        if (!Objects.equals(this.startDate, startDate)) fields.add("startDate");
+        if (!Objects.equals(this.endDate, endDate)) fields.add("endDate(" + this.endDate + "->" + endDate + ")");
+        if (!Objects.equals(this.isActive, isActive)) fields.add("isActive(" + this.isActive + "->" + isActive + ")");
+        return fields;
+    }
+
     public boolean update(String title, String description, String url,
                           String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
         boolean changed = !Objects.equals(this.title, title)
@@ -111,6 +126,30 @@ public class Event {
         this.img = img;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.isActive = isActive;
+        return true;
+    }
+
+    public boolean updateContent(String title, String description, String url, String img) {
+        boolean changed = !Objects.equals(this.title, title)
+                || !Objects.equals(this.description, description)
+                || !Objects.equals(this.url, url)
+                || !Objects.equals(this.img, img);
+        if (!changed) {
+            return false;
+        }
+        this.title = title;
+        this.description = description;
+        this.url = url;
+        this.img = img;
+        return true;
+    }
+
+    public boolean applyDefaultPeriod(int days, Boolean isActive) {
+        if (endDate == null || !endDate.equals(startDate)) {
+            return false;
+        }
+        this.endDate = startDate.plusDays(days);
         this.isActive = isActive;
         return true;
     }

@@ -61,7 +61,15 @@ public class Dominos implements Crawler {
         CrawlErrors errors = new CrawlErrors();
         eventList.addAll(fetchAll(LIST_URL, "E0200", true, brand.getId(), errors));
         eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false, brand.getId(), errors));
-        return CrawlResult.of(eventList, errors);
+        return CrawlResult.of(dedupeByUrl(eventList), errors);
+    }
+
+    private List<CreateEvent> dedupeByUrl(List<CreateEvent> events) {
+        Map<String, CreateEvent> byUrl = new LinkedHashMap<>();
+        for (CreateEvent event : events) {
+            byUrl.putIfAbsent(event.url(), event);
+        }
+        return new ArrayList<>(byUrl.values());
     }
 
     private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing, Long brandId, CrawlErrors errors) {
@@ -260,9 +268,8 @@ public class Dominos implements Crawler {
             endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
             isActive = isOngoing;
         } else {
-            LocalDateTime now = LocalDateTime.now();
-            startDate = now;
-            endDate = now;
+            startDate = null;
+            endDate = null;
             isActive = true;
         }
 

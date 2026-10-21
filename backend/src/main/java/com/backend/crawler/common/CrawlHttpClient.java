@@ -28,6 +28,7 @@ public class CrawlHttpClient {
     private final int maxRetries;
     private final long backoffMs;
     private final Map<String, Long> lastRequestAt = new ConcurrentHashMap<>();
+    private final Map<String, Object> hostLocks = new ConcurrentHashMap<>();
 
     public CrawlHttpClient(
             @Value("${app.crawler.http.connect-timeout-ms:5000}") long connectTimeoutMs,
@@ -87,15 +88,17 @@ public class CrawlHttpClient {
     }
 
     private void waitForTurn(String host) throws InterruptedException {
-        long interval = intervalFor(host);
-        Long last = lastRequestAt.get(host);
-        if (last != null) {
-            long wait = last + interval - System.currentTimeMillis();
-            if (wait > 0) {
-                Thread.sleep(wait);
+        synchronized (hostLocks.computeIfAbsent(host, h -> new Object())) {
+            long interval = intervalFor(host);
+            Long last = lastRequestAt.get(host);
+            if (last != null) {
+                long wait = last + interval - System.currentTimeMillis();
+                if (wait > 0) {
+                    Thread.sleep(wait);
+                }
             }
+            lastRequestAt.put(host, System.currentTimeMillis());
         }
-        lastRequestAt.put(host, System.currentTimeMillis());
     }
 
     private long intervalFor(String host) {

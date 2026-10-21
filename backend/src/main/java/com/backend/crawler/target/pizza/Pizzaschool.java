@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,10 @@ public class Pizzaschool implements Crawler {
     private static final String BASE_URL = "http://pizzaschool.net";
     private static final String LIST_URL = BASE_URL + "/%EC%9D%B4%EB%B2%A4%ED%8A%B8/";
     private static final int PAGES_TO_FETCH = 50;
+
+    private static final Pattern TIME_PATTERN =
+            Pattern.compile("<time[^>]*datetime=['\"](\\d{4}-\\d{2}-\\d{2})", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TITLE_DATE_PATTERN = Pattern.compile("(\\d{1,2})월\\s*(\\d{1,2})일");
 
     private static final Pattern ARTICLE_PATTERN =
             Pattern.compile("<article class=['\"]slide-entry[^'\"]*['\"][^>]*>(.*?)</article>", Pattern.DOTALL);
@@ -99,17 +105,43 @@ public class Pizzaschool implements Crawler {
         if (title.isBlank()) {
             throw new IllegalArgumentException("제목 파싱 실패");
         }
-        LocalDateTime now = LocalDateTime.now();
+
+        LocalDate posted = postedDate(articleHtml, title);
+        if (posted == null) {
+            return new CreateEvent(title, null, linkUrl, imgUrl, null, null, brandId, true, null);
+        }
+        LocalDateTime startDate = posted.atStartOfDay();
+        LocalDateTime endDate = posted.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS).atTime(23, 59, 59);
 
         return new CreateEvent(
                 title,
                 null,
                 linkUrl,
                 imgUrl,
-                now,
-                now,
+                startDate,
+                endDate,
                 brandId,
-                true,
+                endDate.isAfter(LocalDateTime.now()),
                 null);
+    }
+
+    private LocalDate postedDate(String articleHtml, String title) {
+        Matcher timeMatcher = TIME_PATTERN.matcher(articleHtml);
+        if (timeMatcher.find()) {
+            return LocalDate.parse(timeMatcher.group(1));
+        }
+
+        Matcher titleMatcher = TITLE_DATE_PATTERN.matcher(title);
+        if (titleMatcher.find()) {
+            LocalDate today = LocalDate.now();
+            try {
+                LocalDate date = LocalDate.of(today.getYear(),
+                        Integer.parseInt(titleMatcher.group(1)), Integer.parseInt(titleMatcher.group(2)));
+                return date.isAfter(today.plusDays(7)) ? date.minusYears(1) : date;
+            } catch (DateTimeException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

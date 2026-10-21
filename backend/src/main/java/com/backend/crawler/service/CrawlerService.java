@@ -16,11 +16,16 @@ import com.backend.event.dto.CreateEvent;
 import com.backend.event.dto.UpsertResult;
 import com.backend.event.service.EventService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,6 +41,9 @@ public class CrawlerService {
     private final BrandRepository brandRepository;
     private final Map<CrawlTarget, Crawler> registry = new EnumMap<>(CrawlTarget.class);
     private final AtomicBoolean running = new AtomicBoolean(false);
+
+    @Value("${app.crawler.parallelism:5}")
+    private int parallelism = 5;
 
     public CrawlerService(EventService eventService,
                           BrandRepository brandRepository,
@@ -105,21 +113,37 @@ public class CrawlerService {
         List<String> empty = new ArrayList<>();
         try {
             Map<String, Brand> brands = loadBrands();
-            for (CrawlTarget target : targets) {
-                Brand brand = brands.get(target.getBrandName());
-                LocalDateTime startedAt = LocalDateTime.now();
 
-                CrawlOutcome outcome = crawlBrand(target, brand);
-                saveHistory(runId, target, brand, outcome, startedAt);
-
-                saved += outcome.saved();
-                switch (outcome.status()) {
-                    case SKIPPED_INACTIVE -> skipped.add(target.getKey());
-                    case FAILED -> failed.add(target.getKey());
-                    case PARTIAL -> partial.add(target.getKey());
-                    case EMPTY -> empty.add(target.getKey());
-                    case SUCCESS -> { }
+            ExecutorService pool = Executors.newFixedThreadPool(Math.max(1, Math.min(parallelism, targets.size())));
+            List<Future<TimedOutcome>> futures = new ArrayList<>();
+            try {
+                for (CrawlTarget target : targets) {
+                    Brand brand = brands.get(target.getBrandName());
+                    futures.add(pool.submit(() -> {
+                        LocalDateTime startedAt = LocalDateTime.now();
+                        CrawlOutcome outcome = crawlBrand(target, brand);
+                        return new TimedOutcome(outcome, startedAt, LocalDateTime.now());
+                    }));
                 }
+
+                for (int i = 0; i < targets.size(); i++) {
+                    CrawlTarget target = targets.get(i);
+                    Brand brand = brands.get(target.getBrandName());
+                    TimedOutcome timed = await(futures.get(i), target);
+                    CrawlOutcome outcome = timed.outcome();
+                    saveHistory(runId, target, brand, timed);
+
+                    saved += outcome.saved();
+                    switch (outcome.status()) {
+                        case SKIPPED_INACTIVE -> skipped.add(target.getKey());
+                        case FAILED -> failed.add(target.getKey());
+                        case PARTIAL -> partial.add(target.getKey());
+                        case EMPTY -> empty.add(target.getKey());
+                        case SUCCESS -> { }
+                    }
+                }
+            } finally {
+                pool.shutdownNow();
             }
             log.info("[CRAWL DONE] target={} runId={} saved={} skipped={} failed={} partial={} empty={} elapsed={}ms",
                     label, runId, saved, skipped, failed, partial, empty, System.currentTimeMillis() - start);
@@ -127,6 +151,24 @@ public class CrawlerService {
         } finally {
             running.set(false);
         }
+    }
+
+    private TimedOutcome await(Future<TimedOutcome> future, CrawlTarget target) {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return failedOutcome(target, e);
+        } catch (ExecutionException e) {
+            return failedOutcome(target, e.getCause() == null ? e : e.getCause());
+        }
+    }
+
+    private TimedOutcome failedOutcome(CrawlTarget target, Throwable cause) {
+        log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), cause.toString(), cause);
+        LocalDateTime now = LocalDateTime.now();
+        return new TimedOutcome(new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0,
+                cause.getClass().getSimpleName() + ": " + cause.getMessage(), null, null, null), now, now);
     }
 
     private CrawlOutcome crawlBrand(CrawlTarget target, Brand brand) {
@@ -189,19 +231,22 @@ public class CrawlerService {
         }
     }
 
-    private void saveHistory(String runId, CrawlTarget target, Brand brand,
-                             CrawlOutcome outcome, LocalDateTime startedAt) {
+    private void saveHistory(String runId, CrawlTarget target, Brand brand, TimedOutcome timed) {
+        CrawlOutcome outcome = timed.outcome();
         try {
             CrawlRun run = CrawlRun.of(runId,
                     brand == null ? null : brand.getId(),
                     target.getKey(), outcome.status(),
                     outcome.collected(), outcome.errors(), outcome.message(),
-                    startedAt, LocalDateTime.now());
+                    timed.startedAt(), timed.finishedAt());
             run.recordCounts(outcome.created(), outcome.updated(), outcome.unchanged());
             crawlRunRepository.save(run);
         } catch (Exception e) {
             log.warn("[CRAWL RUN SAVE FAIL] brand={} reason={}", target.getKey(), e.getMessage());
         }
+    }
+
+    private record TimedOutcome(CrawlOutcome outcome, LocalDateTime startedAt, LocalDateTime finishedAt) {
     }
 
     private record CrawlOutcome(CrawlStatus status, int collected, int saveErrors, int crawlErrors, String message,
