@@ -1,7 +1,9 @@
 package com.backend.crawler.target.chicken;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,14 +40,15 @@ public class BBQ implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(SEARCH_TYPE_ONGOING, true, brand.getId()));
-        eventList.addAll(fetchAll(SEARCH_TYPE_CLOSED, false, brand.getId()));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(SEARCH_TYPE_ONGOING, true, brand.getId(), errors));
+        eventList.addAll(fetchAll(SEARCH_TYPE_CLOSED, false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String searchType, boolean isOngoing, Long brandId) {
+    private List<CreateEvent> fetchAll(String searchType, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         int page = 0;
         boolean last = false;
@@ -61,6 +64,7 @@ public class BBQ implements Crawler {
 
                 if (response.statusCode() != 200) {
                     log.error("[BBQ] {} 목록 조회 실패(page={}): status={}", searchType, page, response.statusCode());
+                    errors.add(searchType + " 목록 조회 status=" + response.statusCode());
                     break;
                 }
 
@@ -69,14 +73,16 @@ public class BBQ implements Crawler {
                     try {
                         result.add(toCreateEvent(node, isOngoing, brandId));
                     } catch (Exception e) {
-                        log.error("[BBQ] 개별 항목 파싱 오류: {}", e.getMessage());
+                        log.error("[BBQ] 개별 항목 파싱 오류: {}", e.toString());
+                        errors.add("항목 파싱", e);
                     }
                 }
 
                 last = root.path("last").asBoolean(true);
                 page++;
             } catch (Exception e) {
-                log.error("[BBQ] {} 목록 조회 오류(page={}): {}", searchType, page, e.getMessage());
+                log.error("[BBQ] {} 목록 조회 오류(page={}): {}", searchType, page, e.toString());
+                errors.add(searchType + " 목록 조회", e);
                 break;
             }
         }

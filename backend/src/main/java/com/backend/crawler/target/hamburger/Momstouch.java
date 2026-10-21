@@ -1,7 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -68,17 +70,18 @@ public class Momstouch implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        eventList.addAll(fetchAll("Y", true, brand.getId()));
-        eventList.addAll(fetchAll("N", false, brand.getId()));
+        eventList.addAll(fetchAll("Y", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("N", false, brand.getId(), errors));
 
         log.info("[맘스터치] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId) {
+    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenUrls = new HashSet<>();
 
@@ -89,7 +92,8 @@ public class Momstouch implements Crawler {
                 html = requestEventList(page, status);
             } catch (Exception e) {
                 log.error("[맘스터치] 이벤트 목록 조회 오류(status={}, page={}): {}",
-                        status, page, e.getMessage());
+                        status, page, e.toString());
+                errors.add("목록 조회 status=" + status + " page=" + page, e);
                 break;
             }
 
@@ -118,7 +122,8 @@ public class Momstouch implements Crawler {
                     result.add(toCreateEvent(href, itemHtml, isActive, brandId));
                 } catch (Exception e) {
                     log.error("[맘스터치] 개별 이벤트 파싱 오류(url={}): {}",
-                            linkUrl, e.getMessage());
+                            linkUrl, e.toString());
+                    errors.add("이벤트 파싱 url=" + linkUrl, e);
                 }
             }
 

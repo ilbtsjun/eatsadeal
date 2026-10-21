@@ -1,7 +1,9 @@
 package com.backend.crawler.target.pizza;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -46,14 +48,15 @@ public class Pizzamaru implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId()));
-        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId()));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId(), errors));
+        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing, Long brandId) {
+    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
         String joinChar = baseUrl.contains("?") ? "&" : "?";
@@ -69,11 +72,13 @@ public class Pizzamaru implements Crawler {
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[피자마루] 목록 조회 실패(url={}): status={}", url, response.statusCode());
+                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
                     break;
                 }
                 html = response.body();
             } catch (Exception e) {
-                log.error("[피자마루] 목록 조회 오류(url={}): {}", url, e.getMessage());
+                log.error("[피자마루] 목록 조회 오류(url={}): {}", url, e.toString());
+                errors.add("목록 조회 url=" + url, e);
                 break;
             }
 
@@ -82,6 +87,9 @@ public class Pizzamaru implements Crawler {
 
             while (cardMatcher.find()) {
                 String href = cardMatcher.group(1);
+                if (!cardMatcher.group(2).contains("fz18 fw5") && !cardMatcher.group(2).contains("class=\"c6\"")) {
+                    continue;
+                }
                 if (!seenHrefs.add(href)) {
                     continue;
                 }
@@ -89,7 +97,8 @@ public class Pizzamaru implements Crawler {
                 try {
                     result.add(toCreateEvent(href, cardMatcher.group(2), isOngoing, brandId));
                 } catch (Exception e) {
-                    log.error("[피자마루] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
+                    log.error("[피자마루] 개별 항목 파싱 오류(href={}): {}", href, e.toString());
+                    errors.add("항목 파싱 href=" + href, e);
                 }
             }
 

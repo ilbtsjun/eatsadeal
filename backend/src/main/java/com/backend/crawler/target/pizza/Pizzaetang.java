@@ -1,7 +1,9 @@
 package com.backend.crawler.target.pizza;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -48,8 +50,9 @@ public class Pizzaetang implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> result = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
         Set<String> seenHrefs = new HashSet<>();
 
         String url = LIST_URL;
@@ -62,10 +65,14 @@ public class Pizzaetang implements Crawler {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 log.error("[피자에땅] 목록 조회 실패(url={}): status={}", url, response.statusCode());
+                errors.add("목록 조회 status=" + response.statusCode());
+                return CrawlResult.of(result, errors);
             }
             html = response.body();
         } catch (Exception e) {
-            log.error("[피자에땅] 목록 조회 오류(url={}): {}", url, e.getMessage());
+            log.error("[피자에땅] 목록 조회 오류(url={}): {}", url, e.toString());
+            errors.add("목록 조회", e);
+            return CrawlResult.of(result, errors);
         }
 
         Matcher cardMatcher = CARD_PATTERN.matcher(html);
@@ -79,12 +86,13 @@ public class Pizzaetang implements Crawler {
             try {
                 result.add(toCreateEvent(href, cardHtml, brand.getId()));
             } catch (Exception e) {
-                log.error("[피자에땅] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
+                log.error("[피자에땅] 개별 항목 파싱 오류(href={}): {}", href, e.toString());
+                errors.add("항목 파싱 href=" + href, e);
             }
         }
 
         log.info("[피자에땅] 이벤트 개수: {}", result.size());
-        return result;
+        return CrawlResult.of(result, errors);
     }
 
     private CreateEvent toCreateEvent(String href, String cardHtml, Long brandId) {

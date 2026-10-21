@@ -1,7 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -77,17 +79,18 @@ public class Lotteria implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        eventList.addAll(fetchAll("RUN", true, brand.getId()));
-        eventList.addAll(fetchAll("EXP", false, brand.getId()));
+        eventList.addAll(fetchAll("RUN", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("EXP", false, brand.getId(), errors));
 
         log.info("[롯데리아] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String eventStatusCode, boolean isActive, Long brandId) {
+    private List<CreateEvent> fetchAll(String eventStatusCode, boolean isActive, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -96,7 +99,8 @@ public class Lotteria implements Crawler {
             try {
                 html = requestEventList(page, eventStatusCode);
             } catch (Exception e) {
-                log.error("[롯데리아] 이벤트 목록 조회 오류(status={}, page={}): {}", eventStatusCode, page, e.getMessage());
+                log.error("[롯데리아] 이벤트 목록 조회 오류(status={}, page={}): {}", eventStatusCode, page, e.toString());
+                errors.add("목록 조회 status=" + eventStatusCode + " page=" + page, e);
                 break;
             }
 
@@ -115,6 +119,7 @@ public class Lotteria implements Crawler {
 
                 if (href == null) {
                     log.warn("[롯데리아] 이벤트 상세 URL 파싱 실패");
+                    errors.add("상세 URL 파싱 실패");
                     continue;
                 }
 
@@ -127,7 +132,8 @@ public class Lotteria implements Crawler {
                 try {
                     result.add(toCreateEvent(href, itemHtml, isActive, brandId));
                 } catch (Exception e) {
-                    log.error("[롯데리아] 개별 이벤트 파싱 오류(href={}): {}", href, e.getMessage());
+                    log.error("[롯데리아] 개별 이벤트 파싱 오류(href={}): {}", href, e.toString());
+                    errors.add("이벤트 파싱 href=" + href, e);
                 }
             }
 

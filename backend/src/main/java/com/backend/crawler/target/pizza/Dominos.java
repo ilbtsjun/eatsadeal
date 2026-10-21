@@ -1,7 +1,9 @@
 package com.backend.crawler.target.pizza;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -54,21 +56,23 @@ public class Dominos implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(LIST_URL, "E0200", true, brand.getId()));
-        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false, brand.getId()));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(LIST_URL, "E0200", true, brand.getId(), errors));
+        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing, Long brandId) {
+    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing, Long brandId, CrawlErrors errors) {
         Map<String, String[]> items = new LinkedHashMap<>();
 
         try {
             String html = fetchAsString(listUrl);
             parseListHtml(html, items);
         } catch (Exception e) {
-            log.error("[도미노] 목록 조회 오류(url={}): {}", listUrl, e.getMessage());
+            log.error("[도미노] 목록 조회 오류(url={}): {}", listUrl, e.toString());
+            errors.add("목록 조회 url=" + listUrl, e);
         }
 
         int pageNo = items.isEmpty() ? 1 : 2;
@@ -80,7 +84,11 @@ public class Dominos implements Crawler {
                         .header("Content-Type", "application/x-www-form-urlencoded")
                         .build();
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200 || response.body().isBlank()) {
+                if (response.statusCode() != 200) {
+                    errors.add("AJAX 목록 조회 pageNo=" + pageNo + " status=" + response.statusCode());
+                    break;
+                }
+                if (response.body().isBlank()) {
                     break;
                 }
                 int before = items.size();
@@ -93,7 +101,8 @@ public class Dominos implements Crawler {
                     break;
                 }
             } catch (Exception e) {
-                log.error("[도미노] AJAX 목록 조회 오류(pageNo={}): {}", pageNo, e.getMessage());
+                log.error("[도미노] AJAX 목록 조회 오류(pageNo={}): {}", pageNo, e.toString());
+                errors.add("AJAX 목록 조회 pageNo=" + pageNo, e);
                 break;
             }
         }
@@ -106,7 +115,8 @@ public class Dominos implements Crawler {
                     result.add(event);
                 }
             } catch (Exception e) {
-                log.error("[도미노] 상세 조회 오류(href={}): {}", entry.getValue()[0], e.getMessage());
+                log.error("[도미노] 상세 조회 오류(href={}): {}", entry.getValue()[0], e.toString());
+                errors.add("상세 조회 href=" + entry.getValue()[0], e);
             }
         }
 
@@ -181,6 +191,9 @@ public class Dominos implements Crawler {
         while (entryMatcher.find()) {
             String entryJson = entryMatcher.group();
             String seq = entryMatcher.group(1);
+            if ("0".equals(seq)) {
+                continue;
+            }
             String type = extractJsonField(entryJson, "type");
             String linkUrl = extractJsonField(entryJson, "link_url");
             String target = extractJsonField(entryJson, "target");

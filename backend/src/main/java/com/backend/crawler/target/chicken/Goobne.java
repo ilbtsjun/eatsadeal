@@ -1,7 +1,9 @@
 package com.backend.crawler.target.chicken;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -40,14 +42,15 @@ public class Goobne implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll("now_date", true, brand.getId()));
-        eventList.addAll(fetchAll("end_date", false, brand.getId()));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll("now_date", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("end_date", false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String eventGb, boolean isOngoing, Long brandId) {
+    private List<CreateEvent> fetchAll(String eventGb, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         int pageNum = 1;
         int totalCnt = Integer.MAX_VALUE;
@@ -71,6 +74,7 @@ public class Goobne implements Crawler {
 
                 if (response.statusCode() != 200) {
                     log.error("[굽네] {} 목록 조회 실패(pageNum={}): status={}", eventGb, pageNum, response.statusCode());
+                    errors.add(eventGb + " 목록 조회 status=" + response.statusCode());
                     break;
                 }
 
@@ -87,13 +91,15 @@ public class Goobne implements Crawler {
                     try {
                         result.add(toCreateEvent(node, isOngoing, brandId));
                     } catch (Exception e) {
-                        log.error("[굽네] 개별 항목 파싱 오류: {}", e.getMessage());
+                        log.error("[굽네] 개별 항목 파싱 오류: {}", e.toString());
+                        errors.add("항목 파싱", e);
                     }
                 }
 
                 pageNum++;
             } catch (Exception e) {
-                log.error("[굽네] {} 목록 조회 오류(pageNum={}): {}", eventGb, pageNum, e.getMessage());
+                log.error("[굽네] {} 목록 조회 오류(pageNum={}): {}", eventGb, pageNum, e.toString());
+                errors.add(eventGb + " 목록 조회", e);
                 break;
             }
         }

@@ -1,7 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,20 +50,22 @@ public class KFC implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> events = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
         try {
-            events.addAll(crawlList(ONGOING_URL, brand.getId(), true));
-            events.addAll(crawlList(ENDED_URL, brand.getId(), false));
+            events.addAll(crawlList(ONGOING_URL, brand.getId(), true, errors));
+            events.addAll(crawlList(ENDED_URL, brand.getId(), false, errors));
         } catch (Exception e) {
             log.error("KFC 이벤트 크롤링 실패", e);
+            errors.add("크롤링", e);
         }
 
-        return events;
+        return CrawlResult.of(events, errors);
     }
 
-    private List<CreateEvent> crawlList(String url, Long brandId, boolean isActive) {
+    private List<CreateEvent> crawlList(String url, Long brandId, boolean isActive, CrawlErrors errors) {
         List<CreateEvent> events = new ArrayList<>();
 
         try {
@@ -70,6 +74,7 @@ public class KFC implements Crawler {
 
             if (!matcher.find()) {
                 log.warn("KFC 초기 상태 데이터를 찾을 수 없습니다. url={}", url);
+                errors.add("초기 상태 데이터 없음 url=" + url);
                 return events;
             }
 
@@ -88,7 +93,7 @@ public class KFC implements Crawler {
                 }
 
                 for (JsonNode row : rows) {
-                    CreateEvent event = toCreateEvent(row, brandId, isActive);
+                    CreateEvent event = toCreateEvent(row, brandId, isActive, errors);
 
                     if (event != null) {
                         events.add(event);
@@ -99,12 +104,13 @@ public class KFC implements Crawler {
             }
         } catch (Exception e) {
             log.error("KFC 이벤트 목록 크롤링 실패. url={}", url, e);
+            errors.add("목록 크롤링 url=" + url, e);
         }
 
         return events;
     }
 
-    private CreateEvent toCreateEvent(JsonNode row, Long brandId, boolean isActive) {
+    private CreateEvent toCreateEvent(JsonNode row, Long brandId, boolean isActive, CrawlErrors errors) {
         try {
             String eventIndex = getText(row, "event_index");
             String title = getText(row, "event_title");
@@ -152,6 +158,7 @@ public class KFC implements Crawler {
             );
         } catch (Exception e) {
             log.error("KFC 이벤트 변환 실패. row={}", row, e);
+            errors.add("이벤트 변환", e);
             return null;
         }
     }

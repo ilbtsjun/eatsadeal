@@ -1,7 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -57,7 +59,7 @@ public class Frankburger implements Crawler {
     );
 
     private static final Pattern DATE_PATTERN = Pattern.compile(
-            "(\\d{4}/\\d{2}/\\d{2})\\s*~\\s*(\\d{4}/\\d{2}/\\d{2})"
+            "(\\d{4}/\\d{2}/\\d{2})(?:\\s*~\\s*(\\d{4}/\\d{2}/\\d{2})?)?"
     );
 
     private static final Pattern IMG_PATTERN = Pattern.compile(
@@ -78,14 +80,15 @@ public class Frankburger implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
         Set<String> seenIds = new HashSet<>();
 
         for (int page = 1; page <= MAX_PAGES; page++) {
             try {
                 String html = requestEventList(page);
-                List<CreateEvent> pageEvents = parseEvents(html, brand.getId(), seenIds);
+                List<CreateEvent> pageEvents = parseEvents(html, brand.getId(), seenIds, errors);
 
                 if (pageEvents.isEmpty()) {
                     break;
@@ -97,13 +100,14 @@ public class Frankburger implements Crawler {
                         page, pageEvents.size(), eventList.size());
             } catch (Exception e) {
                 log.error("[프랭크버거] 이벤트 목록 조회 오류(page={}): {}",
-                        page, e.getMessage());
+                        page, e.toString());
+                errors.add("목록 조회 page=" + page, e);
                 break;
             }
         }
 
         log.info("[프랭크버거] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
     private String requestEventList(int page) throws Exception {
@@ -128,7 +132,7 @@ public class Frankburger implements Crawler {
         return response.body();
     }
 
-    private List<CreateEvent> parseEvents(String html, Long brandId, Set<String> seenIds) {
+    private List<CreateEvent> parseEvents(String html, Long brandId, Set<String> seenIds, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
 
         Matcher itemMatcher = ITEM_PATTERN.matcher(html);
@@ -152,7 +156,8 @@ public class Frankburger implements Crawler {
                 result.add(toCreateEvent(href, itemHtml, brandId));
             } catch (Exception e) {
                 log.error("[프랭크버거] 개별 이벤트 파싱 오류(idx={}): {}",
-                        eventId, e.getMessage());
+                        eventId, e.toString());
+                errors.add("이벤트 파싱 idx=" + eventId, e);
             }
         }
 
@@ -174,7 +179,9 @@ public class Frankburger implements Crawler {
 
         if (dateMatcher.find()) {
             startDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atStartOfDay();
-            endDate = LocalDate.parse(dateMatcher.group(2), DATE_FORMAT).atTime(23, 59, 59);
+            endDate = dateMatcher.group(2) == null
+                    ? OPEN_ENDED_DATE.atTime(23, 59, 59)
+                    : LocalDate.parse(dateMatcher.group(2), DATE_FORMAT).atTime(23, 59, 59);
         } else {
             startDate = null;
             endDate = OPEN_ENDED_DATE.atTime(23, 59, 59);

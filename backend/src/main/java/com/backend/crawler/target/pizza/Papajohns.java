@@ -1,7 +1,9 @@
 package com.backend.crawler.target.pizza;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -45,14 +47,15 @@ public class Papajohns implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId()));
-        eventList.addAll(fetchAll(PAST_URL, false, brand.getId()));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId(), errors));
+        eventList.addAll(fetchAll(PAST_URL, false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing, Long brandId) {
+    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -67,11 +70,13 @@ public class Papajohns implements Crawler {
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[파파존스] 목록 조회 실패(url={}): status={}", url, response.statusCode());
+                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
                     break;
                 }
                 html = response.body();
             } catch (Exception e) {
-                log.error("[파파존스] 목록 조회 오류(url={}): {}", url, e.getMessage());
+                log.error("[파파존스] 목록 조회 오류(url={}): {}", url, e.toString());
+                errors.add("목록 조회 url=" + url, e);
                 break;
             }
 
@@ -93,7 +98,8 @@ public class Papajohns implements Crawler {
                         result.add(toCreateEventPast(href, cardMatcher.group(2), isOngoing, brandId));
                     }
                 } catch (Exception e) {
-                    log.error("[파파존스] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
+                    log.error("[파파존스] 개별 항목 파싱 오류(href={}): {}", href, e.toString());
+                    errors.add("항목 파싱 href=" + href, e);
                 }
             }
 

@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.brand.repository.BrandRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlTarget;
@@ -114,45 +115,49 @@ public class CrawlerService {
         BrandState state = stateOf(brand);
         if (state == BrandState.INACTIVE) {
             log.info("[CRAWL SKIP] brand={} reason=inactive", target.getKey());
-            return new CrawlOutcome(CrawlStatus.SKIPPED_INACTIVE, 0, 0, null);
+            return new CrawlOutcome(CrawlStatus.SKIPPED_INACTIVE, 0, 0, 0, null);
         }
         if (state == BrandState.MISSING) {
             log.warn("[CRAWL FAIL] brand={} reason=brand not found", target.getKey());
-            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, "brand not found");
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0, "brand not found");
         }
         try {
-            List<CreateEvent> list = registry.get(target).crawl(brand);
-            int collected = list == null ? 0 : list.size();
-            int errors = 0;
-            String firstError = null;
+            CrawlResult result = registry.get(target).crawl(brand);
+            List<CreateEvent> list = result.events() == null ? List.of() : result.events();
+            int collected = list.size();
+            int crawlErrors = result.errors();
+            int saveErrors = 0;
+            String firstError = result.firstError();
 
-            if (list != null) {
-                for (CreateEvent event : list) {
-                    try {
-                        eventService.upsertCrawledEvent(event);
-                    } catch (Exception e) {
-                        errors++;
-                        if (firstError == null) {
-                            firstError = e.getClass().getSimpleName() + ": " + e.getMessage();
-                        }
-                        log.warn("[CRAWL SAVE FAIL] brand={} url={} reason={}",
-                                target.getKey(), event.url(), e.getClass().getSimpleName());
+            for (CreateEvent event : list) {
+                try {
+                    eventService.upsertCrawledEvent(event);
+                } catch (Exception e) {
+                    saveErrors++;
+                    if (firstError == null) {
+                        firstError = "저장 - " + e.getClass().getSimpleName() + ": " + e.getMessage();
                     }
+                    log.warn("[CRAWL SAVE FAIL] brand={} url={} reason={}",
+                            target.getKey(), event.url(), e.getClass().getSimpleName());
                 }
             }
 
-            CrawlStatus status = collected == 0 ? CrawlStatus.EMPTY
-                    : errors > 0 ? CrawlStatus.PARTIAL
-                    : CrawlStatus.SUCCESS;
+            int totalErrors = crawlErrors + saveErrors;
+            CrawlStatus status;
+            if (collected == 0) {
+                status = totalErrors > 0 ? CrawlStatus.FAILED : CrawlStatus.EMPTY;
+            } else {
+                status = totalErrors > 0 ? CrawlStatus.PARTIAL : CrawlStatus.SUCCESS;
+            }
             if (status == CrawlStatus.EMPTY) {
                 log.warn("[CRAWL EMPTY] brand={} reason=no events collected", target.getKey());
             }
-            log.info("[CRAWL OK] brand={} count={} status={} saveErrors={}",
-                    target.getKey(), collected, status, errors);
-            return new CrawlOutcome(status, collected, errors, firstError);
+            log.info("[CRAWL OK] brand={} count={} status={} crawlErrors={} saveErrors={}",
+                    target.getKey(), collected, status, crawlErrors, saveErrors);
+            return new CrawlOutcome(status, collected, saveErrors, crawlErrors, firstError);
         } catch (Exception e) {
             log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.toString(), e);
-            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, e.getClass().getSimpleName() + ": " + e.getMessage());
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -169,9 +174,13 @@ public class CrawlerService {
         }
     }
 
-    private record CrawlOutcome(CrawlStatus status, int collected, int errors, String message) {
+    private record CrawlOutcome(CrawlStatus status, int collected, int saveErrors, int crawlErrors, String message) {
         int saved() {
-            return collected - errors;
+            return collected - saveErrors;
+        }
+
+        int errors() {
+            return saveErrors + crawlErrors;
         }
     }
 

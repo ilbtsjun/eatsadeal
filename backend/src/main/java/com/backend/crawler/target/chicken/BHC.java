@@ -1,7 +1,9 @@
 package com.backend.crawler.target.chicken;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,8 +37,9 @@ public class BHC implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(API_URL))
@@ -47,7 +50,8 @@ public class BHC implements Crawler {
 
             if (response.statusCode() != 200) {
                 log.error("[BHC] 이벤트 목록 조회 실패: status={}", response.statusCode());
-                return eventList;
+                errors.add("목록 조회 status=" + response.statusCode());
+                return CrawlResult.of(eventList, errors);
             }
 
             JsonNode root = objectMapper.readTree(response.body());
@@ -56,16 +60,18 @@ public class BHC implements Crawler {
                 try {
                     eventList.add(toCreateEvent(node, brand.getId()));
                 } catch (Exception e) {
-                    log.error("[BHC] 개별 항목 파싱 오류: {}", e.getMessage());
+                    log.error("[BHC] 개별 항목 파싱 오류: {}", e.toString());
+                    errors.add("항목 파싱", e);
                 }
             }
 
             log.info("[BHC] 크롤링된 이벤트 개수: {}", eventList.size());
         } catch (Exception e) {
-            log.error("[BHC] 크롤링 실패: {}", e.getMessage());
+            log.error("[BHC] 크롤링 실패: {}", e.toString());
+            errors.add("크롤링", e);
         }
 
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
     private CreateEvent toCreateEvent(JsonNode node, Long brandId) {

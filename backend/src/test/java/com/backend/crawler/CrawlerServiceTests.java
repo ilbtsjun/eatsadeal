@@ -4,6 +4,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.brand.repository.BrandRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlTarget;
@@ -49,7 +50,7 @@ class CrawlerServiceTests {
         for (CrawlTarget target : CrawlTarget.values()) {
             Crawler crawler = mock(Crawler.class);
             lenient().when(crawler.getName()).thenReturn(target.getBrandName());
-            lenient().when(crawler.crawl(any())).thenReturn(List.of(EVENT));
+            lenient().when(crawler.crawl(any())).thenReturn(new CrawlResult(List.of(EVENT), 0, null));
             crawlers.put(target, crawler);
         }
         crawlerService = new CrawlerService(eventService, brandRepository, crawlRunRepository,
@@ -192,7 +193,7 @@ class CrawlerServiceTests {
     @DisplayName("수집 0건이면 EMPTY로 기록한다")
     void crawlAll_emptyResult_isReportedAsEmpty() {
         givenBrands();
-        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(List.of());
+        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(new CrawlResult(List.of(), 0, null));
 
         CrawlReport report = crawlerService.crawlAll();
 
@@ -232,5 +233,31 @@ class CrawlerServiceTests {
 
         assertEquals(15, report.saved());
         assertTrue(report.failed().isEmpty());
+    }
+
+    @Test
+    @DisplayName("수집은 됐지만 크롤링 중 오류가 있으면 PARTIAL")
+    void crawlAll_crawlErrorsWithEvents_isPartial() {
+        givenBrands();
+        when(crawler(CrawlTarget.KFC).crawl(any()))
+                .thenReturn(new CrawlResult(List.of(EVENT), 2, "항목 파싱"));
+
+        CrawlReport report = crawlerService.crawlAll();
+
+        assertEquals(List.of("kfc"), report.partial());
+        assertEquals(15, report.saved());
+    }
+
+    @Test
+    @DisplayName("수집 0건에 오류가 있으면 FAILED (EMPTY와 구분)")
+    void crawlAll_crawlErrorsWithoutEvents_isFailed() {
+        givenBrands();
+        when(crawler(CrawlTarget.KFC).crawl(any()))
+                .thenReturn(new CrawlResult(List.of(), 1, "목록 조회 status=503"));
+
+        CrawlReport report = crawlerService.crawlAll();
+
+        assertEquals(List.of("kfc"), report.failed());
+        assertTrue(report.empty().isEmpty());
     }
 }

@@ -1,7 +1,9 @@
 package com.backend.crawler.target.chicken;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,25 +39,27 @@ public class Pelicana implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        for (long eventSeq : fetchAllEventSeqs()) {
+        for (long eventSeq : fetchAllEventSeqs(errors)) {
             try {
-                CreateEvent event = fetchDetail(eventSeq, brand.getId());
+                CreateEvent event = fetchDetail(eventSeq, brand.getId(), errors);
                 if (event != null) {
                     eventList.add(event);
                 }
             } catch (Exception e) {
-                log.error("[Pelicana] 상세 조회 오류(eventSeq={}): {}", eventSeq, e.getMessage());
+                log.error("[Pelicana] 상세 조회 오류(eventSeq={}): {}", eventSeq, e.toString());
+                errors.add("상세 조회 eventSeq=" + eventSeq, e);
             }
         }
 
         log.info("[Pelicana] 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<Long> fetchAllEventSeqs() {
+    private List<Long> fetchAllEventSeqs(CrawlErrors errors) {
         List<Long> seqList = new ArrayList<>();
         int pageNum = 0;
         boolean last = false;
@@ -72,6 +76,7 @@ public class Pelicana implements Crawler {
 
                 if (response.statusCode() != 200) {
                     log.error("[Pelicana] 목록 조회 실패(pageNum={}): status={}", pageNum, response.statusCode());
+                    errors.add("목록 조회 status=" + response.statusCode());
                     break;
                 }
 
@@ -85,7 +90,8 @@ public class Pelicana implements Crawler {
                 last = resultData.path("last").asBoolean(true);
                 pageNum++;
             } catch (Exception e) {
-                log.error("[Pelicana] 목록 조회 오류(pageNum={}): {}", pageNum, e.getMessage());
+                log.error("[Pelicana] 목록 조회 오류(pageNum={}): {}", pageNum, e.toString());
+                errors.add("목록 조회", e);
                 break;
             }
         }
@@ -93,7 +99,7 @@ public class Pelicana implements Crawler {
         return seqList;
     }
 
-    private CreateEvent fetchDetail(long eventSeq, Long brandId) throws Exception {
+    private CreateEvent fetchDetail(long eventSeq, Long brandId, CrawlErrors errors) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(URI.create(DETAIL_API_URL + eventSeq))
                 .GET()
                 .header("Accept", "application/json")
@@ -102,6 +108,7 @@ public class Pelicana implements Crawler {
 
         if (response.statusCode() != 200) {
             log.error("[Pelicana] 상세 조회 실패(eventSeq={}): status={}", eventSeq, response.statusCode());
+            errors.add("상세 조회 eventSeq=" + eventSeq + " status=" + response.statusCode());
             return null;
         }
 

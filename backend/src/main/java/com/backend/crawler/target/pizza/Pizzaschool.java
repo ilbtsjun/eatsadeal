@@ -1,7 +1,9 @@
 package com.backend.crawler.target.pizza;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import lombok.AllArgsConstructor;
@@ -41,8 +43,9 @@ public class Pizzaschool implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> result = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
         for (int page = 1; page <= PAGES_TO_FETCH; page++) {
             String url = page == 1 ? LIST_URL : LIST_URL + "?avia-element-paging=" + page;
@@ -55,11 +58,13 @@ public class Pizzaschool implements Crawler {
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("[피자스쿨] 목록 조회 실패(url={}): status={}", url, response.statusCode());
+                    errors.add("목록 조회 url=" + url + " status=" + response.statusCode());
                     break;
                 }
                 html = response.body();
             } catch (Exception e) {
-                log.error("[피자스쿨] 목록 조회 오류(url={}): {}", url, e.getMessage());
+                log.error("[피자스쿨] 목록 조회 오류(url={}): {}", url, e.toString());
+                errors.add("목록 조회 url=" + url, e);
                 break;
             }
 
@@ -69,13 +74,14 @@ public class Pizzaschool implements Crawler {
                 try {
                     result.add(toCreateEvent(articleHtml, brand.getId()));
                 } catch (Exception e) {
-                    log.error("[피자스쿨] 개별 항목 파싱 오류: {}", e.getMessage());
+                    log.error("[피자스쿨] 개별 항목 파싱 오류: {}", e.toString());
+                    errors.add("항목 파싱", e);
                 }
             }
         }
 
         log.info("[피자스쿨] 이벤트 개수: {}", result.size());
-        return result;
+        return CrawlResult.of(result, errors);
     }
 
     private CreateEvent toCreateEvent(String articleHtml, Long brandId) {

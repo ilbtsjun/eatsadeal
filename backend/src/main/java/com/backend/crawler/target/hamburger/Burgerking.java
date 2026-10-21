@@ -1,7 +1,9 @@
 package com.backend.crawler.target.hamburger;
 
 import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
 import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,16 +47,17 @@ public class Burgerking implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl(Brand brand) {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        eventList.addAll(fetchAll("C", true, brand.getId()));
-        eventList.addAll(fetchAll("E", false, brand.getId()));
+        eventList.addAll(fetchAll("C", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("E", false, brand.getId(), errors));
         log.info("[버거킹] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId) {
+    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenEventIds = new HashSet<>();
 
@@ -63,7 +66,8 @@ public class Burgerking implements Crawler {
             try {
                 json = requestEventList(status, page);
             } catch (Exception e) {
-                log.error("[버거킹] 이벤트 목록 조회 오류(status={}, page={}): {}", status, e.getMessage());
+                log.error("[버거킹] 이벤트 목록 조회 오류(status={}, page={}): {}", status, page, e.toString());
+                errors.add("목록 조회 status=" + status + " page=" + page, e);
                 break;
             }
 
@@ -78,6 +82,7 @@ public class Burgerking implements Crawler {
                                     .path("error_text")
                                     .asText()
                     );
+                    errors.add("API 응답 실패 status=" + status + " page=" + page);
                     break;
                 }
 
@@ -105,7 +110,8 @@ public class Burgerking implements Crawler {
                         addedInThisPage++;
 
                     } catch (Exception e) {
-                        log.error("[버거킹] 개별 이벤트 파싱 오류(eventId={}): {}", eventId, e.getMessage());
+                        log.error("[버거킹] 개별 이벤트 파싱 오류(eventId={}): {}", eventId, e.toString());
+                        errors.add("이벤트 파싱 eventId=" + eventId, e);
                     }
                 }
 
@@ -120,7 +126,8 @@ public class Burgerking implements Crawler {
                 }
 
             } catch (Exception e) {
-                log.error("[버거킹] JSON 파싱 오류(status={}, page={}): {}", status, page, e.getMessage());
+                log.error("[버거킹] JSON 파싱 오류(status={}, page={}): {}", status, page, e.toString());
+                errors.add("JSON 파싱 status=" + status + " page=" + page, e);
                 break;
             }
         }
