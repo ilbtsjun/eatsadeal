@@ -7,12 +7,16 @@ import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
+import com.backend.crawler.dto.CrawlRunResponse;
 import com.backend.crawler.dto.CrawlTarget;
 import com.backend.crawler.entity.CrawlRun;
+import com.backend.crawler.entity.CrawlStatus;
 import com.backend.crawler.repository.CrawlRunRepository;
+import com.backend.crawler.scheduler.CrawlerScheduler;
 import com.backend.crawler.service.CrawlerService;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
+import com.backend.mail.service.MailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,12 +24,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,9 +47,11 @@ class CrawlerServiceTests {
     @Mock private EventService eventService;
     @Mock private BrandRepository brandRepository;
     @Mock private CrawlRunRepository crawlRunRepository;
+    @Mock private MailService mailService;
 
     private final Map<CrawlTarget, Crawler> crawlers = new EnumMap<>(CrawlTarget.class);
     private CrawlerService crawlerService;
+    private CrawlerScheduler scheduler;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +63,8 @@ class CrawlerServiceTests {
         }
         crawlerService = new CrawlerService(eventService, brandRepository, crawlRunRepository,
                 new ArrayList<>(crawlers.values()));
+        scheduler = new CrawlerScheduler(crawlerService, mailService);
+        ReflectionTestUtils.setField(scheduler, "alertEnabled", true);
     }
 
     private Crawler crawler(CrawlTarget target) {
@@ -259,5 +269,82 @@ class CrawlerServiceTests {
 
         assertEquals(List.of("kfc"), report.failed());
         assertTrue(report.empty().isEmpty());
+    }
+
+    private CrawlRun history(String brandKey, CrawlStatus status) {
+        LocalDateTime now = LocalDateTime.now();
+        return CrawlRun.of("run", 1L, brandKey, status, 0, 1, null, now, now);
+    }
+
+    @Test
+    @DisplayName("스케줄러: 문제가 없으면 메일을 보내지 않는다")
+    void scheduler_noProblem_sendsNothing() {
+        givenBrands(CrawlTarget.LOTTERIA);
+
+        scheduler.crawlPeriodically();
+
+        verifyNoInteractions(mailService);
+    }
+
+    @Test
+    @DisplayName("스케줄러: 일부 실패·0건이 있으면 문제 브랜드만 담아 메일을 보낸다")
+    @SuppressWarnings("unchecked")
+    void scheduler_problem_sendsMailWithProblemBrandsOnly() {
+        givenBrands(CrawlTarget.LOTTERIA);
+        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(new CrawlResult(List.of(), 0, null));
+        when(crawler(CrawlTarget.KYOCHON).crawl(any()))
+                .thenReturn(new CrawlResult(List.of(EVENT), 2, "항목 파싱"));
+        when(crawlRunRepository.findTopByOrderByIdDesc())
+                .thenReturn(Optional.of(history("bhc", CrawlStatus.SUCCESS)));
+        when(crawlRunRepository.findByRunIdOrderByIdAsc("run")).thenReturn(List.of(
+                history("bhc", CrawlStatus.SUCCESS),
+                history("kfc", CrawlStatus.EMPTY),
+                history("kyochon", CrawlStatus.PARTIAL)));
+
+        scheduler.crawlPeriodically();
+
+        ArgumentCaptor<CrawlReport> report = ArgumentCaptor.forClass(CrawlReport.class);
+        ArgumentCaptor<List<CrawlRunResponse>> problems = ArgumentCaptor.forClass(List.class);
+        verify(mailService).sendCrawlAlertMessage(report.capture(), problems.capture());
+        assertEquals(List.of("kyochon"), report.getValue().partial());
+        assertEquals(List.of("kfc"), report.getValue().empty());
+        assertEquals(List.of("kfc", "kyochon"),
+                problems.getValue().stream().map(CrawlRunResponse::brandKey).toList());
+    }
+
+    @Test
+    @DisplayName("스케줄러: 알림을 끄면 메일을 보내지 않는다")
+    void scheduler_disabled_sendsNothing() {
+        ReflectionTestUtils.setField(scheduler, "alertEnabled", false);
+        givenBrands(CrawlTarget.LOTTERIA);
+        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(new CrawlResult(List.of(), 0, null));
+
+        scheduler.crawlPeriodically();
+
+        verifyNoInteractions(mailService);
+    }
+
+    @Test
+    @DisplayName("스케줄러: 크롤링이 예외로 중단되면 실행 실패 메일을 보낸다")
+    void scheduler_crawlException_sendsErrorMail() {
+        when(brandRepository.findAll()).thenThrow(new RuntimeException("db down"));
+
+        scheduler.crawlPeriodically();
+
+        verify(mailService).sendCrawlErrorMessage(any(Exception.class));
+        verify(mailService, never()).sendCrawlAlertMessage(any(), any());
+    }
+
+    @Test
+    @DisplayName("스케줄러: 알림 준비 중 예외가 나도 실행 실패 메일로 오인하지 않는다")
+    void scheduler_alertPreparationFailure_isSwallowed() {
+        givenBrands(CrawlTarget.LOTTERIA);
+        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(new CrawlResult(List.of(), 0, null));
+        when(crawlRunRepository.findTopByOrderByIdDesc()).thenThrow(new RuntimeException("db down"));
+
+        scheduler.crawlPeriodically();
+
+        verify(mailService, never()).sendCrawlErrorMessage(any());
+        verify(mailService, never()).sendCrawlAlertMessage(any(), any());
     }
 }
