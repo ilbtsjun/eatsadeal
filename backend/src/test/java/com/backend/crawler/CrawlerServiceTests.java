@@ -7,6 +7,8 @@ import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlTarget;
+import com.backend.crawler.entity.CrawlRun;
+import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.crawler.service.CrawlerService;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
@@ -37,6 +39,7 @@ class CrawlerServiceTests {
 
     @Mock private EventService eventService;
     @Mock private BrandRepository brandRepository;
+    @Mock private CrawlRunRepository crawlRunRepository;
 
     private final Map<CrawlTarget, Crawler> crawlers = new EnumMap<>(CrawlTarget.class);
     private CrawlerService crawlerService;
@@ -49,7 +52,7 @@ class CrawlerServiceTests {
             lenient().when(crawler.crawl(any())).thenReturn(List.of(EVENT));
             crawlers.put(target, crawler);
         }
-        crawlerService = new CrawlerService(eventService, brandRepository,
+        crawlerService = new CrawlerService(eventService, brandRepository, crawlRunRepository,
                 new ArrayList<>(crawlers.values()));
     }
 
@@ -81,7 +84,7 @@ class CrawlerServiceTests {
         withoutBhc.remove(crawler(CrawlTarget.BHC));
 
         assertThrows(IllegalStateException.class,
-                () -> new CrawlerService(eventService, brandRepository, withoutBhc));
+                () -> new CrawlerService(eventService, brandRepository, crawlRunRepository, withoutBhc));
     }
 
     @Test
@@ -183,5 +186,51 @@ class CrawlerServiceTests {
         crawlerService.crawlAll();
 
         verify(brandRepository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("수집 0건이면 EMPTY로 기록한다")
+    void crawlAll_emptyResult_isReportedAsEmpty() {
+        givenBrands();
+        when(crawler(CrawlTarget.KFC).crawl(any())).thenReturn(List.of());
+
+        CrawlReport report = crawlerService.crawlAll();
+
+        assertEquals(List.of("kfc"), report.empty());
+        assertEquals(14, report.saved());
+    }
+
+    @Test
+    @DisplayName("저장 중 일부가 실패하면 PARTIAL이고 나머지는 계속 저장한다")
+    void crawlAll_saveFailure_isPartial() {
+        givenBrands();
+        doThrow(new RuntimeException("boom")).when(eventService).upsertCrawledEvent(any(CreateEvent.class));
+
+        CrawlReport report = crawlerService.crawlAll();
+
+        assertEquals(15, report.partial().size());
+        assertEquals(0, report.saved());
+    }
+
+    @Test
+    @DisplayName("브랜드마다 실행 이력을 1건씩 저장한다 (건너뛴 브랜드 포함)")
+    void crawlAll_savesOneHistoryPerTarget() {
+        givenBrands(CrawlTarget.LOTTERIA);
+
+        crawlerService.crawlAll();
+
+        verify(crawlRunRepository, times(15)).save(any(CrawlRun.class));
+    }
+
+    @Test
+    @DisplayName("이력 저장이 실패해도 크롤링 결과는 정상이다")
+    void crawlAll_historyFailure_doesNotBreakCrawl() {
+        givenBrands();
+        when(crawlRunRepository.save(any(CrawlRun.class))).thenThrow(new RuntimeException("db down"));
+
+        CrawlReport report = crawlerService.crawlAll();
+
+        assertEquals(15, report.saved());
+        assertTrue(report.failed().isEmpty());
     }
 }

@@ -7,22 +7,26 @@ import com.backend.common.error.ErrorCode;
 import com.backend.crawler.common.Crawler;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlTarget;
+import com.backend.crawler.entity.CrawlRun;
+import com.backend.crawler.entity.CrawlStatus;
+import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.service.EventService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
 public class CrawlerService {
 
     private enum BrandState { ACTIVE, INACTIVE, MISSING }
+    private final CrawlRunRepository crawlRunRepository;
 
     private final EventService eventService;
     private final BrandRepository brandRepository;
@@ -31,9 +35,11 @@ public class CrawlerService {
 
     public CrawlerService(EventService eventService,
                           BrandRepository brandRepository,
+                          CrawlRunRepository crawlRunRepository,
                           List<Crawler> crawlers) {
         this.eventService = eventService;
         this.brandRepository = brandRepository;
+        this.crawlRunRepository = crawlRunRepository;
 
         Map<String, Crawler> byName = crawlers.stream()
                 .collect(Collectors.toMap(Crawler::getName, Function.identity()));
@@ -72,49 +78,101 @@ public class CrawlerService {
                     "이미 크롤링이 진행 중입니다. 완료 후 다시 시도해주세요.");
         }
         long start = System.currentTimeMillis();
+        String runId = UUID.randomUUID().toString();
         int saved = 0;
         List<String> skipped = new ArrayList<>();
         List<String> failed = new ArrayList<>();
+        List<String> partial = new ArrayList<>();
+        List<String> empty = new ArrayList<>();
         try {
             Map<String, Brand> brands = loadBrands();
             for (CrawlTarget target : targets) {
                 Brand brand = brands.get(target.getBrandName());
-                BrandState state = stateOf(brand);
-                if (state == BrandState.INACTIVE) {
-                    skipped.add(target.getKey());
-                    log.info("[CRAWL SKIP] brand={} reason=inactive", target.getKey());
-                    continue;
-                }
-                if (state == BrandState.MISSING) {
-                    failed.add(target.getKey());
-                    log.warn("[CRAWL FAIL] brand={} reason=brand not found", target.getKey());
-                    continue;
-                }
-                try {
-                    saved += crawlAndSave(target, brand);
-                } catch (Exception e) {
-                    failed.add(target.getKey());
-                    log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.getMessage(), e);
+                LocalDateTime startedAt = LocalDateTime.now();
+
+                CrawlOutcome outcome = crawlBrand(target, brand);
+                saveHistory(runId, target, brand, outcome, startedAt);
+
+                saved += outcome.saved();
+                switch (outcome.status()) {
+                    case SKIPPED_INACTIVE -> skipped.add(target.getKey());
+                    case FAILED -> failed.add(target.getKey());
+                    case PARTIAL -> partial.add(target.getKey());
+                    case EMPTY -> empty.add(target.getKey());
+                    case SUCCESS -> { }
                 }
             }
-            log.info("[CRAWL DONE] target={} saved={} skipped={} failed={} elapsed={}ms",
-                    label, saved, skipped, failed, System.currentTimeMillis() - start);
-            return new CrawlReport(saved, skipped, failed);
+            log.info("[CRAWL DONE] target={} runId={} saved={} skipped={} failed={} partial={} empty={} elapsed={}ms",
+                    label, runId, saved, skipped, failed, partial, empty, System.currentTimeMillis() - start);
+            return new CrawlReport(saved, skipped, failed, partial, empty);
         } finally {
             running.set(false);
         }
     }
 
-    private int crawlAndSave(CrawlTarget target, Brand brand) {
-        List<CreateEvent> list = registry.get(target).crawl(brand);
-        if (list == null) {
-            return 0;
+    private CrawlOutcome crawlBrand(CrawlTarget target, Brand brand) {
+        BrandState state = stateOf(brand);
+        if (state == BrandState.INACTIVE) {
+            log.info("[CRAWL SKIP] brand={} reason=inactive", target.getKey());
+            return new CrawlOutcome(CrawlStatus.SKIPPED_INACTIVE, 0, 0, null);
         }
-        for (CreateEvent event : list) {
-            eventService.upsertCrawledEvent(event);
+        if (state == BrandState.MISSING) {
+            log.warn("[CRAWL FAIL] brand={} reason=brand not found", target.getKey());
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, "brand not found");
         }
-        log.info("[CRAWL OK] brand={} count={}", target.getKey(), list.size());
-        return list.size();
+        try {
+            List<CreateEvent> list = registry.get(target).crawl(brand);
+            int collected = list == null ? 0 : list.size();
+            int errors = 0;
+            String firstError = null;
+
+            if (list != null) {
+                for (CreateEvent event : list) {
+                    try {
+                        eventService.upsertCrawledEvent(event);
+                    } catch (Exception e) {
+                        errors++;
+                        if (firstError == null) {
+                            firstError = e.getClass().getSimpleName() + ": " + e.getMessage();
+                        }
+                        log.warn("[CRAWL SAVE FAIL] brand={} url={} reason={}",
+                                target.getKey(), event.url(), e.getClass().getSimpleName());
+                    }
+                }
+            }
+
+            CrawlStatus status = collected == 0 ? CrawlStatus.EMPTY
+                    : errors > 0 ? CrawlStatus.PARTIAL
+                    : CrawlStatus.SUCCESS;
+            if (status == CrawlStatus.EMPTY) {
+                log.warn("[CRAWL EMPTY] brand={} reason=no events collected", target.getKey());
+            }
+            log.info("[CRAWL OK] brand={} count={} status={} saveErrors={}",
+                    target.getKey(), collected, status, errors);
+            return new CrawlOutcome(status, collected, errors, firstError);
+        } catch (Exception e) {
+            log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.toString(), e);
+            return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+    }
+
+    private void saveHistory(String runId, CrawlTarget target, Brand brand,
+                             CrawlOutcome outcome, LocalDateTime startedAt) {
+        try {
+            crawlRunRepository.save(CrawlRun.of(runId,
+                    brand == null ? null : brand.getId(),
+                    target.getKey(), outcome.status(),
+                    outcome.collected(), outcome.errors(), outcome.message(),
+                    startedAt, LocalDateTime.now()));
+        } catch (Exception e) {
+            log.warn("[CRAWL RUN SAVE FAIL] brand={} reason={}", target.getKey(), e.getMessage());
+        }
+    }
+
+    private record CrawlOutcome(CrawlStatus status, int collected, int errors, String message) {
+        int saved() {
+            return collected - errors;
+        }
     }
 
     private Map<String, Brand> loadBrands() {
