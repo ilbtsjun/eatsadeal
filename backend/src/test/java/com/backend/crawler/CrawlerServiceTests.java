@@ -16,6 +16,7 @@ import com.backend.crawler.scheduler.CrawlerScheduler;
 import com.backend.crawler.service.CrawlerService;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.dto.UpsertResult;
+import com.backend.event.service.EventCodeBackfillService;
 import com.backend.event.service.EventService;
 import com.backend.mail.service.MailService;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class CrawlerServiceTests {
             LocalDateTime.now(), null, 1L, true, null);
 
     @Mock private EventService eventService;
+    @Mock private EventCodeBackfillService eventCodeBackfillService;
     @Mock private BrandRepository brandRepository;
     @Mock private CrawlRunRepository crawlRunRepository;
     @Mock private MailService mailService;
@@ -62,7 +64,7 @@ class CrawlerServiceTests {
             lenient().when(crawler.crawl(any())).thenReturn(new CrawlResult(List.of(EVENT), 0, null));
             crawlers.put(target, crawler);
         }
-        crawlerService = new CrawlerService(eventService, brandRepository, crawlRunRepository,
+        crawlerService = new CrawlerService(eventService, eventCodeBackfillService, brandRepository, crawlRunRepository,
                 new ArrayList<>(crawlers.values()));
         lenient().when(eventService.upsertCrawledEvent(any(CreateEvent.class))).thenReturn(UpsertResult.CREATED);
         scheduler = new CrawlerScheduler(crawlerService, mailService);
@@ -147,13 +149,64 @@ class CrawlerServiceTests {
     }
 
     @Test
+    @DisplayName("크롤링 뒤: 코드가 없는 이벤트를 분류하고, 남은 이벤트가 있으면 다음 페이지도 처리한다")
+    void crawlOne_classifiesPendingEvents_untilNoMore() {
+        givenBrands();
+        when(eventCodeBackfillService.run(50, null))
+                .thenReturn(new EventCodeBackfillService.Result(50, 40, 77L, 10, 200));
+        when(eventCodeBackfillService.run(50, 77L))
+                .thenReturn(new EventCodeBackfillService.Result(3, 3, null, 13, 200));
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventCodeBackfillService).run(50, null);
+        verify(eventCodeBackfillService).run(50, 77L);
+        verifyNoMoreInteractions(eventCodeBackfillService);
+    }
+
+    @Test
+    @DisplayName("크롤링 뒤: 한 번에 최대 2페이지까지만 분류한다")
+    void crawlOne_classifiesPendingEvents_capsPages() {
+        givenBrands();
+        when(eventCodeBackfillService.run(anyInt(), any()))
+                .thenReturn(new EventCodeBackfillService.Result(50, 0, 99L, 0, 200));
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventCodeBackfillService, times(2)).run(anyInt(), any());
+    }
+
+    @Test
+    @DisplayName("크롤링 뒤: 설정으로 끄면 분류하지 않는다")
+    void crawlOne_classifySwitchOff_doesNotClassify() {
+        givenBrands();
+        ReflectionTestUtils.setField(crawlerService, "classifyAfterCrawl", false);
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verifyNoInteractions(eventCodeBackfillService);
+    }
+
+    @Test
+    @DisplayName("크롤링 뒤: 분류 중 예외가 나도 크롤링 결과는 그대로다")
+    void crawlOne_classifyFails_crawlStillSucceeds() {
+        givenBrands();
+        when(eventCodeBackfillService.run(anyInt(), any())).thenThrow(new IllegalStateException("ai"));
+
+        CrawlReport report = crawlerService.crawlOne(CrawlTarget.BHC);
+
+        assertEquals(1, report.saved());
+        assertTrue(report.failed().isEmpty());
+    }
+
+    @Test
     @DisplayName("기동: 크롤러가 하나라도 없으면 IllegalStateException")
     void constructor_missingCrawler_throws() {
         List<Crawler> withoutBhc = new ArrayList<>(crawlers.values());
         withoutBhc.remove(crawler(CrawlTarget.BHC));
 
         assertThrows(IllegalStateException.class,
-                () -> new CrawlerService(eventService, brandRepository, crawlRunRepository, withoutBhc));
+                () -> new CrawlerService(eventService, eventCodeBackfillService, brandRepository, crawlRunRepository, withoutBhc));
     }
 
     @Test
