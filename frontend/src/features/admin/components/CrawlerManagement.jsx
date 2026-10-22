@@ -104,6 +104,8 @@ export default function CrwalerManagement({
     recentRuns = [],
     runsLoading = false,
     onLoadRuns,
+    classifyLoading = false,
+    onClassifyEventCodes,
 }){
     useEffect(() => {
         onLoadRuns?.();
@@ -156,6 +158,17 @@ export default function CrwalerManagement({
                         ))}
                     </div>
                 ))}
+            </div>
+
+            <div className="crawler-actions">
+                <button type="button"
+                        disabled={classifyLoading || crawlerLoading}
+                        onClick={onClassifyEventCodes}>
+                    {classifyLoading ? '이벤트 코드 분류 중...' : '이벤트 코드 분류 실행'}
+                </button>
+                <span className="panel-description">
+                    혜택 유형(1+1, 할인 등)이 비어 있는 이벤트를 규칙과 AI로 분류합니다. 크롤링 뒤에도 자동으로 일부 처리됩니다.
+                </span>
             </div>
 
             {crawlerLoading && (

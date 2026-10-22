@@ -14,6 +14,7 @@ import com.backend.crawler.entity.CrawlStatus;
 import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.event.dto.CreateEvent;
 import com.backend.event.dto.UpsertResult;
+import com.backend.event.service.EventCodeBackfillService;
 import com.backend.event.service.EventService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +38,11 @@ public class CrawlerService {
     private enum BrandState { ACTIVE, INACTIVE, MISSING }
     private final CrawlRunRepository crawlRunRepository;
 
+    private static final int CLASSIFY_PAGE_SIZE = 50;
+    private static final int CLASSIFY_MAX_PAGES = 2;
+
     private final EventService eventService;
+    private final EventCodeBackfillService eventCodeBackfillService;
     private final BrandRepository brandRepository;
     private final Map<CrawlTarget, Crawler> registry = new EnumMap<>(CrawlTarget.class);
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -48,11 +53,16 @@ public class CrawlerService {
     @Value("${app.crawler.deactivate-missing:true}")
     private boolean deactivateMissing = true;
 
+    @Value("${app.crawler.classify-after-crawl:true}")
+    private boolean classifyAfterCrawl = true;
+
     public CrawlerService(EventService eventService,
+                          EventCodeBackfillService eventCodeBackfillService,
                           BrandRepository brandRepository,
                           CrawlRunRepository crawlRunRepository,
                           List<Crawler> crawlers) {
         this.eventService = eventService;
+        this.eventCodeBackfillService = eventCodeBackfillService;
         this.brandRepository = brandRepository;
         this.crawlRunRepository = crawlRunRepository;
 
@@ -148,11 +158,37 @@ public class CrawlerService {
             } finally {
                 pool.shutdownNow();
             }
+            classifyPendingEvents();
             log.info("[CRAWL DONE] target={} runId={} saved={} skipped={} failed={} partial={} empty={} elapsed={}ms",
                     label, runId, saved, skipped, failed, partial, empty, System.currentTimeMillis() - start);
             return new CrawlReport(saved, skipped, failed, partial, empty);
         } finally {
             running.set(false);
+        }
+    }
+
+    private void classifyPendingEvents() {
+        if (!classifyAfterCrawl) {
+            return;
+        }
+        try {
+            Long afterId = null;
+            int processed = 0;
+            int classified = 0;
+            for (int page = 0; page < CLASSIFY_MAX_PAGES; page++) {
+                EventCodeBackfillService.Result result = eventCodeBackfillService.run(CLASSIFY_PAGE_SIZE, afterId);
+                processed += result.processed();
+                classified += result.classified();
+                afterId = result.nextAfterId();
+                if (afterId == null) {
+                    break;
+                }
+            }
+            if (processed > 0) {
+                log.info("[CRAWL CLASSIFY] processed={} classified={}", processed, classified);
+            }
+        } catch (Exception e) {
+            log.warn("[CRAWL CLASSIFY FAIL] reason={}", e.toString());
         }
     }
 
