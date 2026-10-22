@@ -62,6 +62,8 @@ export default function AdminPage({ user, onBack }) {
       recentRuns,
       runsLoading,
       loadRuns,
+      classifyLoading,
+      classifyEventCodes,
   } = useAdminCrawler(setMessage);
 
   if (user?.role !== 'ADMIN') {
@@ -120,6 +122,8 @@ export default function AdminPage({ user, onBack }) {
                       recentRuns={recentRuns}
                       runsLoading={runsLoading}
                       onLoadRuns={loadRuns}
+                      classifyLoading={classifyLoading}
+                      onClassifyEventCodes={classifyEventCodes}
                   />
               ) : (
                   <CatalogManagement
