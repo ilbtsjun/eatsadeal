@@ -1,10 +1,8 @@
 package com.backend.crawler.common;
 
-import com.backend.event.dto.CreateEvent;
-
-import java.util.List;
+import com.backend.brand.entity.Brand;
 
 public interface Crawler {
     String getName();
-    List<CreateEvent> crawl();
+    CrawlResult crawl(Brand brand);
 }

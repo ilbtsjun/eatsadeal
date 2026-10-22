@@ -1,0 +1,1 @@
+UPDATE brand SET is_active = 0 WHERE name = 'Lotteria';

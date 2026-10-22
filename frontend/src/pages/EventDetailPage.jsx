@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
@@ -5,6 +6,7 @@ import { getFallbackImage } from '@/common/utils/BrandUtil.js';
 import { calculateDDay, formatDate } from '@/common/utils/DateUtil.js';
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
 import { getEventCodeName } from '@/features/events/utils/eventDisplay.js';
+import EventEditModal from '@/features/events/components/EventEditModal.jsx';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 
@@ -17,7 +19,11 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         pendingId,
         toggleError,
         handleToggleFavorite,
+        reload,
     } = useEventDetail({ event, user, onLoginClick });
+
+    const [editing, setEditing] = useState(false);
+    const isAdmin = user?.role === 'ADMIN';
 
     usePageTitle(detailEvent?.title || '이벤트');
 
@@ -132,6 +138,24 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
 
                         <h1>{detailEvent?.title}</h1>
 
+                        {isAdmin && (
+                            <div className="detail-admin-bar">
+                                <button
+                                    type="button"
+                                    className="detail-edit-button"
+                                    onClick={() => setEditing(true)}
+                                >
+                                    이벤트 수정
+                                </button>
+                                {detailEvent?.hidden && (
+                                    <span className="detail-admin-badge">숨김</span>
+                                )}
+                                {detailEvent?.adminLocked && (
+                                    <span className="detail-admin-badge">크롤러 잠금</span>
+                                )}
+                            </div>
+                        )}
+
                         <div className="detail-tags">
                         <span>
                             {getEventCodeName(detailEvent?.eventCodes)}
@@ -171,6 +195,17 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                         )}
                     </div>
                 </article>
+
+                {editing && (
+                    <EventEditModal
+                        event={detailEvent}
+                        onClose={() => setEditing(false)}
+                        onSaved={() => {
+                            setEditing(false);
+                            reload();
+                        }}
+                    />
+                )}
 
                 <CommentSection
                     eventId={event.id}

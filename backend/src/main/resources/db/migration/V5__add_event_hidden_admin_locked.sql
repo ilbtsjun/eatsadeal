@@ -1,0 +1,3 @@
+ALTER TABLE event
+    ADD COLUMN hidden       BIT NOT NULL DEFAULT 0,
+    ADD COLUMN admin_locked BIT NOT NULL DEFAULT 0;

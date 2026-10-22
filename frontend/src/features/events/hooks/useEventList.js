@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getListEvents, getListFavoriteIds, setFavorite } from '@/api/index.js';
+import { EVENT_CODE_NAMES } from '../utils/eventDisplay.js';
 
 const PAGE_SIZE = 20;
 
-export function useEventList({ activeCategory, activeSort, searchKeyword, page, user, onPageChange }) {
+export function useEventList({ activeCategory, activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -21,6 +22,8 @@ export function useEventList({ activeCategory, activeSort, searchKeyword, page, 
 
         if (activeCategory !== 'all' && /^\d+$/.test(String(activeCategory)))
             params.set('categoryId', activeCategory);
+        if (EVENT_CODE_NAMES[activeEventCode])
+            params.set('eventCode', activeEventCode);
         if (searchKeyword.trim())
             params.set('keyword', searchKeyword.trim());
 
@@ -52,7 +55,7 @@ export function useEventList({ activeCategory, activeSort, searchKeyword, page, 
             });
 
         return () => { cancelled = true; };
-    }, [user, activeCategory, activeSort, searchKeyword, page]);
+    }, [user, activeCategory, activeEventCode, activeSort, searchKeyword, page]);
 
     useEffect(() => {
         if (!loading && totalPages > 0 && page >= totalPages) {

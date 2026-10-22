@@ -23,6 +23,25 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
+      - name: 서버 .env.prod에 AI 키 반영
+        env:
+          HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY 시크릿이 없어 건너뜁니다. (서버 .env.prod의 기존 값이 유지됩니다)"
+            exit 0
+          fi
+          printf '%s\n' "$ANTHROPIC_API_KEY" | ssh -i ~/.ssh/deploy_key "$SSH_USER@$HOST" '
+            set -eu
+            IFS= read -r key
+            f=~/eatsadeal/.env.prod
+            umask 077
+            { grep -v "^ANTHROPIC_API_KEY=" "$f" || true; printf "ANTHROPIC_API_KEY=%s\n" "$key"; } > "$f.tmp"
+            mv "$f.tmp" "$f"
+          '
+
       - name: 서버에 배포
         env:
           HOST: ${{ secrets.EC2_HOST }}

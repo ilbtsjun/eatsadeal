@@ -8,7 +8,11 @@ import com.backend.common.error.ErrorCode;
 import com.backend.event.dto.*;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
+import com.backend.event.service.AnthropicEventCodeAi;
+import com.backend.event.service.EventCodeBackfillService;
+import com.backend.event.service.EventCodeClassifier;
 import com.backend.event.service.EventService;
+import com.backend.event.service.EventUrlNormalizer;
 import com.backend.favorite.entity.Favorite;
 import com.backend.favorite.repository.FavoriteRepository;
 import com.backend.user.entity.User;
@@ -36,6 +40,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +49,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,6 +72,9 @@ class EventServiceTests {
 
     @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private EventCodeClassifier eventCodeClassifier;
 
     @InjectMocks
     private EventService eventService;
@@ -168,11 +178,10 @@ class EventServiceTests {
         verifyNoInteractions(eventRepository, brandRepository);
     }
 
-    @ParameterizedTest(name = "{index} - {0}")
-    @MethodSource("invalidDateRangeProvider")
-    @DisplayName("이벤트 생성(크롤러) - 잘못된 날짜면 INVALID_REQUEST, DB 접근 없음")
-    void upsertCrawledEventInvalidDateRange(String description, LocalDateTime start, LocalDateTime end) {
-        CreateEvent request = createRequest(start, end, 1L, true, null);
+    @Test
+    @DisplayName("이벤트 생성(크롤러) - 종료일이 시작일보다 빠르면 INVALID_REQUEST, DB 접근 없음")
+    void upsertCrawledEventInvalidDateRange() {
+        CreateEvent request = createRequest(START, START.minusSeconds(1), 1L, true, null);
 
         assertBusinessException(() -> eventService.upsertCrawledEvent(request), ErrorCode.INVALID_REQUEST);
 
@@ -483,7 +492,7 @@ class EventServiceTests {
         void firstViewIncreasesCount() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
 
@@ -497,7 +506,7 @@ class EventServiceTests {
         void repeatedViewDoesNotIncreaseCount() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, false);
 
@@ -511,7 +520,7 @@ class EventServiceTests {
         void viewKeyIsScopedByEventAndIp() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             when(valueOperations.setIfAbsent(anyString(), eq("1"), eq(Duration.ofHours(3)))).thenReturn(true);
 
@@ -526,7 +535,7 @@ class EventServiceTests {
             User user = mock(User.class);
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.of(mock(Favorite.class)));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
@@ -544,7 +553,7 @@ class EventServiceTests {
             User user = mock(User.class);
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.empty());
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
@@ -559,7 +568,7 @@ class EventServiceTests {
         void anonymousUser() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             givenClientIp(CLIENT_IP);
             givenFirstView(CLIENT_IP, 1L, true);
 
@@ -574,7 +583,7 @@ class EventServiceTests {
         void redisFailureStillIncreasesCountAndReturnsEvent() {
             Event event = buildEvent(responseBrand());
             when(currentUserService.getOptionalUser()).thenReturn(null);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(currentUserService.getClientIp()).thenReturn(CLIENT_IP);
             when(redisTemplate.opsForValue()).thenThrow(new RedisConnectionFailureException("연결 실패"));
 
@@ -587,7 +596,7 @@ class EventServiceTests {
         @Test
         @DisplayName("실패: 존재하지 않는 이벤트면 NOT_FOUND, 조회수/IP 조회 모두 하지 않는다")
         void eventNotFound() {
-            when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+            when(eventRepository.findVisibleById(999L)).thenReturn(Optional.empty());
 
             assertBusinessException(() -> eventService.getEvent(999L), ErrorCode.NOT_FOUND);
 
@@ -887,6 +896,600 @@ class EventServiceTests {
     }
 
     @Nested
+    @DisplayName("hidden / adminLocked")
+    class HiddenAndAdminLockedTests {
+
+        @Test
+        @DisplayName("createEvent: 관리자가 만든 이벤트는 잠긴 상태로 저장된다")
+        void createEventIsLocked() {
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.existsByUrl(request.url())).thenReturn(false);
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            eventService.createEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertTrue(captor.getValue().isAdminLocked());
+            assertFalse(captor.getValue().isHidden());
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 잠긴 이벤트는 덮어쓰지 않고 UNCHANGED를 반환한다")
+        void upsertSkipsLockedEvent() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeAdminLocked(true);
+            CreateEvent request = createRequest(START.plusDays(1), END.plusDays(1), 1L, false, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertEquals("기존 제목", existing.getTitle());
+            assertEquals(START, existing.getStartDate());
+            assertTrue(existing.getIsActive());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 날짜를 모르는 요청도 잠긴 이벤트는 건드리지 않는다")
+        void upsertSkipsLockedEventWithUnknownDates() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeAdminLocked(true);
+            CreateEvent request = createRequest(null, null, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertEquals("기존 제목", existing.getTitle());
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 숨긴 이벤트라도 잠기지 않았다면 내용은 갱신하되 숨김은 유지된다")
+        void upsertKeepsHidden() {
+            Event existing = buildEvent(mock(Brand.class));
+            existing.changeHidden(true);
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            eventService.upsertCrawledEvent(request);
+
+            assertEquals(request.title(), existing.getTitle());
+            assertTrue(existing.isHidden());
+        }
+
+        @Test
+        @DisplayName("updateEvent: 관리자가 수정하면 크롤러가 덮어쓰지 못하도록 잠긴다")
+        void updateEventLocks() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            assertFalse(event.isAdminLocked());
+
+            eventService.updateEvent(1L, updateRequest("수정 제목", null, null, null, null, null, null, null));
+
+            assertEquals("수정 제목", event.getTitle());
+            assertTrue(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("deactivateEvent: 비활성화하면 잠겨서 크롤러가 되살리지 못한다")
+        void deactivateEventLocks() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.deactivateEvent(1L);
+
+            assertFalse(event.getIsActive());
+            assertTrue(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("changeHidden: 숨김과 해제가 반영된다")
+        void changeHiddenToggles() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.changeHidden(1L, true);
+            assertTrue(event.isHidden());
+
+            eventService.changeHidden(1L, false);
+            assertFalse(event.isHidden());
+        }
+
+        @Test
+        @DisplayName("changeAdminLocked: 잠금과 해제가 반영된다")
+        void changeAdminLockedToggles() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+            eventService.changeAdminLocked(1L, true);
+            assertTrue(event.isAdminLocked());
+
+            eventService.changeAdminLocked(1L, false);
+            assertFalse(event.isAdminLocked());
+        }
+
+        @Test
+        @DisplayName("실패: 존재하지 않는 이벤트면 NOT_FOUND")
+        void eventNotFound() {
+            when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertBusinessException(() -> eventService.changeHidden(999L, true), ErrorCode.NOT_FOUND);
+            assertBusinessException(() -> eventService.changeAdminLocked(999L, true), ErrorCode.NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("URL 정규화")
+    class UrlNormalizationTests {
+
+        @ParameterizedTest(name = "{index} - {0}")
+        @CsvSource(delimiter = '|', value = {
+                "호스트와 스킴은 소문자로|HTTPS://WWW.BHC.CO.KR/event/currentEvent/33|https://www.bhc.co.kr/event/currentEvent/33",
+                "경로의 대소문자는 유지|https://example.com/Event/ABC|https://example.com/Event/ABC",
+                "fragment 제거|https://example.com/event/1#comments|https://example.com/event/1",
+                "경로 끝 슬래시 제거|https://example.com/event/1/|https://example.com/event/1",
+                "기본 포트 제거|https://example.com:443/event/1|https://example.com/event/1",
+                "기본이 아닌 포트는 유지|https://example.com:8443/event/1|https://example.com:8443/event/1",
+                "추적 파라미터 제거|https://example.com/event/1?utm_source=a&utm_medium=b&fbclid=x|https://example.com/event/1",
+                "식별 파라미터는 값과 순서를 유지|https://web.dominos.co.kr/event/viewHtml?seq=2100&gubun=E0200|https://web.dominos.co.kr/event/viewHtml?seq=2100&gubun=E0200",
+                "추적 파라미터만 골라 제거|https://example.com/view?id=5&utm_campaign=z|https://example.com/view?id=5",
+                "루트 경로|https://example.com/|https://example.com"
+        })
+        @DisplayName("EventUrlNormalizer.normalize")
+        void normalize(String description, String input, String expected) {
+            assertEquals(expected, EventUrlNormalizer.normalize(input));
+        }
+
+        @Test
+        @DisplayName("null은 null, URL이 아닌 값은 그대로 둔다")
+        void edgeCases() {
+            assertNull(EventUrlNormalizer.normalize(null));
+            assertEquals("not a url", EventUrlNormalizer.normalize("not a url"));
+            assertEquals("/relative/path", EventUrlNormalizer.normalize("/relative/path"));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 추적 파라미터가 붙은 URL도 같은 이벤트로 보고 갱신한다")
+        void upsertMatchesNormalizedUrl() {
+            Event existing = buildEvent(mock(Brand.class));
+            String normalized = existing.getUrl();
+            CreateEvent request = new CreateEvent("새 제목", null, normalized + "?utm_source=ad", "https://image.url/old.png",
+                    START, END, 1L, true, null);
+            when(eventRepository.findByUrl(normalized)).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UPDATED, result);
+            assertEquals("새 제목", existing.getTitle());
+            assertEquals(normalized, existing.getUrl());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 정규화 전 형태로 저장된 기존 이벤트는 찾아서 URL을 정규화한다")
+        void upsertMigratesLegacyUrl() {
+            Event legacy = Event.builder()
+                    .title("기존 제목").description("기존 설명")
+                    .url("https://example.com/event/1/").img("https://image.url/old.png")
+                    .startDate(START).endDate(END).brand(mock(Brand.class)).isActive(true).build();
+            CreateEvent request = new CreateEvent("기존 제목", "기존 설명", "https://example.com/event/1/",
+                    "https://image.url/old.png", START, END, 1L, true, null);
+            when(eventRepository.findByUrl("https://example.com/event/1")).thenReturn(Optional.empty());
+            when(eventRepository.findByUrl("https://example.com/event/1/")).thenReturn(Optional.of(legacy));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UPDATED, result);
+            assertEquals("https://example.com/event/1", legacy.getUrl());
+            verify(eventRepository, never()).save(any(Event.class));
+        }
+
+        @Test
+        @DisplayName("upsertCrawledEvent: 새 이벤트는 정규화된 URL로 저장한다")
+        void upsertInsertsNormalizedUrl() {
+            CreateEvent request = new CreateEvent("제목", null, "HTTPS://Example.com/event/9/#top",
+                    "https://image.url/9.png", START, END, 1L, true, null);
+            when(eventRepository.findByUrl(anyString())).thenReturn(Optional.empty());
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.CREATED, result);
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals("https://example.com/event/9", captor.getValue().getUrl());
+        }
+
+        @Test
+        @DisplayName("createEvent: 관리자가 넣은 URL도 정규화해서 중복을 검사하고 저장한다")
+        void createEventNormalizesUrl() {
+            CreateEvent request = new CreateEvent("제목", null, "https://example.com/event/5/?utm_source=x",
+                    "https://image.url/5.png", START, END, 1L, true, null);
+            when(eventRepository.existsByUrl("https://example.com/event/5")).thenReturn(false);
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            eventService.createEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals("https://example.com/event/5", captor.getValue().getUrl());
+        }
+    }
+
+    @Nested
+    @DisplayName("deactivateMissing")
+    class DeactivateMissingTests {
+
+        private Event activeEvent(String url) {
+            return Event.builder().title("t").url(url).img("i").startDate(START).endDate(END)
+                    .brand(mock(Brand.class)).isActive(true).build();
+        }
+
+        @Test
+        @DisplayName("이번 목록에 없는 진행 중 이벤트만 끈다")
+        void deactivatesOnlyMissing() {
+            Event kept = activeEvent("https://e.com/1");
+            Event gone = activeEvent("https://e.com/2");
+            when(eventRepository.findActiveUnlockedByBrandId(1L)).thenReturn(List.of(kept, gone));
+
+            int count = eventService.deactivateMissing(1L, List.of("https://e.com/1"));
+
+            assertEquals(1, count);
+            assertTrue(kept.getIsActive());
+            assertFalse(gone.getIsActive());
+        }
+
+        @Test
+        @DisplayName("추적 파라미터가 붙은 URL로 수집돼도 정규화된 저장 URL과 같은 이벤트로 본다")
+        void matchesNormalizedUrls() {
+            Event event = activeEvent("https://e.com/1");
+            when(eventRepository.findActiveUnlockedByBrandId(1L)).thenReturn(List.of(event));
+
+            int count = eventService.deactivateMissing(1L, List.of("https://e.com/1/?utm_source=x"));
+
+            assertEquals(0, count);
+            assertTrue(event.getIsActive());
+        }
+
+        @Test
+        @DisplayName("수집된 URL이 없으면 DB를 조회하지 않고 아무것도 끄지 않는다")
+        void emptyListDoesNothing() {
+            assertEquals(0, eventService.deactivateMissing(1L, List.of()));
+            assertEquals(0, eventService.deactivateMissing(1L, (Collection<String>) null));
+
+            verifyNoInteractions(eventRepository);
+        }
+
+        @Test
+        @DisplayName("진행 중 이벤트의 절반 미만만 보이면 사이트 오류로 보고 끄지 않는다")
+        void skipsWhenListShrinksTooMuch() {
+            Event a = activeEvent("https://e.com/1");
+            Event b = activeEvent("https://e.com/2");
+            Event c = activeEvent("https://e.com/3");
+            when(eventRepository.findActiveUnlockedByBrandId(1L)).thenReturn(List.of(a, b, c));
+
+            int count = eventService.deactivateMissing(1L, List.of("https://e.com/1"));
+
+            assertEquals(0, count);
+            assertTrue(a.getIsActive() && b.getIsActive() && c.getIsActive());
+        }
+
+        @Test
+        @DisplayName("절반 이상 보이면(경계 포함) 사라진 이벤트를 끈다")
+        void deactivatesAtHalfBoundary() {
+            Event a = activeEvent("https://e.com/1");
+            Event b = activeEvent("https://e.com/2");
+            when(eventRepository.findActiveUnlockedByBrandId(1L)).thenReturn(List.of(a, b));
+
+            int count = eventService.deactivateMissing(1L, List.of("https://e.com/1"));
+
+            assertEquals(1, count);
+            assertFalse(b.getIsActive());
+        }
+
+        @Test
+        @DisplayName("사라진 이벤트가 없으면 0")
+        void nothingMissing() {
+            Event a = activeEvent("https://e.com/1");
+            when(eventRepository.findActiveUnlockedByBrandId(1L)).thenReturn(List.of(a));
+
+            assertEquals(0, eventService.deactivateMissing(1L, List.of("https://e.com/1", "https://e.com/9")));
+        }
+
+        @Test
+        @DisplayName("날짜 없는 요청: 꺼져 있던 이벤트가 목록에 다시 나타나면 다시 켠다")
+        void dateLessRequestReactivates() {
+            Event existing = activeEvent("https://www.bhc.co.kr/event/currentEvent/100");
+            existing.deactivate();
+            CreateEvent request = new CreateEvent("t", null, existing.getUrl(), "i", null, null, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UPDATED, result);
+            assertTrue(existing.getIsActive());
+        }
+
+        @Test
+        @DisplayName("날짜 없는 요청: 종료 목록(isActive=false)에 있는 이벤트는 켜지 않는다")
+        void dateLessRequestKeepsEndedInactive() {
+            Event existing = activeEvent("https://www.bhc.co.kr/event/currentEvent/100");
+            existing.deactivate();
+            CreateEvent request = new CreateEvent("t", null, existing.getUrl(), "i", null, null, 1L, false, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertFalse(existing.getIsActive());
+        }
+    }
+
+    @Nested
+    @DisplayName("이벤트 코드 분류")
+    class EventCodeClassificationTests {
+
+        @ParameterizedTest(name = "{index} - {0} -> {1}")
+        @CsvSource({
+                "'치킨 1+1 이벤트', BUY_ONE_GET_ONE",
+                "'피자 2+1 행사', BUY_N_GET_N",
+                "'전 메뉴 20% 할인', DISCOUNT_RATE",
+                "'3,000원 할인 쿠폰', DISCOUNT_PRICE",
+                "'방문 포장 시 할인', TAKE_OUT",
+                "'배달비 무료 이벤트', DELIVERY_FREE",
+                "'굿즈 증정 이벤트', GIFT_PROMO",
+                "'네이버페이 결제 혜택', PAYMENT_PROMO",
+                "'멤버십 가입 혜택', MEMBERSHIP",
+                "'평일 점심 타임세일', TIME_SALE"
+        })
+        @DisplayName("규칙: 제목의 키워드로 코드를 정한다")
+        void rulesClassifyByKeyword(String title, EventCode expected) {
+            assertTrue(EventCodeClassifier.classifyByRules(title, null).contains(expected));
+        }
+
+        @Test
+        @DisplayName("규칙: 1+1 증정은 사은품이 아니라 1+1로만 분류한다")
+        void rulesTreatGiveawayOfQuantityPromoAsQuantity() {
+            Set<EventCode> codes = EventCodeClassifier.classifyByRules("치킨 1+1 증정", null);
+
+            assertEquals(EnumSet.of(EventCode.BUY_ONE_GET_ONE), codes);
+        }
+
+        @Test
+        @DisplayName("규칙: 11+1 처럼 숫자가 붙은 경우는 1+1로 보지 않는다")
+        void rulesIgnoreEmbeddedNumbers() {
+            assertFalse(EventCodeClassifier.classifyByRules("11+1", null).contains(EventCode.BUY_ONE_GET_ONE));
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = {"신메뉴 출시", "브랜드 스토리", "이벤트 안내"})
+        @DisplayName("규칙: 키워드가 없으면 빈 집합이다")
+        void rulesReturnEmptyWithoutKeyword(String title) {
+            assertTrue(EventCodeClassifier.classifyByRules(title, null).isEmpty());
+        }
+
+        @Test
+        @DisplayName("서비스: 규칙으로 정해지면 AI를 부르지 않는다")
+        void serviceSkipsAiWhenRulesMatch() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+
+            Set<EventCode> codes = new EventCodeClassifier(ai).classify("치킨 1+1", null, "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.BUY_ONE_GET_ONE), codes);
+            verifyNoInteractions(ai);
+        }
+
+        @Test
+        @DisplayName("서비스: 규칙이 비면 텍스트로 AI에 먼저 묻고, 정해지면 이미지는 보내지 않는다")
+        void serviceUsesTextBeforeImage() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.classify("이벤트 안내", null, null)).thenReturn(EnumSet.of(EventCode.MEMBERSHIP));
+
+            Set<EventCode> codes = new EventCodeClassifier(ai).classify("이벤트 안내", null, "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.MEMBERSHIP), codes);
+            verify(ai, never()).classify(any(), any(), eq("https://image.url/a.png"));
+        }
+
+        @Test
+        @DisplayName("서비스: 텍스트로도 못 정하면 이미지로 한 번 더 묻는다")
+        void serviceFallsBackToImage() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.classify("이벤트 안내", null, null)).thenReturn(EnumSet.noneOf(EventCode.class));
+            when(ai.classify("이벤트 안내", null, "https://image.url/a.png")).thenReturn(EnumSet.of(EventCode.DISCOUNT_RATE));
+
+            Set<EventCode> codes = new EventCodeClassifier(ai).classify("이벤트 안내", null, "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.DISCOUNT_RATE), codes);
+        }
+
+        @Test
+        @DisplayName("서비스: 이미지 URL이 없으면 이미지 호출은 하지 않는다")
+        void serviceSkipsImageWithoutUrl() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.classify("이벤트 안내", null, null)).thenReturn(EnumSet.noneOf(EventCode.class));
+
+            Set<EventCode> codes = new EventCodeClassifier(ai).classify("이벤트 안내", null, " ");
+
+            assertTrue(codes.isEmpty());
+            verify(ai, times(1)).classify(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("AI 응답 파싱: 코드 이름만 뽑고 NONE이나 모르는 값은 무시한다")
+        void parseAiResponse() {
+            assertEquals(EnumSet.of(EventCode.TAKE_OUT, EventCode.DISCOUNT_RATE),
+                    AnthropicEventCodeAi.parseCodes("take_out, DISCOUNT_RATE"));
+            assertTrue(AnthropicEventCodeAi.parseCodes("NONE").isEmpty());
+            assertTrue(AnthropicEventCodeAi.parseCodes(null).isEmpty());
+        }
+
+        @Test
+        @DisplayName("AI: 키가 없으면 호출 없이 빈 집합을 돌려주고 호출 수도 세지 않는다")
+        void aiDisabledWithoutApiKey() {
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "");
+
+            assertTrue(ai.classify("이벤트 안내", null, null).isEmpty());
+            assertEquals(0, ai.usedToday());
+            assertEquals(10, ai.dailyLimit());
+        }
+
+        @Test
+        @DisplayName("AI: 꺼져 있으면 키가 있어도 호출하지 않는다")
+        void aiDisabledByFlag() {
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(false, true, "claude-haiku-5-5", 10, "sk-test");
+
+            assertTrue(ai.classify("이벤트 안내", null, "https://image.url/a.png").isEmpty());
+            assertEquals(0, ai.usedToday());
+        }
+
+        @Test
+        @DisplayName("AI: 키가 있고 켜져 있으면 클라이언트를 만들 수 있다 (호출은 하지 않음)")
+        void aiEnabledBuildsClient() {
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test");
+
+            assertEquals(0, ai.usedToday());
+        }
+
+        @Test
+        @DisplayName("신규 크롤링 이벤트: 요청에 코드가 없으면 분류한 코드로 저장한다")
+        void upsertClassifiesNewEvent() {
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.empty());
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+            when(eventCodeClassifier.classify(request.title(), request.description(), request.img()))
+                    .thenReturn(Set.of(EventCode.MEMBERSHIP));
+
+            eventService.upsertCrawledEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals(Set.of(EventCode.MEMBERSHIP), captor.getValue().getEventCodes());
+        }
+
+        @Test
+        @DisplayName("신규 크롤링 이벤트: 요청에 코드가 이미 있으면 분류하지 않는다")
+        void upsertKeepsRequestedCodes() {
+            CreateEvent request = createRequest(START, END, 1L, true, Set.of(EventCode.TIME_SALE));
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.empty());
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+
+            eventService.upsertCrawledEvent(request);
+
+            verifyNoInteractions(eventCodeClassifier);
+        }
+
+        @Test
+        @DisplayName("기존 이벤트: 제목이 바뀌면 다시 분류해 코드를 교체한다")
+        void upsertReclassifiesWhenTitleChanges() {
+            Event existing = buildEvent(mock(Brand.class), Set.of(EventCode.TAKE_OUT));
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+            when(eventCodeClassifier.classify(request.title(), request.description(), request.img()))
+                    .thenReturn(Set.of(EventCode.DISCOUNT_RATE));
+
+            eventService.upsertCrawledEvent(request);
+
+            assertEquals(Set.of(EventCode.DISCOUNT_RATE), existing.getEventCodes());
+        }
+
+        @Test
+        @DisplayName("기존 이벤트: 내용이 그대로면 분류하지 않아 AI 호출이 반복되지 않는다")
+        void upsertDoesNotReclassifyUnchangedEvent() {
+            Event existing = buildEvent(mock(Brand.class));
+            CreateEvent request = new CreateEvent(existing.getTitle(), existing.getDescription(), existing.getUrl(),
+                    existing.getImg(), START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            verifyNoInteractions(eventCodeClassifier);
+        }
+
+        @Test
+        @DisplayName("기존 이벤트: 새로 분류하지 못하면 기존 코드를 지우지 않는다")
+        void upsertKeepsCodesWhenClassificationEmpty() {
+            Event existing = buildEvent(mock(Brand.class), Set.of(EventCode.TAKE_OUT));
+            CreateEvent request = createRequest(START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            eventService.upsertCrawledEvent(request);
+
+            assertEquals(Set.of(EventCode.TAKE_OUT), existing.getEventCodes());
+        }
+
+        @Test
+        @DisplayName("applyEventCodes: 잠긴 이벤트는 분류하지 않는다")
+        void applyEventCodesSkipsLockedEvent() {
+            Event event = buildEvent(mock(Brand.class));
+            event.changeAdminLocked(true);
+            when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+
+            assertFalse(eventService.applyEventCodes(5L));
+
+            verifyNoInteractions(eventCodeClassifier);
+        }
+
+        @Test
+        @DisplayName("applyEventCodes: 분류되면 코드를 채우고 true를 반환한다")
+        void applyEventCodesFillsCodes() {
+            Event event = buildEvent(mock(Brand.class));
+            when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+            when(eventCodeClassifier.classify(event.getTitle(), event.getDescription(), event.getImg()))
+                    .thenReturn(Set.of(EventCode.GIFT_PROMO));
+
+            assertTrue(eventService.applyEventCodes(5L));
+            assertEquals(Set.of(EventCode.GIFT_PROMO), event.getEventCodes());
+        }
+
+        @Test
+        @DisplayName("applyEventCodes: 없는 이벤트면 NOT_FOUND")
+        void applyEventCodesNotFound() {
+            when(eventRepository.findById(5L)).thenReturn(Optional.empty());
+
+            assertBusinessException(() -> eventService.applyEventCodes(5L), ErrorCode.NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("일괄 분류: 한 페이지가 가득 차면 다음 afterId를 돌려준다")
+        void backfillReturnsNextCursor() {
+            EventService service = mock(EventService.class);
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.usedToday()).thenReturn(3);
+            when(ai.dailyLimit()).thenReturn(200);
+            when(eventRepository.findActiveIdsWithoutEventCodes(eq(0L), eq(PageRequest.of(0, 2))))
+                    .thenReturn(List.of(4L, 9L));
+            when(service.applyEventCodes(4L)).thenReturn(true);
+            when(service.applyEventCodes(9L)).thenReturn(false);
+
+            EventCodeBackfillService.Result result = new EventCodeBackfillService(eventRepository, service, ai).run(2, null);
+
+            assertEquals(2, result.processed());
+            assertEquals(1, result.classified());
+            assertEquals(9L, result.nextAfterId());
+            assertEquals(3, result.aiCallsToday());
+        }
+
+        @Test
+        @DisplayName("일괄 분류: 마지막 페이지면 nextAfterId가 null이고, limit은 1~200으로 보정한다")
+        void backfillLastPageAndLimitClamp() {
+            EventService service = mock(EventService.class);
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(eventRepository.findActiveIdsWithoutEventCodes(eq(7L), eq(PageRequest.of(0, 200))))
+                    .thenReturn(List.of());
+
+            EventCodeBackfillService.Result result = new EventCodeBackfillService(eventRepository, service, ai).run(9999, 7L);
+
+            assertEquals(0, result.processed());
+            assertNull(result.nextAfterId());
+        }
+    }
+
+    @Nested
     @DisplayName("getEventCodes")
     class GetEventCodesTests {
 
@@ -899,4 +1502,4 @@ class EventServiceTests {
             verifyNoInteractions(eventRepository);
         }
     }
-}
+}

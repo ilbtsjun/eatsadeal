@@ -41,4 +41,5 @@ public record CreateEvent(
         @Schema(description = "이벤트 코드", example = "null")
         Set<EventCode> eventCodes
 ) {
+    public static final int DEFAULT_PERIOD_DAYS = 60;
 }

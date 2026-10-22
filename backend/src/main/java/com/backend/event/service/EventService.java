@@ -1,9 +1,11 @@
 package com.backend.event.service;
 
 import com.backend.auth.service.CurrentUserService;
+import com.backend.common.dto.UserRole;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
+import com.backend.common.log.QueryTrace;
 import com.backend.event.dto.EventCode;
 import com.backend.event.dto.*;
 import com.backend.brand.entity.Brand;
@@ -36,10 +38,12 @@ public class EventService {
     private final FavoriteRepository favoriteRepository;
     private final CurrentUserService currentUserService;
     private final StringRedisTemplate redisTemplate;
+    private final EventCodeClassifier eventCodeClassifier;
 
     @Transactional
     @CudLogging("이벤트 생성")
-    public void createEvent(CreateEvent request){
+    public void createEvent(CreateEvent rawRequest){
+        CreateEvent request = withNormalizedUrl(rawRequest);
         validateDateRange(request.startDate(), request.endDate());
         if(eventRepository.existsByUrl(request.url())){
             throw new BusinessException(ErrorCode.ALREADY_EXISTS);
@@ -57,20 +61,50 @@ public class EventService {
                 .isActive(request.isActive())
                 .eventCodes(request.eventCodes())
                 .build();
+        event.changeAdminLocked(true);
         eventRepository.save(event);
     }
 
     @Transactional
     @CudLogging("이벤트 생성(크롤러)")
-    public void upsertCrawledEvent(CreateEvent request) {
-        validateDateRange(request.startDate(), request.endDate());
+    public UpsertResult upsertCrawledEvent(CreateEvent rawRequest) {
+        CreateEvent request = withNormalizedUrl(rawRequest);
+        boolean datesUnknown = request.startDate() == null;
+        if (!datesUnknown) {
+            validateDateRange(request.startDate(), request.endDate());
+        }
 
         Optional<Event> optionalEvent = eventRepository.findByUrl(request.url());
+        if (optionalEvent.isEmpty() && !request.url().equals(rawRequest.url())) {
+            optionalEvent = eventRepository.findByUrl(rawRequest.url());
+        }
 
         if (optionalEvent.isPresent()) {
             Event event = optionalEvent.get();
 
-            event.update(
+            if (event.isAdminLocked()) {
+                return UpsertResult.UNCHANGED;
+            }
+
+            if (datesUnknown) {
+                boolean contentChanged = event.updateContent(
+                        request.title(),
+                        request.description(),
+                        request.url(),
+                        request.img());
+                boolean periodChanged = event.applyDefaultPeriod(
+                        CreateEvent.DEFAULT_PERIOD_DAYS, request.isActive());
+                boolean reactivated = event.reactivate(request.isActive());
+                if (contentChanged) {
+                    refreshEventCodes(event);
+                }
+                return contentChanged || periodChanged || reactivated ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
+            }
+
+            List<String> changedFields = event.changedFields(
+                    request.title(), request.description(), request.url(), request.img(),
+                    request.startDate(), request.endDate(), request.isActive());
+            boolean changed = event.update(
                     request.title(),
                     request.description(),
                     request.url(),
@@ -79,30 +113,75 @@ public class EventService {
                     request.endDate(),
                     request.isActive()
             );
+            if (changed) {
+                log.info("[EVENT UPDATED] url={} fields={}", request.url(), changedFields);
+                if (changedFields.contains("title") || changedFields.contains("description") || changedFields.contains("img")) {
+                    refreshEventCodes(event);
+                }
+            }
 
-            return;
+            return changed ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
         }
 
         Brand brand = brandRepository.findById(request.brandId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        Set<EventCode> eventCodes = request.eventCodes() == null || request.eventCodes().isEmpty()
+                ? eventCodeClassifier.classify(request.title(), request.description(), request.img())
+                : request.eventCodes();
+
+        LocalDateTime startDate = datesUnknown ? LocalDateTime.now() : request.startDate();
+        LocalDateTime endDate = datesUnknown ? startDate.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS) : request.endDate();
 
         Event event = Event.builder()
                 .title(request.title())
                 .description(request.description())
                 .url(request.url())
                 .img(request.img())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
+                .startDate(startDate)
+                .endDate(endDate)
                 .brand(brand)
                 .isActive(request.isActive())
-                .eventCodes(request.eventCodes())
+                .eventCodes(eventCodes)
                 .build();
 
         eventRepository.save(event);
+        return UpsertResult.CREATED;
     }
 
+    @Transactional
+    @CudLogging("이벤트 비활성화(크롤러, 목록에서 사라짐)")
+    public int deactivateMissing(Long brandId, Collection<String> crawledUrls) {
+        if (crawledUrls == null || crawledUrls.isEmpty()) {
+            return 0;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String url : crawledUrls) {
+            seen.add(url);
+            seen.add(EventUrlNormalizer.normalize(url));
+        }
+
+        List<Event> active = eventRepository.findActiveUnlockedByBrandId(brandId);
+        List<Event> missing = active.stream()
+                .filter(event -> !seen.contains(event.getUrl()))
+                .toList();
+        if (missing.isEmpty()) {
+            return 0;
+        }
+        if (active.size() - missing.size() < active.size() / 2.0) {
+            log.warn("[CRAWL DEACTIVATE SKIP] brandId={} active={} missing={} reason=목록이 평소보다 크게 줄어 건너뜀",
+                    brandId, active.size(), missing.size());
+            return 0;
+        }
+        missing.forEach(event -> {
+            event.deactivate();
+            log.info("[EVENT DEACTIVATED] url={}", event.getUrl());
+        });
+        return missing.size();
+    }
 
     @Transactional(readOnly = true)
+    @QueryTrace("searchEvents")
     public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
         Pageable pageable = createPageable(request.sort(), request.page(), request.size());
         String normalizedKeyword = StringUtils.hasText(request.keyword())
@@ -122,7 +201,10 @@ public class EventService {
     @Transactional
     public GetEventResponse getEvent(Long eventId) {
         User user = currentUserService.getOptionalUser();
-        Event event = eventRepository.findById(eventId)
+        boolean isAdmin = user != null && user.getRole() == UserRole.ADMIN;
+        Event event = (isAdmin
+                ? eventRepository.findAnyById(eventId)
+                : eventRepository.findVisibleById(eventId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         increaseViewCount(eventId);
         return toDetailResponse(user, event);
@@ -162,6 +244,7 @@ public class EventService {
 
         validateDateRange(newStartDate, newEndDate);
 
+        event.changeAdminLocked(true);
         event.update(newTitle, newDescription, newUrl, newImg, newStartDate, newEndDate, newIsActive);
 
         if (request.eventCodes() != null) {
@@ -184,6 +267,33 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         event.deactivate();
+        event.changeAdminLocked(true);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 숨김 변경")
+    public void changeHidden(Long eventId, boolean hidden){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        event.changeHidden(hidden);
+    }
+
+    @Transactional
+    @CudLogging("이벤트 크롤러 잠금 변경")
+    public void changeAdminLocked(Long eventId, boolean adminLocked){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        event.changeAdminLocked(adminLocked);
+    }
+
+    @Transactional
+    public boolean applyEventCodes(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (event.isAdminLocked()) {
+            return false;
+        }
+        return refreshEventCodes(event);
     }
 
     @Transactional(readOnly = true)
@@ -241,7 +351,7 @@ public class EventService {
                 event.getIsActive(),
                 brand.getId(),
                 brand.getName(),
-                event.getEventCodes()
+                Set.copyOf(event.getEventCodes())
         );
     }
 
@@ -265,8 +375,33 @@ public class EventService {
                 brand.getName(),
                 brand.getImg(),
                 event.getEventCodes(),
-                isFavorite
+                isFavorite,
+                event.isHidden(),
+                event.isAdminLocked()
         );
+    }
+
+    private boolean refreshEventCodes(Event event) {
+        Set<EventCode> codes = eventCodeClassifier.classify(event.getTitle(), event.getDescription(), event.getImg());
+        if (codes.isEmpty()) {
+            return false;
+        }
+        new HashSet<>(event.getEventCodes()).stream()
+                .filter(code -> !codes.contains(code))
+                .forEach(event::removeEventCode);
+        codes.forEach(event::addEventCode);
+        return true;
+    }
+
+    private CreateEvent withNormalizedUrl(CreateEvent request) {
+        String normalizedUrl = EventUrlNormalizer.normalize(request.url());
+        if (normalizedUrl == null || normalizedUrl.equals(request.url())) {
+            return request;
+        }
+        return new CreateEvent(
+                request.title(), request.description(), normalizedUrl, request.img(),
+                request.startDate(), request.endDate(), request.brandId(),
+                request.isActive(), request.eventCodes());
     }
 
     private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate) {

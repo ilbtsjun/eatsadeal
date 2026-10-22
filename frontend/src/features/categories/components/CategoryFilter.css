@@ -38,6 +38,38 @@
     color: white;
 }
 
+/* 할인 종류(이벤트 코드) 버튼 스타일 */
+.event-code-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.event-code-btn {
+    padding: 6px 14px;
+    background-color: #fff;
+    border: 1px solid #dfe4ea;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #57606f;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.event-code-btn:hover {
+    border-color: #ff4757;
+    color: #ff4757;
+}
+
+.event-code-btn.active {
+    background-color: #ff4757;
+    border-color: #ff4757;
+    color: #fff;
+}
+
 /* 필터바 스타일 */
 .filter-bar {
     display: flex;

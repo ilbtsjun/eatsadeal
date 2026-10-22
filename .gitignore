@@ -14,3 +14,9 @@ frontend/dist/
 # IDE
 .idea/
 *.iml
+
+# 컴파일
+out/
+
+# 그래들
+.gradle

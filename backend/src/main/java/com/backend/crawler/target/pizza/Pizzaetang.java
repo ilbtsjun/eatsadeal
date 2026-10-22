@@ -1,18 +1,16 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -27,14 +25,9 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Pizzaetang implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://pizzaetang.com";
     private static final String LIST_URL =
             BASE_URL + "/shop1/front/php/b/board_list.php?board_no=12&is_pcver=T";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 50; // 무한 루프 방지 안전장치
     private static final DateTimeFormatter REG_DATE_FORMAT =
@@ -47,7 +40,7 @@ public class Pizzaetang implements Crawler {
     // 제목의 "N월"에서 월 숫자를 뽑아내기 위한 패턴 (예: "9월 할인 프로모션" -> 9)
     private static final Pattern MONTH_IN_TITLE_PATTERN = Pattern.compile("(\\d{1,2})월");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -55,25 +48,20 @@ public class Pizzaetang implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> result = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
         Set<String> seenHrefs = new HashSet<>();
 
         String url = LIST_URL;
 
-        String html = null;
+        String html;
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .GET()
-                    .header("User-Agent", USER_AGENT)
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                log.error("[피자에땅] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-            }
-            html = response.body();
+            html = http.getString(url);
         } catch (Exception e) {
-            log.error("[피자에땅] 목록 조회 오류(url={}): {}", url, e.getMessage());
+            log.error("[피자에땅] 목록 조회 오류(url={}): {}", url, e.toString());
+            errors.add("목록 조회", e);
+            return CrawlResult.of(result, errors);
         }
 
         Matcher cardMatcher = CARD_PATTERN.matcher(html);
@@ -85,23 +73,23 @@ public class Pizzaetang implements Crawler {
                 continue; // 이미 수집한 항목 (마지막 페이지를 넘어가서 반복되는 경우)
             }
             try {
-                result.add(toCreateEvent(href, cardHtml));
+                result.add(toCreateEvent(href, cardHtml, brand.getId()));
             } catch (Exception e) {
-                log.error("[피자에땅] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
+                log.error("[피자에땅] 개별 항목 파싱 오류(href={}): {}", href, e.toString());
+                errors.add("항목 파싱 href=" + href, e);
             }
         }
 
         log.info("[피자에땅] 이벤트 개수: {}", result.size());
-        return result;
+        return CrawlResult.of(result, errors);
     }
 
-    private CreateEvent toCreateEvent(String href, String cardHtml) {
-        String linkUrl = href.startsWith("http") ? href : BASE_URL + href;
+    private CreateEvent toCreateEvent(String href, String cardHtml, Long brandId) {
+        String linkUrl = CrawlerUtil.absoluteUrl(BASE_URL, href);
 
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
         String imgSrc = imgMatcher.find() ? imgMatcher.group(1) : "";
-        String imgUrl = imgSrc.startsWith("//") ? "https:" + imgSrc
-                : imgSrc.startsWith("http") ? imgSrc : BASE_URL + imgSrc;
+        String imgUrl = CrawlerUtil.absoluteUrl(BASE_URL, imgSrc);
 
         Matcher titleMatcher = TITLE_PATTERN.matcher(cardHtml);
         String title = titleMatcher.find() ? titleMatcher.group(1).trim() : "";
@@ -128,19 +116,6 @@ public class Pizzaetang implements Crawler {
         LocalDateTime now = LocalDateTime.now();
         boolean isActive = !now.isBefore(startDate) && !now.isAfter(endDate);
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 }

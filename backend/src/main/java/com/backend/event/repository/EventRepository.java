@@ -11,43 +11,83 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
     boolean existsByUrl(String url);
-    @Query("""
-        SELECT e
-        FROM Event e
-        WHERE e.isActive = true
-          AND (
-              e.endDate IS NULL
-              OR e.endDate >= :now
+    @Query(
+    value = """
+    SELECT e
+    FROM Event e
+    JOIN FETCH e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (
+          e.endDate IS NULL
+          OR e.endDate >= :now
+      )
+      AND (
+          :brandId IS NULL
+          OR b.id = :brandId
+      )
+      AND (
+          :categoryId IS NULL
+          OR EXISTS (
+              SELECT bc
+              FROM BrandCategory bc
+              WHERE bc.brand = b
+                AND bc.category.id = :categoryId
           )
-          AND (
-              :brandId IS NULL
-              OR e.brand.id = :brandId
+      )
+      AND (
+          :eventCode IS NULL
+          OR :eventCode MEMBER OF e.eventCodes
+      )
+      AND (
+          :keyword IS NULL
+          OR LOWER(e.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      )
+""", countQuery =
+            """
+    SELECT COUNT(e)
+    FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (
+          e.endDate IS NULL
+          OR e.endDate >= :now
+      )
+      AND (
+          :brandId IS NULL
+          OR b.id = :brandId
+      )
+      AND (
+          :categoryId IS NULL
+          OR EXISTS (
+              SELECT bc
+              FROM BrandCategory bc
+              WHERE bc.brand = b
+                AND bc.category.id = :categoryId
           )
-          AND (
-              :categoryId IS NULL
-              OR EXISTS (
-                  SELECT bc
-                  FROM BrandCategory bc
-                  WHERE bc.brand = e.brand
-                    AND bc.category.id = :categoryId
-              )
-          )
-          AND (
-              :eventCode IS NULL
-              OR :eventCode MEMBER OF e.eventCodes
-          )
-          AND (
-              :keyword IS NULL
-              OR LOWER(e.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              OR LOWER(e.brand.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-          )
-    """)
+      )
+      AND (
+          :eventCode IS NULL
+          OR :eventCode MEMBER OF e.eventCodes
+      )
+      AND (
+          :keyword IS NULL
+          OR LOWER(e.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          OR LOWER(b.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      )
+""")
     Page<Event> searchEvents(
             @Param("brandId") Long brandId,
             @Param("categoryId") Long categoryId,
@@ -56,6 +96,24 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("now") LocalDateTime now,
             Pageable pageable
     );
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    JOIN e.brand b
+    WHERE e.id = :eventId
+      AND b.isActive = true
+      AND e.hidden = false
+""")
+    Optional<Event> findVisibleById(@Param("eventId") Long eventId);
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    JOIN e.brand b
+    WHERE e.id = :eventId
+""")
+    Optional<Event> findAnyById(@Param("eventId") Long eventId);
 
     @Modifying
     @Query("""
@@ -74,6 +132,26 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           AND e.endDate < :now
     """)
     Long deactivateExpiredEvents(@Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    WHERE e.brand.id = :brandId
+      AND e.isActive = true
+      AND e.adminLocked = false
+""")
+    List<Event> findActiveUnlockedByBrandId(@Param("brandId") Long brandId);
+
+    @Query("""
+    SELECT e.id
+    FROM Event e
+    WHERE e.id > :afterId
+      AND e.isActive = true
+      AND e.adminLocked = false
+      AND e.eventCodes IS EMPTY
+    ORDER BY e.id
+""")
+    List<Long> findActiveIdsWithoutEventCodes(@Param("afterId") Long afterId, Pageable pageable);
 
     boolean existsByUrlAndIdNot(String url, Long id);
 

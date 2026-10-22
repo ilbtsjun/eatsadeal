@@ -76,7 +76,7 @@ class FavoriteServiceTests {
             User user = mockUser();
             Event event = mockEvent(1L);
             when(currentUserService.getRequiredUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.empty());
 
             favoriteService.addFavorite(1L);
@@ -102,7 +102,7 @@ class FavoriteServiceTests {
         @DisplayName("실패: 존재하지 않는 이벤트면 NOT_FOUND, 즐겨찾기 조회/저장은 하지 않는다")
         void eventNotFound() {
             when(currentUserService.getRequiredUser()).thenReturn(mockUser());
-            when(eventRepository.findById(999L)).thenReturn(Optional.empty());
+            when(eventRepository.findVisibleById(999L)).thenReturn(Optional.empty());
 
             assertBusinessException(() -> favoriteService.addFavorite(999L), ErrorCode.NOT_FOUND);
 
@@ -115,7 +115,7 @@ class FavoriteServiceTests {
             User user = mockUser();
             Event event = mockEvent(1L);
             when(currentUserService.getRequiredUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event))
                     .thenReturn(Optional.of(buildFavorite(user, event)));
 
@@ -130,7 +130,7 @@ class FavoriteServiceTests {
             User user = mockUser();
             Event event = mockEvent(1L);
             when(currentUserService.getRequiredUser()).thenReturn(user);
-            when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+            when(eventRepository.findVisibleById(1L)).thenReturn(Optional.of(event));
             when(favoriteRepository.findByUserAndEvent(user, event)).thenReturn(Optional.empty());
             when(favoriteRepository.save(any(Favorite.class)))
                     .thenThrow(new DataIntegrityViolationException("uk_user_event"));
@@ -200,31 +200,24 @@ class FavoriteServiceTests {
     class GetFavoriteListTests {
 
         @Test
-        @DisplayName("성공: 현재 유저의 즐겨찾기에서 이벤트 ID만 뽑아 repository 순서대로 반환한다")
+        @DisplayName("성공: 브랜드가 활성인 이벤트 ID를 repository 순서대로 반환한다")
         void success() {
             User user = mockUser();
             when(currentUserService.getRequiredUser()).thenReturn(user);
-            Favorite fav1 = buildFavorite(user, mockEvent(30L));
-            Favorite fav2 = buildFavorite(user, mockEvent(10L));
-            Favorite fav3 = buildFavorite(user, mockEvent(20L));
-            when(favoriteRepository.findByUser(user)).thenReturn(List.of(
-                    fav1,
-                    fav2,
-                    fav3
-            ));
+            when(favoriteRepository.findVisibleEventIdsByUser(user)).thenReturn(List.of(30L, 10L, 20L));
 
             List<Long> result = favoriteService.getFavoriteList();
 
             assertEquals(List.of(30L, 10L, 20L), result);
-            verify(favoriteRepository).findByUser(user);
+            verify(favoriteRepository).findVisibleEventIdsByUser(user);
         }
 
         @Test
-        @DisplayName("성공: 즐겨찾기가 없으면 빈 리스트 (null 아님)")
+        @DisplayName("성공: 보이는 즐겨찾기가 없으면 빈 리스트 (null 아님)")
         void empty() {
             User user = mockUser();
             when(currentUserService.getRequiredUser()).thenReturn(user);
-            when(favoriteRepository.findByUser(user)).thenReturn(List.of());
+            when(favoriteRepository.findVisibleEventIdsByUser(user)).thenReturn(List.of());
 
             List<Long> result = favoriteService.getFavoriteList();
 

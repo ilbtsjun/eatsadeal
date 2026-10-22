@@ -129,7 +129,7 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public List<CommentResponse> getEventCommentList(Long eventId){
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findVisibleById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         User user = currentUserService.getOptionalUser();
@@ -148,7 +148,7 @@ public class CommentService {
     @Transactional
     @CudLogging("댓글 생성")
     public CommentResponse createComment(Long eventId, CreateComment request) {
-        Event event = eventRepository.findById(eventId)
+        Event event = eventRepository.findVisibleById(eventId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         User user = currentUserService.getRequiredUser();

@@ -1,19 +1,16 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.HtmlUtils;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,19 +26,12 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Lotteria implements Crawler {
-
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://www.lotteeatz.com";
     private static final String EVENT_LIST_API = BASE_URL + "/event/main/eventListAjax";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 50;
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
-    private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
             "<li[^>]*class=\"[^\"]*grid-item[^\"]*\"[^>]*>(.*?)</li>",
@@ -77,7 +67,7 @@ public class Lotteria implements Crawler {
             Pattern.DOTALL
     );
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -85,21 +75,18 @@ public class Lotteria implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
-        eventList.addAll(fetchAll("RUN", true, brandId));
-        eventList.addAll(fetchAll("EXP", false, brandId));
+        eventList.addAll(fetchAll("RUN", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("EXP", false, brand.getId(), errors));
 
         log.info("[롯데리아] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String eventStatusCode, boolean isActive, Long brandId) {
+    private List<CreateEvent> fetchAll(String eventStatusCode, boolean isActive, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -108,7 +95,8 @@ public class Lotteria implements Crawler {
             try {
                 html = requestEventList(page, eventStatusCode);
             } catch (Exception e) {
-                log.error("[롯데리아] 이벤트 목록 조회 오류(status={}, page={}): {}", eventStatusCode, page, e.getMessage());
+                log.error("[롯데리아] 이벤트 목록 조회 오류(status={}, page={}): {}", eventStatusCode, page, e.toString());
+                errors.add("목록 조회 status=" + eventStatusCode + " page=" + page, e);
                 break;
             }
 
@@ -127,6 +115,7 @@ public class Lotteria implements Crawler {
 
                 if (href == null) {
                     log.warn("[롯데리아] 이벤트 상세 URL 파싱 실패");
+                    errors.add("상세 URL 파싱 실패");
                     continue;
                 }
 
@@ -139,7 +128,8 @@ public class Lotteria implements Crawler {
                 try {
                     result.add(toCreateEvent(href, itemHtml, isActive, brandId));
                 } catch (Exception e) {
-                    log.error("[롯데리아] 개별 이벤트 파싱 오류(href={}): {}", href, e.getMessage());
+                    log.error("[롯데리아] 개별 이벤트 파싱 오류(href={}): {}", href, e.toString());
+                    errors.add("이벤트 파싱 href=" + href, e);
                 }
             }
 
@@ -178,25 +168,10 @@ public class Lotteria implements Crawler {
                 }
                 """.formatted(page, eventStatusCode);
 
-        HttpRequest request = HttpRequest.newBuilder(URI.create(EVENT_LIST_API))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-                .header("User-Agent", USER_AGENT)
-                .header("Accept", "*/*")
-                .header("Content-Type", "application/json; charset=UTF-8")
-                .header("Origin", BASE_URL)
-                .header("Referer", BASE_URL + "/event/main")
-                .build();
-
-        HttpResponse<String> response = httpClient.send(
-                request,
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-        );
-
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP status=" + response.statusCode() + ", body=" + response.body());
-        }
-
-        return response.body();
+        return http.postString(EVENT_LIST_API, StandardCharsets.UTF_8, "application/json; charset=UTF-8", requestBody,
+                "Accept", "*/*",
+                "Origin", BASE_URL,
+                "Referer", BASE_URL + "/event/main");
     }
 
     private CreateEvent toCreateEvent(String href, String itemHtml, boolean isActive, Long brandId) {
@@ -211,7 +186,7 @@ public class Lotteria implements Crawler {
             throw new IllegalArgumentException("제목 파싱 실패");
         }
 
-        String title = cleanText(titleMatcher.group(1));
+        String title = CrawlerUtil.cleanText(titleMatcher.group(1));
 
         Matcher periodMatcher = PERIOD_PATTERN.matcher(itemHtml);
 
@@ -219,7 +194,7 @@ public class Lotteria implements Crawler {
             throw new IllegalArgumentException("기간 파싱 실패");
         }
 
-        String period = cleanText(periodMatcher.group(1));
+        String period = CrawlerUtil.cleanText(periodMatcher.group(1));
 
         Matcher dateMatcher = Pattern.compile("(\\d{4}\\.\\d{2}\\.\\d{2})").matcher(period);
 
@@ -227,36 +202,19 @@ public class Lotteria implements Crawler {
         LocalDateTime endDate = null;
 
         if (dateMatcher.find()) {
-            startDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atStartOfDay();
+            startDate = CrawlerUtil.startOfDay(LocalDate.parse(dateMatcher.group(1), DATE_FORMAT));
         }
 
         if (dateMatcher.find()) {
-            endDate = LocalDate.parse(dateMatcher.group(1), DATE_FORMAT).atTime(23, 59, 59);
+            endDate = CrawlerUtil.endOfDay(LocalDate.parse(dateMatcher.group(1), DATE_FORMAT));
         } else {
-            endDate = OPEN_ENDED_DATE.atTime(23, 59, 59);
+            endDate = CrawlerUtil.openEndedEnd();
         }
 
         if (startDate == null) {
             throw new IllegalArgumentException("시작일 파싱 실패");
         }
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null
-        );
-    }
-
-    private String cleanText(String html) {
-        if (html == null) return "";
-        String noTags = html.replaceAll("<[^>]*>", " ");
-        String unescaped = HtmlUtils.htmlUnescape(noTags);
-        return unescaped.replaceAll("\\s+", " ").trim();
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 }

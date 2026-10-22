@@ -55,7 +55,14 @@ export default function AdminPage({ user, onBack }) {
       submitSuspension,
   } = useAdminUsers();
 
-  const { crawlerLoading, runCrawler } = useAdminCrawler(setMessage);
+  const {
+      crawlerLoading,
+      runCrawler,
+      latestRuns,
+      recentRuns,
+      runsLoading,
+      loadRuns,
+  } = useAdminCrawler(setMessage);
 
   if (user?.role !== 'ADMIN') {
       return (
@@ -109,6 +116,10 @@ export default function AdminPage({ user, onBack }) {
                   <CrawlerManagement
                       crawlerLoading={crawlerLoading}
                       onRunCrawler={runCrawler}
+                      latestRuns={latestRuns}
+                      recentRuns={recentRuns}
+                      runsLoading={runsLoading}
+                      onLoadRuns={loadRuns}
                   />
               ) : (
                   <CatalogManagement
