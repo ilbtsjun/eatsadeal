@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Getter
@@ -45,6 +48,12 @@ public class Event {
 
     @Column(nullable = false)
     private Boolean isActive = true;
+
+    @Column(nullable = false)
+    private boolean hidden = false;
+
+    @Column(nullable = false)
+    private boolean adminLocked = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand", nullable = false)
@@ -92,8 +101,31 @@ public class Event {
         this.eventCodes.remove(eventCode);
     }
 
-    public void update(String title, String description, String url,
-                       String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
+    public List<String> changedFields(String title, String description, String url,
+                                      String img, LocalDateTime startDate, LocalDateTime endDate, Boolean isActive) {
+        List<String> fields = new ArrayList<>();
+        if (!Objects.equals(this.title, title)) fields.add("title");
+        if (!Objects.equals(this.description, description)) fields.add("description");
+        if (!Objects.equals(this.url, url)) fields.add("url");
+        if (!Objects.equals(this.img, img)) fields.add("img");
+        if (!Objects.equals(this.startDate, startDate)) fields.add("startDate");
+        if (!Objects.equals(this.endDate, endDate)) fields.add("endDate(" + this.endDate + "->" + endDate + ")");
+        if (!Objects.equals(this.isActive, isActive)) fields.add("isActive(" + this.isActive + "->" + isActive + ")");
+        return fields;
+    }
+
+    public boolean update(String title, String description, String url,
+                          String img, LocalDateTime startDate, LocalDateTime endDate , Boolean isActive){
+        boolean changed = !Objects.equals(this.title, title)
+                || !Objects.equals(this.description, description)
+                || !Objects.equals(this.url, url)
+                || !Objects.equals(this.img, img)
+                || !Objects.equals(this.startDate, startDate)
+                || !Objects.equals(this.endDate, endDate)
+                || !Objects.equals(this.isActive, isActive);
+        if (!changed) {
+            return false;
+        }
         this.title = title;
         this.description = description;
         this.url = url;
@@ -101,10 +133,51 @@ public class Event {
         this.startDate = startDate;
         this.endDate = endDate;
         this.isActive = isActive;
+        return true;
+    }
+
+    public boolean updateContent(String title, String description, String url, String img) {
+        boolean changed = !Objects.equals(this.title, title)
+                || !Objects.equals(this.description, description)
+                || !Objects.equals(this.url, url)
+                || !Objects.equals(this.img, img);
+        if (!changed) {
+            return false;
+        }
+        this.title = title;
+        this.description = description;
+        this.url = url;
+        this.img = img;
+        return true;
+    }
+
+    public boolean applyDefaultPeriod(int days, Boolean isActive) {
+        if (endDate == null || !endDate.equals(startDate)) {
+            return false;
+        }
+        this.endDate = startDate.plusDays(days);
+        this.isActive = isActive;
+        return true;
     }
 
     public void deactivate() {
         this.isActive = false;
+    }
+
+    public boolean reactivate(Boolean requestedActive) {
+        if (!Boolean.TRUE.equals(requestedActive) || Boolean.TRUE.equals(this.isActive)) {
+            return false;
+        }
+        this.isActive = true;
+        return true;
+    }
+
+    public void changeHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public void changeAdminLocked(boolean adminLocked) {
+        this.adminLocked = adminLocked;
     }
 
 }

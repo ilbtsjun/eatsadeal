@@ -55,6 +55,9 @@ services:
       REPORT_MAIL_TO: ${REPORT_MAIL_TO:?REPORT_MAIL_TO 가 필요합니다}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_ENABLED: ${AI_ENABLED:-true}
+      AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-200}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - backend-logs:/app/logs

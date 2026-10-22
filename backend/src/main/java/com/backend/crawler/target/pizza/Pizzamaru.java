@@ -1,18 +1,16 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,14 +24,9 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Pizzamaru implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://www.pizzamaru.co.kr";
     private static final String ONGOING_URL = BASE_URL + "/event/01/";
     private static final String ENDED_URL = BASE_URL + "/event/01/?endchk=1";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 50; // 무한 루프 방지 안전장치
     private static final String PAGE_PARAM = "page";
@@ -45,7 +38,7 @@ public class Pizzamaru implements Crawler {
     private static final Pattern DATE_LINE_PATTERN = Pattern.compile("<p class=\"c6\">([^<]*)</p>");
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -53,14 +46,15 @@ public class Pizzamaru implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true));
-        eventList.addAll(fetchAll(ENDED_URL, false));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId(), errors));
+        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String baseUrl, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
         String joinChar = baseUrl.contains("?") ? "&" : "?";
@@ -70,18 +64,10 @@ public class Pizzamaru implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .header("User-Agent", USER_AGENT)
-                        .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[피자마루] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    break;
-                }
-                html = response.body();
+                html = http.getString(url);
             } catch (Exception e) {
-                log.error("[피자마루] 목록 조회 오류(url={}): {}", url, e.getMessage());
+                log.error("[피자마루] 목록 조회 오류(url={}): {}", url, e.toString());
+                errors.add("목록 조회 url=" + url, e);
                 break;
             }
 
@@ -90,14 +76,18 @@ public class Pizzamaru implements Crawler {
 
             while (cardMatcher.find()) {
                 String href = cardMatcher.group(1);
+                if (!cardMatcher.group(2).contains("fz18 fw5") && !cardMatcher.group(2).contains("class=\"c6\"")) {
+                    continue;
+                }
                 if (!seenHrefs.add(href)) {
                     continue;
                 }
                 foundNew = true;
                 try {
-                    result.add(toCreateEvent(href, cardMatcher.group(2), isOngoing));
+                    result.add(toCreateEvent(href, cardMatcher.group(2), isOngoing, brandId));
                 } catch (Exception e) {
-                    log.error("[피자마루] 개별 항목 파싱 오류(href={}): {}", href, e.getMessage());
+                    log.error("[피자마루] 개별 항목 파싱 오류(href={}): {}", href, e.toString());
+                    errors.add("항목 파싱 href=" + href, e);
                 }
             }
 
@@ -110,12 +100,12 @@ public class Pizzamaru implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String href, String cardHtml, boolean isOngoing) {
-        String linkUrl = href.startsWith("http") ? href : BASE_URL + href;
+    private CreateEvent toCreateEvent(String href, String cardHtml, boolean isOngoing, Long brandId) {
+        String linkUrl = CrawlerUtil.absoluteUrl(BASE_URL, href);
 
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(cardHtml);
         String imgSrc = imgMatcher.find() ? imgMatcher.group(1) : "";
-        String imgUrl = imgSrc.startsWith("http") ? imgSrc : BASE_URL + imgSrc;
+        String imgUrl = CrawlerUtil.absoluteUrl(BASE_URL, imgSrc);
 
         Matcher titleMatcher = TITLE_PATTERN.matcher(cardHtml);
         String title = titleMatcher.find() ? titleMatcher.group(1).trim() : "";
@@ -134,22 +124,9 @@ public class Pizzamaru implements Crawler {
             throw new IllegalArgumentException("기간 파싱 실패: " + dateLineMatcher.group(1));
         }
 
-        LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
-        LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
+        LocalDateTime startDate = CrawlerUtil.startOfDay(LocalDate.parse(startDateStr));
+        LocalDateTime endDate = CrawlerUtil.endOfDay(LocalDate.parse(endDateStr));
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isOngoing);
     }
 }

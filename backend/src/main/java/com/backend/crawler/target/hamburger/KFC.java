@@ -1,20 +1,18 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -26,8 +24,7 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class KFC implements Crawler {
-
-    private final BrandRepository brandRepository;
+    private final CrawlHttpClient http;
 
     private static final String BASE_URL = "https://www.kfckorea.com";
     private static final String ONGOING_URL = BASE_URL + "/promotion/promotionList/A801";
@@ -51,32 +48,31 @@ public class KFC implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> events = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
         try {
-            Long brandId = brandRepository.findByName(getName())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                    .getId();
-
-            events.addAll(crawlList(ONGOING_URL, brandId, true));
-            events.addAll(crawlList(ENDED_URL, brandId, false));
+            events.addAll(crawlList(ONGOING_URL, brand.getId(), true, errors));
+            events.addAll(crawlList(ENDED_URL, brand.getId(), false, errors));
         } catch (Exception e) {
             log.error("KFC 이벤트 크롤링 실패", e);
+            errors.add("크롤링", e);
         }
 
-        return events;
+        return CrawlResult.of(events, errors);
     }
 
-    private List<CreateEvent> crawlList(String url, Long brandId, boolean isActive) {
+    private List<CreateEvent> crawlList(String url, Long brandId, boolean isActive, CrawlErrors errors) {
         List<CreateEvent> events = new ArrayList<>();
 
         try {
-            String html = request(url);
+            String html = http.getString(url, "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             Matcher matcher = INITIAL_STATE_PATTERN.matcher(html);
 
             if (!matcher.find()) {
                 log.warn("KFC 초기 상태 데이터를 찾을 수 없습니다. url={}", url);
+                errors.add("초기 상태 데이터 없음 url=" + url);
                 return events;
             }
 
@@ -95,7 +91,7 @@ public class KFC implements Crawler {
                 }
 
                 for (JsonNode row : rows) {
-                    CreateEvent event = toCreateEvent(row, brandId, isActive);
+                    CreateEvent event = toCreateEvent(row, brandId, isActive, errors);
 
                     if (event != null) {
                         events.add(event);
@@ -106,12 +102,13 @@ public class KFC implements Crawler {
             }
         } catch (Exception e) {
             log.error("KFC 이벤트 목록 크롤링 실패. url={}", url, e);
+            errors.add("목록 크롤링 url=" + url, e);
         }
 
         return events;
     }
 
-    private CreateEvent toCreateEvent(JsonNode row, Long brandId, boolean isActive) {
+    private CreateEvent toCreateEvent(JsonNode row, Long brandId, boolean isActive, CrawlErrors errors) {
         try {
             String eventIndex = getText(row, "event_index");
             String title = getText(row, "event_title");
@@ -131,7 +128,7 @@ public class KFC implements Crawler {
             }
 
             if (endDate == null || endDate.getYear() >= 9999) {
-                endDate = LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+                endDate = CrawlerUtil.openEndedEnd();
             }
 
             String imgUrl = getText(row, "event_web_list_img");
@@ -140,47 +137,18 @@ public class KFC implements Crawler {
                 imgUrl = getText(row, "event_web_img");
             }
 
-            if (imgUrl != null && imgUrl.startsWith("/")) {
-                imgUrl = BASE_URL + imgUrl;
+            if (imgUrl != null) {
+                imgUrl = CrawlerUtil.absoluteUrl(BASE_URL, imgUrl);
             }
 
             String linkUrl = (isActive ? DETAIL_URL : ENDED_DETAIL_URL) + eventIndex;
 
-            return new CreateEvent(
-                    title,
-                    null,
-                    linkUrl,
-                    imgUrl,
-                    startDate,
-                    endDate,
-                    brandId,
-                    isActive,
-                    null
-            );
+            return CrawlerUtil.event(title, linkUrl, imgUrl, startDate, endDate, brandId, isActive);
         } catch (Exception e) {
             log.error("KFC 이벤트 변환 실패. row={}", row, e);
+            errors.add("이벤트 변환", e);
             return null;
         }
-    }
-
-    private String request(String url) throws Exception {
-        HttpClient client = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build();
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(
-                request,
-                HttpResponse.BodyHandlers.ofString()
-        );
-
-        return response.body();
     }
 
     private String getText(JsonNode node, String field) {

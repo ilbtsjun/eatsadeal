@@ -47,7 +47,13 @@ public record GetEventResponse(
         Set<EventCode> eventCodes,
 
         @Schema(description = "즐겨찾기 여부", example = "false")
-        Boolean isFavorite
+        Boolean isFavorite,
+
+        @Schema(description = "사용자 화면 숨김 여부(관리자 조회 시 의미 있음)", example = "false")
+        Boolean hidden,
+
+        @Schema(description = "크롤러 덮어쓰기 방지 여부", example = "false")
+        Boolean adminLocked
 ) {
 
 }

@@ -1,22 +1,21 @@
 package com.backend.crawler.target.hamburger;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.crawler.common.CrawlerUtil;
+import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,22 +27,17 @@ import java.util.Set;
 @AllArgsConstructor
 public class Burgerking implements Crawler {
 
-    private final BrandRepository brandRepository;
     private final ObjectMapper objectMapper;
 
     private static final String BASE_URL = "https://www.burgerking.co.kr";
 
     private static final String EVENT_API = BASE_URL + "/burgerking/BKR0608.json";
 
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
-
     private static final int MAX_PAGES = 50;
     private static final int PAGE_COUNT = 20;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -51,19 +45,17 @@ public class Burgerking implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
+        CrawlErrors errors = new CrawlErrors();
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-        eventList.addAll(fetchAll("C", true, brandId));
-        eventList.addAll(fetchAll("E", false, brandId));
+        eventList.addAll(fetchAll("C", true, brand.getId(), errors));
+        eventList.addAll(fetchAll("E", false, brand.getId(), errors));
         log.info("[버거킹] 총 이벤트 개수: {}", eventList.size());
-        return eventList;
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId) {
+    private List<CreateEvent> fetchAll(String status, boolean isActive, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenEventIds = new HashSet<>();
 
@@ -72,7 +64,8 @@ public class Burgerking implements Crawler {
             try {
                 json = requestEventList(status, page);
             } catch (Exception e) {
-                log.error("[버거킹] 이벤트 목록 조회 오류(status={}, page={}): {}", status, e.getMessage());
+                log.error("[버거킹] 이벤트 목록 조회 오류(status={}, page={}): {}", status, page, e.toString());
+                errors.add("목록 조회 status=" + status + " page=" + page, e);
                 break;
             }
 
@@ -87,6 +80,7 @@ public class Burgerking implements Crawler {
                                     .path("error_text")
                                     .asText()
                     );
+                    errors.add("API 응답 실패 status=" + status + " page=" + page);
                     break;
                 }
 
@@ -114,7 +108,8 @@ public class Burgerking implements Crawler {
                         addedInThisPage++;
 
                     } catch (Exception e) {
-                        log.error("[버거킹] 개별 이벤트 파싱 오류(eventId={}): {}", eventId, e.getMessage());
+                        log.error("[버거킹] 개별 이벤트 파싱 오류(eventId={}): {}", eventId, e.toString());
+                        errors.add("이벤트 파싱 eventId=" + eventId, e);
                     }
                 }
 
@@ -129,7 +124,8 @@ public class Burgerking implements Crawler {
                 }
 
             } catch (Exception e) {
-                log.error("[버거킹] JSON 파싱 오류(status={}, page={}): {}", status, page, e.getMessage());
+                log.error("[버거킹] JSON 파싱 오류(status={}, page={}): {}", status, page, e.toString());
+                errors.add("JSON 파싱 status=" + status + " page=" + page, e);
                 break;
             }
         }
@@ -161,34 +157,12 @@ public class Burgerking implements Crawler {
             }
             """.formatted(page, status);
 
-        String requestBody = "message=" + java.net.URLEncoder.encode(message, java.nio.charset.StandardCharsets.UTF_8);
+        String requestBody = "message=" + URLEncoder.encode(message, StandardCharsets.UTF_8);
 
-        HttpRequest request = HttpRequest.newBuilder(URI.create(EVENT_API))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .header("User-Agent", USER_AGENT)
-                .header("Accept", "*/*")
-                .header(
-                        "Content-Type",
-                        "application/x-www-form-urlencoded; charset=UTF-8"
-                )
-                .header("Origin", BASE_URL)
-                .header(
-                        "Referer",
-                        BASE_URL + (
-                                "C".equals(status)
-                                        ? "/event/ongoing"
-                                        : "/event/end"
-                        )
-                )
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP status=" + response.statusCode() + ", body=" + response.body());
-        }
-
-        return response.body();
+        return http.postString(EVENT_API, "application/x-www-form-urlencoded; charset=UTF-8", requestBody,
+                "Accept", "*/*",
+                "Origin", BASE_URL,
+                "Referer", BASE_URL + ("C".equals(status) ? "/event/ongoing" : "/event/end"));
     }
 
     private CreateEvent toCreateEvent(JsonNode event, boolean isActive, Long brandId
@@ -216,27 +190,14 @@ public class Burgerking implements Crawler {
 
         LocalDate endDate;
         if (endDateText.isBlank() || "99991231".equals(endDateText)) {
-            endDate = OPEN_ENDED_DATE;
+            endDate = CrawlerUtil.OPEN_ENDED_DATE;
         } else {
             endDate = LocalDate.parse(endDateText, DATE_FORMAT);
         }
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-
-        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
-
         String linkUrl = BASE_URL + "/event/detail/" + eventId;
 
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imageUrl,
-                startDateTime,
-                endDateTime,
-                brandId,
-                isActive,
-                null
-        );
+        return CrawlerUtil.event(title, linkUrl, imageUrl,
+                CrawlerUtil.startOfDay(startDate), CrawlerUtil.endOfDay(endDate), brandId, isActive);
     }
 }

@@ -7,6 +7,7 @@ export function useEventDetail({ event, user, onLoginClick }) {
     const [loaded, setLoaded] = useState(Boolean(event?.title));
     const [loadError, setLoadError] = useState(null);
     const [isFavorite, setIsFavorite] = useState(Boolean(event?.isFavorite));
+    const [reloadKey, setReloadKey] = useState(0);
 
     const {
         pendingId,
@@ -41,7 +42,9 @@ export function useEventDetail({ event, user, onLoginClick }) {
         return () => {
             cancelled = true;
         };
-    }, [event.id]);
+    }, [event.id, reloadKey]);
+
+    const reload = () => setReloadKey((key) => key + 1);
 
     const handleToggleFavorite = () => {
         if (!user) {
@@ -63,5 +66,6 @@ export function useEventDetail({ event, user, onLoginClick }) {
         pendingId,
         toggleError,
         handleToggleFavorite,
+        reload,
     };
 }

@@ -8,3 +8,6 @@ export const setFavorite = (id, on) => {
     return on ? api.post(url) : api.del(url);
 };
 export const getHighlight = () => api.get('/api/events?page=0&size=1&sort=popular');
+export const updateEvent = (id, body) => api.patch(`/api/events/${id}`, body);
+export const setEventHidden = (id, hidden) => api.patch(`/api/events/${id}/hidden`, { hidden });
+export const setEventLock = (id, adminLocked) => api.patch(`/api/events/${id}/lock`, { adminLocked });

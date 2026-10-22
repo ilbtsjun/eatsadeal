@@ -1,21 +1,18 @@
 package com.backend.crawler.target.chicken;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlHttpException;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.CookieManager;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,14 +24,9 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class KyoChonChicken implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String DIR_URL = "https://www.kyochon.com/event/";
     private static final String ONGOING_URL = DIR_URL + "ing.asp";
     private static final String ENDED_URL = DIR_URL + "end.asp";
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final int MAX_PAGES = 200;
 
@@ -46,8 +38,10 @@ public class KyoChonChicken implements Crawler {
     private static final Pattern TITLE_PATTERN = Pattern.compile("<dt><a[^>]*>(.*?)</a></dt>", Pattern.DOTALL);
     private static final Pattern PERIOD_PATTERN = Pattern.compile("<dd>(.*?)</dd>", Pattern.DOTALL);
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final Pattern KOREAN_DATE_PATTERN =
+            Pattern.compile("(\\d{2,4})년\\s*(\\d{1,2})월\\s*(\\d{1,2})일");
 
-    private final HttpClient httpClient = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -55,14 +49,15 @@ public class KyoChonChicken implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(ONGOING_URL, true));
-        eventList.addAll(fetchAll(ENDED_URL, false));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(ONGOING_URL, true, brand.getId(), errors));
+        eventList.addAll(fetchAll(ENDED_URL, false, brand.getId(), errors));
+        return CrawlResult.of(eventList, errors);
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing) {
+    private List<CreateEvent> fetchAll(String listUrl, boolean isOngoing, Long brandId, CrawlErrors errors) {
         List<CreateEvent> result = new ArrayList<>();
         Set<String> seenHrefs = new HashSet<>();
 
@@ -71,18 +66,16 @@ public class KyoChonChicken implements Crawler {
 
             String html;
             try {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                        .GET()
-                        .header("User-Agent", USER_AGENT)
-                        .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200) {
-                    log.error("[교촌] 목록 조회 실패(url={}): status={}", url, response.statusCode());
-                    break;
+                html = http.getString(url);
+            } catch (CrawlHttpException e) {
+                log.error("[교촌] 목록 조회 실패(url={}): status={}", url, e.status());
+                if (pageNum == 1) {
+                    errors.add("목록 조회 status=" + e.status());
                 }
-                html = response.body();
+                break;
             } catch (Exception e) {
-                log.error("[교촌] 목록 조회 오류(url={}): {}", url, e.getMessage());
+                log.error("[교촌] 목록 조회 오류(url={}): {}", url, e.toString());
+                errors.add("목록 조회", e);
                 break;
             }
 
@@ -108,9 +101,13 @@ public class KyoChonChicken implements Crawler {
                         continue;
                     }
                     foundNew = true;
-                    result.add(toCreateEvent(itemHtml, linkUrl, isOngoing));
+                    CreateEvent event = toCreateEvent(itemHtml, linkUrl, isOngoing, brandId);
+                    if (event != null) {
+                        result.add(event);
+                    }
                 } catch (Exception e) {
-                    log.error("[교촌] 개별 항목 파싱 오류: {}", e.getMessage());
+                    log.error("[교촌] 개별 항목 파싱 오류: {}", e.toString());
+                    errors.add("항목 파싱", e);
                 }
             }
 
@@ -123,7 +120,13 @@ public class KyoChonChicken implements Crawler {
         return result;
     }
 
-    private CreateEvent toCreateEvent(String itemHtml, String linkUrl, boolean isOngoing) {
+    private LocalDate toDate(Matcher m) {
+        int year = Integer.parseInt(m.group(1));
+        return LocalDate.of(year < 100 ? 2000 + year : year,
+                Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
+    }
+
+    private CreateEvent toCreateEvent(String itemHtml, String linkUrl, boolean isOngoing, Long brandId) {
         Matcher imgMatcher = IMG_SRC_PATTERN.matcher(itemHtml);
         Matcher titleMatcher = TITLE_PATTERN.matcher(itemHtml);
         Matcher periodMatcher = PERIOD_PATTERN.matcher(itemHtml);
@@ -132,34 +135,37 @@ public class KyoChonChicken implements Crawler {
             throw new IllegalArgumentException("필수 요소 누락");
         }
 
-        String imgUrl = "https://www.kyochon.com" + imgMatcher.group(1);
+        String imgUrl = CrawlerUtil.absoluteUrl("https://www.kyochon.com", imgMatcher.group(1));
         String title = titleMatcher.group(1).trim();
         String periodText = periodMatcher.group(1).trim();
 
-        Matcher dateMatcher = DATE_PATTERN.matcher(periodText);
-        String startDateStr = dateMatcher.find() ? dateMatcher.group() : null;
-        String endDateStr = dateMatcher.find() ? dateMatcher.group() : null;
+        LocalDate start = null;
+        LocalDate end = null;
 
-        if (title.isBlank() || startDateStr == null || endDateStr == null) {
+        Matcher dateMatcher = DATE_PATTERN.matcher(periodText);
+        if (dateMatcher.find()) {
+            start = LocalDate.parse(dateMatcher.group());
+            end = dateMatcher.find() ? LocalDate.parse(dateMatcher.group()) : null;
+        } else {
+            Matcher koreanMatcher = KOREAN_DATE_PATTERN.matcher(periodText);
+            if (koreanMatcher.find()) {
+                start = toDate(koreanMatcher);
+                end = koreanMatcher.find() ? toDate(koreanMatcher) : null;
+            }
+        }
+        if (start == null && !title.isBlank()) {
+            log.warn("[교촌] 기간에 날짜가 없어 건너뜀: title={}, period={}", title, periodText);
+            return null;
+        }
+        if (start != null && end == null) {
+            end = CrawlerUtil.OPEN_ENDED_DATE;
+        }
+
+        if (title.isBlank() || start == null || end == null) {
             throw new IllegalArgumentException("제목/기간 파싱 실패: title=" + title + ", period=" + periodText);
         }
 
-        LocalDateTime startDate = LocalDate.parse(startDateStr).atStartOfDay();
-        LocalDateTime endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
-
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
-        return new CreateEvent(
-                title,
-                null,
-                linkUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isOngoing,
-                null);
+        return CrawlerUtil.event(title, linkUrl, imgUrl,
+                CrawlerUtil.startOfDay(start), CrawlerUtil.endOfDay(end), brandId, isOngoing);
     }
 }

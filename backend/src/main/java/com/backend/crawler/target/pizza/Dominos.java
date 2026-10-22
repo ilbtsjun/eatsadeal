@@ -1,18 +1,16 @@
 package com.backend.crawler.target.pizza;
 
-import com.backend.common.error.BusinessException;
-import com.backend.common.error.ErrorCode;
+import com.backend.brand.entity.Brand;
+import com.backend.crawler.common.CrawlErrors;
+import com.backend.crawler.common.CrawlHttpClient;
+import com.backend.crawler.common.CrawlResult;
+import com.backend.crawler.common.CrawlerUtil;
 import com.backend.crawler.common.Crawler;
 import com.backend.event.dto.CreateEvent;
-import com.backend.brand.repository.BrandRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,8 +25,6 @@ import java.util.regex.Pattern;
 @Component
 @AllArgsConstructor
 public class Dominos implements Crawler {
-    private final BrandRepository brandRepository;
-
     private static final String BASE_URL = "https://web.dominos.co.kr";
     private static final String LIST_URL = BASE_URL + "/event/list?gubun=E0200";
     private static final String ENDED_LIST_URL = BASE_URL + "/event/endlist";
@@ -36,9 +32,6 @@ public class Dominos implements Crawler {
     private static final String IMG_BASE_URL = "https://cdn.dominos.co.kr/admin/upload/event/";
 
     private static final Charset SITE_CHARSET = Charset.forName("EUC-KR");
-
-    private static final String USER_AGENT =
-            "EatsADealPortfolioCrawler/1.0 (+mailto:ilbtsjun@gmail.com; https://github.com/ilbtsjun/eatsadeal)";
 
     private static final Pattern ITEM_PATTERN = Pattern.compile(
             "<a\\s+href=\"([^\"]+)\"[^>]*>\\s*<img([^>]*)>", Pattern.DOTALL);
@@ -53,7 +46,7 @@ public class Dominos implements Crawler {
             Pattern.compile("<p class=\"date\">(.*?)</p>", Pattern.DOTALL);
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final CrawlHttpClient http;
 
     @Override
     public String getName() {
@@ -61,38 +54,43 @@ public class Dominos implements Crawler {
     }
 
     @Override
-    public List<CreateEvent> crawl() {
+    public CrawlResult crawl(Brand brand) {
         List<CreateEvent> eventList = new ArrayList<>();
-        eventList.addAll(fetchAll(LIST_URL, "E0200", true));
-        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false));
-        return eventList;
+        CrawlErrors errors = new CrawlErrors();
+        eventList.addAll(fetchAll(LIST_URL, "E0200", true, brand.getId(), errors));
+        eventList.addAll(fetchAll(ENDED_LIST_URL, "E0200", false, brand.getId(), errors));
+        return CrawlResult.of(dedupeByUrl(eventList), errors);
     }
 
-    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing) {
+    private List<CreateEvent> dedupeByUrl(List<CreateEvent> events) {
+        Map<String, CreateEvent> byUrl = new LinkedHashMap<>();
+        for (CreateEvent event : events) {
+            byUrl.putIfAbsent(event.url(), event);
+        }
+        return new ArrayList<>(byUrl.values());
+    }
+
+    private List<CreateEvent> fetchAll(String listUrl, String gubun, boolean isOngoing, Long brandId, CrawlErrors errors) {
         Map<String, String[]> items = new LinkedHashMap<>();
 
         try {
             String html = fetchAsString(listUrl);
             parseListHtml(html, items);
         } catch (Exception e) {
-            log.error("[도미노] 목록 조회 오류(url={}): {}", listUrl, e.getMessage());
+            log.error("[도미노] 목록 조회 오류(url={}): {}", listUrl, e.toString());
+            errors.add("목록 조회 url=" + listUrl, e);
         }
 
         int pageNo = items.isEmpty() ? 1 : 2;
         while (true) {
             try {
                 String body = "gubun=" + gubun + "&pageNo=" + pageNo;
-                HttpRequest request = HttpRequest.newBuilder(URI.create(AJAX_URL))
-                        .POST(HttpRequest.BodyPublishers.ofString(body))
-                        .header("Content-Type", "application/x-www-form-urlencoded")
-                        .header("User-Agent", USER_AGENT)
-                        .build();
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() != 200 || response.body().isBlank()) {
+                String json = http.postString(AJAX_URL, "application/x-www-form-urlencoded", body);
+                if (json.isBlank()) {
                     break;
                 }
                 int before = items.size();
-                parseAjaxJson(response.body(), gubun, items);
+                parseAjaxJson(json, gubun, items);
                 if (items.size() == before) {
                     break;
                 }
@@ -101,7 +99,8 @@ public class Dominos implements Crawler {
                     break;
                 }
             } catch (Exception e) {
-                log.error("[도미노] AJAX 목록 조회 오류(pageNo={}): {}", pageNo, e.getMessage());
+                log.error("[도미노] AJAX 목록 조회 오류(pageNo={}): {}", pageNo, e.toString());
+                errors.add("AJAX 목록 조회 pageNo=" + pageNo, e);
                 break;
             }
         }
@@ -109,12 +108,13 @@ public class Dominos implements Crawler {
         List<CreateEvent> result = new ArrayList<>();
         for (Map.Entry<String, String[]> entry : items.entrySet()) {
             try {
-                CreateEvent event = fetchDetail(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2], isOngoing);
+                CreateEvent event = fetchDetail(entry.getValue()[0], entry.getValue()[1], entry.getValue()[2], isOngoing, brandId);
                 if (event != null) {
                     result.add(event);
                 }
             } catch (Exception e) {
-                log.error("[도미노] 상세 조회 오류(href={}): {}", entry.getValue()[0], e.getMessage());
+                log.error("[도미노] 상세 조회 오류(href={}): {}", entry.getValue()[0], e.toString());
+                errors.add("상세 조회 href=" + entry.getValue()[0], e);
             }
         }
 
@@ -145,7 +145,7 @@ public class Dominos implements Crawler {
 
     private String resolveDetailUrl(String rawHref) {
         if (!rawHref.startsWith("javascript:")) {
-            return rawHref.startsWith("http") ? rawHref : BASE_URL + rawHref;
+            return CrawlerUtil.absoluteUrl(BASE_URL, rawHref);
         }
 
         Matcher callMatcher = JS_CALL_PATTERN.matcher(rawHref);
@@ -165,7 +165,7 @@ public class Dominos implements Crawler {
                 return BASE_URL + "/event/view?seq=" + args[1] + "&gubun=" + args[2];
             case "goLinkView": {
                 String linkUrl = args[2];
-                return linkUrl.startsWith("http") ? linkUrl : BASE_URL + linkUrl;
+                return CrawlerUtil.absoluteUrl(BASE_URL, linkUrl);
             }
             default:
                 return null;
@@ -189,6 +189,9 @@ public class Dominos implements Crawler {
         while (entryMatcher.find()) {
             String entryJson = entryMatcher.group();
             String seq = entryMatcher.group(1);
+            if ("0".equals(seq)) {
+                continue;
+            }
             String type = extractJsonField(entryJson, "type");
             String linkUrl = extractJsonField(entryJson, "link_url");
             String target = extractJsonField(entryJson, "target");
@@ -206,7 +209,7 @@ public class Dominos implements Crawler {
                 if (linkUrl.contains(".html")) {
                     detailUrl = BASE_URL + "/event/viewHtml?seq=" + seq + "&gubun=" + itemGubun;
                 } else {
-                    detailUrl = linkUrl.startsWith("http") ? linkUrl : BASE_URL + linkUrl;
+                    detailUrl = CrawlerUtil.absoluteUrl(BASE_URL, linkUrl);
                 }
             } else {
                 detailUrl = BASE_URL + "/event/view?seq=" + seq + "&gubun=" + itemGubun;
@@ -227,7 +230,8 @@ public class Dominos implements Crawler {
         return m.find() ? m.group(1) : defaultValue;
     }
 
-    private CreateEvent fetchDetail(String detailUrl, String imgUrl, String fallbackTitle, boolean isOngoing) throws Exception {
+    private CreateEvent fetchDetail(String detailUrl, String imgUrl, String fallbackTitle, boolean isOngoing, Long brandId)
+            throws Exception {
         String html = fetchAsString(detailUrl);
 
         Matcher titleMatcher = TITLE_PATTERN.matcher(html);
@@ -250,41 +254,19 @@ public class Dominos implements Crawler {
         }
 
         if (startDateStr != null && endDateStr != null) {
-            startDate = LocalDate.parse(startDateStr).atStartOfDay();
-            endDate = LocalDate.parse(endDateStr).atTime(23, 59, 59);
+            startDate = CrawlerUtil.startOfDay(LocalDate.parse(startDateStr));
+            endDate = CrawlerUtil.endOfDay(LocalDate.parse(endDateStr));
             isActive = isOngoing;
         } else {
-            LocalDateTime now = LocalDateTime.now();
-            startDate = now;
-            endDate = now;
+            startDate = null;
+            endDate = null;
             isActive = true;
         }
 
-        Long brandId = brandRepository.findByName(getName())
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, getName() + " 브랜드가 DB에 없습니다."))
-                .getId();
-
-        return new CreateEvent(
-                title,
-                null,
-                detailUrl,
-                imgUrl,
-                startDate,
-                endDate,
-                brandId,
-                isActive,
-                null);
+        return CrawlerUtil.event(title, detailUrl, imgUrl, startDate, endDate, brandId, isActive);
     }
 
     private String fetchAsString(String url) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .GET()
-                .header("User-Agent", USER_AGENT)
-                .build();
-        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("HTTP " + response.statusCode());
-        }
-        return new String(response.body(), SITE_CHARSET);
+        return new String(http.getBytes(url), SITE_CHARSET);
     }
 }

@@ -1,0 +1,20 @@
+.event-edit-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(47, 53, 66, .4); overflow-y: auto; }
+.event-edit-modal { display: grid; gap: 10px; width: min(100%, 520px); max-height: 100%; overflow-y: auto; padding: 25px; border-radius: 14px; background: #fff; box-shadow: 0 15px 40px rgba(0, 0, 0, .2); }
+.event-edit-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.event-edit-heading h2 { margin: 0; }
+.event-edit-heading button { border: 0; background: transparent; font-size: 24px; cursor: pointer; }
+.event-edit-modal label { display: grid; gap: 6px; color: #57606f; font-size: 13px; font-weight: 700; }
+.event-edit-modal input:not([type='checkbox']), .event-edit-modal textarea { padding: 11px; border: 1px solid #dfe4ea; border-radius: 7px; outline: 0; font: inherit; }
+.event-edit-modal textarea { resize: vertical; }
+.event-edit-modal input:focus, .event-edit-modal textarea:focus { border-color: #ff4757; box-shadow: 0 0 0 3px rgba(255, 71, 87, .12); }
+.event-edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.event-edit-codes > span { display: block; margin-bottom: 6px; color: #57606f; font-size: 13px; font-weight: 700; }
+.event-edit-codes > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.event-edit-codes button { padding: 6px 11px; border: 1px solid #dfe4ea; border-radius: 16px; color: #57606f; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; }
+.event-edit-codes button.selected { color: #fff; border-color: #ff4757; background: #ff4757; }
+.event-edit-checks { display: grid; gap: 6px; }
+.event-edit-checks label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.event-edit-error { margin: 0; color: #e84118; font-size: 13px; }
+.event-edit-submit { margin-top: 6px; padding: 11px; border: 0; border-radius: 7px; color: #fff; background: #ff4757; cursor: pointer; font-weight: 700; }
+.event-edit-submit:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 520px) { .event-edit-row { grid-template-columns: 1fr; } }
