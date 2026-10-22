@@ -38,6 +38,7 @@ public class EventService {
     private final FavoriteRepository favoriteRepository;
     private final CurrentUserService currentUserService;
     private final StringRedisTemplate redisTemplate;
+    private final EventCodeClassifier eventCodeClassifier;
 
     @Transactional
     @CudLogging("이벤트 생성")
@@ -93,7 +94,11 @@ public class EventService {
                         request.img());
                 boolean periodChanged = event.applyDefaultPeriod(
                         CreateEvent.DEFAULT_PERIOD_DAYS, request.isActive());
-                return contentChanged || periodChanged ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
+                boolean reactivated = event.reactivate(request.isActive());
+                if (contentChanged) {
+                    refreshEventCodes(event);
+                }
+                return contentChanged || periodChanged || reactivated ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
             }
 
             List<String> changedFields = event.changedFields(
@@ -110,6 +115,9 @@ public class EventService {
             );
             if (changed) {
                 log.info("[EVENT UPDATED] url={} fields={}", request.url(), changedFields);
+                if (changedFields.contains("title") || changedFields.contains("description") || changedFields.contains("img")) {
+                    refreshEventCodes(event);
+                }
             }
 
             return changed ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
@@ -117,6 +125,10 @@ public class EventService {
 
         Brand brand = brandRepository.findById(request.brandId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        Set<EventCode> eventCodes = request.eventCodes() == null || request.eventCodes().isEmpty()
+                ? eventCodeClassifier.classify(request.title(), request.description(), request.img())
+                : request.eventCodes();
 
         LocalDateTime startDate = datesUnknown ? LocalDateTime.now() : request.startDate();
         LocalDateTime endDate = datesUnknown ? startDate.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS) : request.endDate();
@@ -130,13 +142,43 @@ public class EventService {
                 .endDate(endDate)
                 .brand(brand)
                 .isActive(request.isActive())
-                .eventCodes(request.eventCodes())
+                .eventCodes(eventCodes)
                 .build();
 
         eventRepository.save(event);
         return UpsertResult.CREATED;
     }
 
+    @Transactional
+    @CudLogging("이벤트 비활성화(크롤러, 목록에서 사라짐)")
+    public int deactivateMissing(Long brandId, Collection<String> crawledUrls) {
+        if (crawledUrls == null || crawledUrls.isEmpty()) {
+            return 0;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String url : crawledUrls) {
+            seen.add(url);
+            seen.add(EventUrlNormalizer.normalize(url));
+        }
+
+        List<Event> active = eventRepository.findActiveUnlockedByBrandId(brandId);
+        List<Event> missing = active.stream()
+                .filter(event -> !seen.contains(event.getUrl()))
+                .toList();
+        if (missing.isEmpty()) {
+            return 0;
+        }
+        if (active.size() - missing.size() < active.size() / 2.0) {
+            log.warn("[CRAWL DEACTIVATE SKIP] brandId={} active={} missing={} reason=목록이 평소보다 크게 줄어 건너뜀",
+                    brandId, active.size(), missing.size());
+            return 0;
+        }
+        missing.forEach(event -> {
+            event.deactivate();
+            log.info("[EVENT DEACTIVATED] url={}", event.getUrl());
+        });
+        return missing.size();
+    }
 
     @Transactional(readOnly = true)
     @QueryTrace("searchEvents")
@@ -244,6 +286,16 @@ public class EventService {
         event.changeAdminLocked(adminLocked);
     }
 
+    @Transactional
+    public boolean applyEventCodes(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (event.isAdminLocked()) {
+            return false;
+        }
+        return refreshEventCodes(event);
+    }
+
     @Transactional(readOnly = true)
     public List<GetEventCodeListResponse> getEventCodes(){
         return Arrays.stream(EventCode.values())
@@ -327,6 +379,18 @@ public class EventService {
                 event.isHidden(),
                 event.isAdminLocked()
         );
+    }
+
+    private boolean refreshEventCodes(Event event) {
+        Set<EventCode> codes = eventCodeClassifier.classify(event.getTitle(), event.getDescription(), event.getImg());
+        if (codes.isEmpty()) {
+            return false;
+        }
+        new HashSet<>(event.getEventCodes()).stream()
+                .filter(code -> !codes.contains(code))
+                .forEach(event::removeEventCode);
+        codes.forEach(event::addEventCode);
+        return true;
     }
 
     private CreateEvent withNormalizedUrl(CreateEvent request) {

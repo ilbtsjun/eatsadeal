@@ -1,7 +1,8 @@
 import { useCategories } from '../hooks/useCategories.js';
+import { EVENT_CODE_NAMES } from '@/features/events/utils/eventDisplay.js';
 import './CategoryFilter.css';
 
-export default function CategoryFilter({ activeCategory, onCategoryChange, activeSort, onSortChange }) {
+export default function CategoryFilter({ activeCategory, onCategoryChange, activeEventCode = 'all', onEventCodeChange, activeSort, onSortChange }) {
     const { categories } = useCategories();
     return (
     <div className="category-filter-container">
@@ -12,6 +13,16 @@ export default function CategoryFilter({ activeCategory, onCategoryChange, activ
                     className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
                     onClick={() => onCategoryChange(category.id)}>
                 {category.name}
+            </button>)
+        }
+      </div>
+      <div className="event-code-list" aria-label="할인 종류">
+        {[['all', '전체'], ...Object.entries(EVENT_CODE_NAMES)].map(([code, name]) =>
+            <button key={code}
+                    type="button"
+                    className={`event-code-btn ${activeEventCode === code ? 'active' : ''}`}
+                    onClick={() => onEventCodeChange?.(code)}>
+                {name}
             </button>)
         }
       </div>

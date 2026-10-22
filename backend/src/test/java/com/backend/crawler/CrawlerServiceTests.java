@@ -91,6 +91,62 @@ class CrawlerServiceTests {
     }
 
     @Test
+    @DisplayName("사라진 이벤트: 오류 없이 끝난 브랜드는 수집한 URL로 deactivateMissing을 호출한다")
+    void crawlOne_success_deactivatesMissing() {
+        givenBrands();
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventService).deactivateMissing(any(), eq(List.of(EVENT.url())));
+    }
+
+    @Test
+    @DisplayName("사라진 이벤트: 수집 중 오류가 있으면(PARTIAL) 끄지 않는다")
+    void crawlOne_partial_doesNotDeactivate() {
+        givenBrands();
+        when(crawler(CrawlTarget.BHC).crawl(any())).thenReturn(new CrawlResult(List.of(EVENT), 1, "boom"));
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventService, never()).deactivateMissing(any(), any());
+    }
+
+    @Test
+    @DisplayName("사라진 이벤트: 아무것도 수집하지 못하면(EMPTY) 끄지 않는다")
+    void crawlOne_empty_doesNotDeactivate() {
+        givenBrands();
+        when(crawler(CrawlTarget.BHC).crawl(any())).thenReturn(new CrawlResult(List.of(), 0, null));
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventService, never()).deactivateMissing(any(), any());
+    }
+
+    @Test
+    @DisplayName("사라진 이벤트: 설정으로 끄면 호출하지 않는다")
+    void crawlOne_switchOff_doesNotDeactivate() {
+        givenBrands();
+        ReflectionTestUtils.setField(crawlerService, "deactivateMissing", false);
+
+        crawlerService.crawlOne(CrawlTarget.BHC);
+
+        verify(eventService, never()).deactivateMissing(any(), any());
+    }
+
+    @Test
+    @DisplayName("사라진 이벤트: 비활성화 중 예외가 나도 크롤링 결과는 SUCCESS로 남는다")
+    void crawlOne_deactivateFails_crawlStillSucceeds() {
+        givenBrands();
+        when(eventService.deactivateMissing(any(), any())).thenThrow(new IllegalStateException("db"));
+
+        CrawlReport report = crawlerService.crawlOne(CrawlTarget.BHC);
+
+        assertEquals(1, report.saved());
+        assertTrue(report.failed().isEmpty());
+        assertTrue(report.partial().isEmpty());
+    }
+
+    @Test
     @DisplayName("기동: 크롤러가 하나라도 없으면 IllegalStateException")
     void constructor_missingCrawler_throws() {
         List<Crawler> withoutBhc = new ArrayList<>(crawlers.values());

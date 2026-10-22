@@ -164,6 +164,14 @@ public class Event {
         this.isActive = false;
     }
 
+    public boolean reactivate(Boolean requestedActive) {
+        if (!Boolean.TRUE.equals(requestedActive) || Boolean.TRUE.equals(this.isActive)) {
+            return false;
+        }
+        this.isActive = true;
+        return true;
+    }
+
     public void changeHidden(boolean hidden) {
         this.hidden = hidden;
     }

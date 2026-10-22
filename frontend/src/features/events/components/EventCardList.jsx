@@ -5,6 +5,7 @@ import './EventCardList.css';
 
 export default function EventCardList({
                                           activeCategory = 'all',
+                                          activeEventCode = 'all',
                                           activeSort = 'latest',
                                           searchKeyword = '',
                                           page = 0,
@@ -19,6 +20,7 @@ export default function EventCardList({
         totalElements,
         toggleFavorite } = useEventList({
         activeCategory,
+        activeEventCode,
         activeSort,
         searchKeyword,
         page,
@@ -35,7 +37,7 @@ export default function EventCardList({
                 <p className="event-result-count">총 <strong>{totalElements}</strong>개의 할인정보</p>
             </div>
             {events.length === 0 ? (
-                <p className="empty-events">선택한 음식 테마의 할인 정보가 없습니다.</p>
+                <p className="empty-events">선택한 조건의 할인 정보가 없습니다.</p>
             ) : (
                 <div className="card-grid">
                     {events.map((event) => (

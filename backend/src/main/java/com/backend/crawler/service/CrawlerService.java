@@ -45,6 +45,9 @@ public class CrawlerService {
     @Value("${app.crawler.parallelism:5}")
     private int parallelism = 5;
 
+    @Value("${app.crawler.deactivate-missing:true}")
+    private boolean deactivateMissing = true;
+
     public CrawlerService(EventService eventService,
                           BrandRepository brandRepository,
                           CrawlRunRepository crawlRunRepository,
@@ -217,6 +220,9 @@ public class CrawlerService {
             } else {
                 status = totalErrors > 0 ? CrawlStatus.PARTIAL : CrawlStatus.SUCCESS;
             }
+            if (deactivateMissing && status == CrawlStatus.SUCCESS) {
+                deactivateMissingEvents(target, brand, list);
+            }
             if (status == CrawlStatus.EMPTY) {
                 log.warn("[CRAWL EMPTY] brand={} reason=no events collected", target.getKey());
             }
@@ -228,6 +234,18 @@ public class CrawlerService {
             log.error("[CRAWL FAIL] brand={} reason={}", target.getKey(), e.toString(), e);
             return new CrawlOutcome(CrawlStatus.FAILED, 0, 0, 0,
                     e.getClass().getSimpleName() + ": " + e.getMessage(), null, null, null);
+        }
+    }
+
+    private void deactivateMissingEvents(CrawlTarget target, Brand brand, List<CreateEvent> list) {
+        try {
+            int deactivated = eventService.deactivateMissing(brand.getId(),
+                    list.stream().map(CreateEvent::url).toList());
+            if (deactivated > 0) {
+                log.info("[CRAWL DEACTIVATED] brand={} count={}", target.getKey(), deactivated);
+            }
+        } catch (Exception e) {
+            log.warn("[CRAWL DEACTIVATE FAIL] brand={} reason={}", target.getKey(), e.toString());
         }
     }
 

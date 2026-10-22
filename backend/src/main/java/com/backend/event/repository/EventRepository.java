@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -131,6 +132,26 @@ public interface EventRepository extends JpaRepository<Event, Long> {
           AND e.endDate < :now
     """)
     Long deactivateExpiredEvents(@Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    WHERE e.brand.id = :brandId
+      AND e.isActive = true
+      AND e.adminLocked = false
+""")
+    List<Event> findActiveUnlockedByBrandId(@Param("brandId") Long brandId);
+
+    @Query("""
+    SELECT e.id
+    FROM Event e
+    WHERE e.id > :afterId
+      AND e.isActive = true
+      AND e.adminLocked = false
+      AND e.eventCodes IS EMPTY
+    ORDER BY e.id
+""")
+    List<Long> findActiveIdsWithoutEventCodes(@Param("afterId") Long afterId, Pageable pageable);
 
     boolean existsByUrlAndIdNot(String url, Long id);
 

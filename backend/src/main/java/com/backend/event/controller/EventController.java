@@ -5,6 +5,7 @@ import com.backend.event.dto.CreateComment;
 import com.backend.comment.service.CommentService;
 import com.backend.common.dto.MsgResponse;
 import com.backend.event.dto.*;
+import com.backend.event.service.EventCodeBackfillService;
 import com.backend.event.service.EventService;
 import com.backend.favorite.service.FavoriteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,6 +25,7 @@ import java.util.List;
 @RequestMapping("/api/events")
 public class EventController {
     private final EventService eventService;
+    private final EventCodeBackfillService eventCodeBackfillService;
     private final CommentService commentService;
     private final FavoriteService favoriteService;
 
@@ -103,6 +105,17 @@ public class EventController {
                                   @Valid @RequestBody UpdateEventLock request) {
         eventService.changeAdminLocked(eventId, request.adminLocked());
         return new MsgResponse("잠금 상태가 변경되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "이벤트 코드 일괄 분류",
+            description = "코드가 없는 진행 중 이벤트를 규칙과 AI로 분류합니다. 결과의 nextAfterId를 afterId로 넘겨 이어서 호출하세요."
+    )
+    @PostMapping("/event-codes/backfill")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EventCodeBackfillService.Result backfillEventCodes(@RequestParam(defaultValue = "50") int limit,
+                                                         @RequestParam(required = false) Long afterId) {
+        return eventCodeBackfillService.run(limit, afterId);
     }
 
     @Operation(
