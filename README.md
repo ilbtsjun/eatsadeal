@@ -16,14 +16,14 @@
 - 이벤트 상세 조회, 조회수 집계(같은 IP는 3시간에 1회만 반영, Redis)
 - 회원가입(이메일 인증코드), 로그인(JWT), 로그아웃(토큰 블랙리스트), 비밀번호 재설정, 회원 탈퇴(개인정보 마스킹)
 - 즐겨찾기, 댓글(작성/수정/삭제)
-- 이벤트 제보 (비로그인 가능, 관리자 메일로 발송)
+- 이벤트 제보 (비로그인 가능, 관리자 메일로 발송, 10분에 5건·같은 내용 중복 제한)
 
 **관리자**
 - 브랜드·카테고리·이벤트 CRUD (브랜드 삭제는 소프트 삭제라 수집된 이벤트는 유지)
 - 회원 조회 및 이용 정지, 댓글 숨김/해제
 - 이벤트 상세에서 수정 모달: 내용 수정, 사용자 화면 숨김, 크롤러 잠금(잠근 이벤트는 크롤러가 덮어쓰지 않음)
 - 크롤링 수동 실행 (전체 / 카테고리 / 브랜드 단위), 실행 이력(브랜드별 수집·신규·변경·동일·오류 건수와 소요 시간) 대시보드
-- 혜택 유형이 없는 기존 이벤트 일괄 분류 (규칙 + AI)
+- 혜택 유형이 없는 기존 이벤트 일괄 분류 (규칙 + AI): 크롤링 관리 탭의 "이벤트 코드 분류 실행" 버튼(50건씩 반복 호출, 끝나면 오늘 AI 호출 수 표시) 또는 API
 
 **크롤러**
 - 14개 브랜드를 6시간마다 자동 수집 (`0 0 0/6 * * *`, Asia/Seoul), 브랜드는 병렬로 수집(`app.crawler.parallelism`, 기본 5)
@@ -35,9 +35,13 @@
 - 날짜 정보가 없는 사이트는 처음 수집한 날짜부터 60일을 기간으로 사용
 - 관리자가 수정한 이벤트(`admin_locked`)는 덮어쓰지 않음
 
+**성능**
+- 이벤트 목록 조회의 N+1 개선: `JOIN FETCH`(브랜드)와 `@BatchSize`(혜택 유형)로 요청당 쿼리를 20개에서 3개로 줄임 (`@QueryTrace`로 측정, 상세는 `portfolio/n-plus-1-improvement.md`)
+
 **혜택 유형(EventCode) 분류**
 - 새 이벤트를 저장하거나 제목·이미지가 바뀐 이벤트를 갱신할 때만 분류 (내용이 같으면 다시 분류하지 않음, 관리자 잠금 이벤트 제외)
 - 1단계 키워드 규칙 → 2단계 AI(제목) → 3단계 AI(이벤트 배너 이미지) 순서로 시도하고, 앞 단계에서 정해지면 멈춤
+- 크롤링이 끝날 때마다 혜택 유형이 비어 있는 이벤트를 자동으로 이어서 분류 (한 번에 최대 100건, `app.crawler.classify-after-crawl`로 끌 수 있고, 실패해도 크롤링 결과에는 영향 없음)
 - AI는 Anthropic Claude Haiku 5.5. 하루 호출 상한(`app.ai.daily-limit`, 기본 200)과 짧은 응답 제한으로 비용을 제어하고, `ANTHROPIC_API_KEY`가 없거나 `app.ai.enabled=false`이면 AI 없이 규칙만 사용
 
 | 카테고리 | 브랜드 |
@@ -56,9 +60,9 @@
 | 크롤링 | `java.net.http.HttpClient`(공통 래퍼), Jackson, 정규식 파싱 (공개 API가 있는 사이트는 API 사용) |
 | AI | Anthropic Java SDK, Claude Haiku 5.5 (혜택 유형 분류, 선택 기능) |
 | API 문서 | springdoc-openapi (Swagger UI, 개발 환경에서만 활성화) |
-| Frontend | React 19, Vite 8 (라우터 라이브러리 없이 상태 기반 화면 전환) |
+| Frontend | React 19, Vite 8, React Router 8 (URL 기반 라우팅, 로그인 필요 화면은 보호 라우트) |
 | 인프라 | Docker Compose, Nginx, Caddy (자동 HTTPS), GitHub Actions → AWS EC2 |
-| 테스트 | JUnit 5, Mockito (서비스 계층 단위 테스트), Testcontainers 기반 이벤트 검색 통합 테스트(쿼리 수 회귀 포함) |
+| 테스트 | JUnit 5, Mockito (서비스 계층 단위 테스트) |
 
 ## 아키텍처
 
@@ -85,6 +89,18 @@ backend/src/main/java/com/backend
 ├── mail/       메일 발송
 ├── crawler/    Crawler 인터페이스, 공통 HTTP 클라이언트(common/), 브랜드별 구현(target/), 스케줄러, 수동 실행·이력 API
 └── common/     보안 설정, 예외 처리, Redis 유틸, CUD 로깅(AOP)
+```
+
+프론트엔드는 기능 단위로 나눈 구조입니다.
+
+```
+frontend/src
+├── api/        API 호출 (도메인별 파일, 공통 client)
+├── auth/       로그인 상태(AuthContext), 토큰 관리
+├── routes/     라우트 래퍼, 보호 라우트(RequireAuth), 약관 오버레이
+├── pages/      화면 단위 컴포넌트
+├── features/   도메인별 컴포넌트·훅 (events, admin, comments, favorites, reports, account, categories)
+└── common/     공통 컴포넌트, 훅, 유틸
 ```
 
 새 브랜드를 추가하려면 `Crawler` 인터페이스를 구현하고(공통 HTTP 클라이언트 `CrawlHttpClient`와 `CrawlerUtil`을 사용), `CrawlTarget`에 등록한 뒤, 브랜드 데이터를 Flyway 마이그레이션으로 추가합니다.
@@ -219,6 +235,8 @@ GitHub Secrets: `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `DOMAIN`, `ANTHROPIC_API_
 ## 로드맵
 
 - [ ] 제보 내용 DB 저장 (현재는 메일 발송만)
-- [x] 이벤트 검색 통합 테스트 (Testcontainers)
+- [ ] 크롤러 파싱 테스트 (HTML/JSON 응답 픽스처 기반)
+- [ ] 이벤트 검색 통합 테스트 (Testcontainers)
 - [ ] 그 외 도메인 컨트롤러·통합 테스트
+- [ ] 크롤러 수집 건수 급감 감지 알림
 - [ ] 댓글 대댓글, 이벤트 상세 댓글 UI 보강
