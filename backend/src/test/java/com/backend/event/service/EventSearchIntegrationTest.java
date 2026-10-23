@@ -33,8 +33,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class EventSearchIntegrationTest {
 
-    private static final int MIN_SEARCHABLE = 30;
-
     @Container
     static final MySQLContainer<?> MYSQL =
             new MySQLContainer<>("mysql:8.4")
@@ -51,7 +49,7 @@ class EventSearchIntegrationTest {
     }
 
     @Autowired
-    private EventCsvFixtureLoader fixtureLoader;
+    private EventFixtureLoader fixtureLoader;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -63,7 +61,7 @@ class EventSearchIntegrationTest {
     private MockMvc mockMvc;
 
     @BeforeEach
-    void setUp() throws Exception {
+    void setUp() {
         fixtureLoader.loadIfEmpty();
     }
 
@@ -93,11 +91,9 @@ class EventSearchIntegrationTest {
     }
 
     @Test
-    void fixtureHasEnoughSearchableEvents() {
-        int searchable = countSearchable();
-        assertTrue(searchable >= MIN_SEARCHABLE,
-                "검색 조건(활성+미종료)에 맞는 이벤트가 " + MIN_SEARCHABLE + "건 이상이어야 합니다. 현재: " + searchable
-                        + " (CSV 날짜 이동 기준일을 확인하세요)");
+    void fixtureHasExpectedSearchableEvents() {
+        assertEquals(EventFixtureLoader.SEARCHABLE_COUNT, countSearchable(),
+                "종료·비활성·비활성 브랜드 이벤트는 검색 대상에서 빠져야 합니다.");
     }
 
     @Test
@@ -231,4 +227,4 @@ class EventSearchIntegrationTest {
                     "size=" + size + " 쿼리 수가 3개를 넘으면 안 됩니다: " + executed);
         }
     }
-}
+}

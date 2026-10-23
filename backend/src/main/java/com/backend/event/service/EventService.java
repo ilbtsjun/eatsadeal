@@ -86,27 +86,31 @@ public class EventService {
                 return UpsertResult.UNCHANGED;
             }
 
+            String description = StringUtils.hasText(request.description())
+                    ? request.description()
+                    : event.getDescription();
+
             if (datesUnknown) {
                 boolean contentChanged = event.updateContent(
                         request.title(),
-                        request.description(),
+                        description,
                         request.url(),
                         request.img());
                 boolean periodChanged = event.applyDefaultPeriod(
                         CreateEvent.DEFAULT_PERIOD_DAYS, request.isActive());
                 boolean reactivated = event.reactivate(request.isActive());
                 if (contentChanged) {
-                    refreshEventCodes(event);
+                    refreshEventCodes(event, true);
                 }
                 return contentChanged || periodChanged || reactivated ? UpsertResult.UPDATED : UpsertResult.UNCHANGED;
             }
 
             List<String> changedFields = event.changedFields(
-                    request.title(), request.description(), request.url(), request.img(),
+                    request.title(), description, request.url(), request.img(),
                     request.startDate(), request.endDate(), request.isActive());
             boolean changed = event.update(
                     request.title(),
-                    request.description(),
+                    description,
                     request.url(),
                     request.img(),
                     request.startDate(),
@@ -116,7 +120,7 @@ public class EventService {
             if (changed) {
                 log.info("[EVENT UPDATED] url={} fields={}", request.url(), changedFields);
                 if (changedFields.contains("title") || changedFields.contains("description") || changedFields.contains("img")) {
-                    refreshEventCodes(event);
+                    refreshEventCodes(event, true);
                 }
             }
 
@@ -126,16 +130,23 @@ public class EventService {
         Brand brand = brandRepository.findById(request.brandId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        Set<EventCode> eventCodes = request.eventCodes() == null || request.eventCodes().isEmpty()
-                ? eventCodeClassifier.classify(request.title(), request.description(), request.img())
-                : request.eventCodes();
+        Set<EventCode> eventCodes = request.eventCodes();
+        String description = request.description();
+        if (eventCodes == null || eventCodes.isEmpty()) {
+            AnthropicEventCodeAi.Analysis analysis =
+                    eventCodeClassifier.analyze(request.title(), request.description(), request.img());
+            eventCodes = analysis.codes();
+            if (!StringUtils.hasText(description)) {
+                description = analysis.summary();
+            }
+        }
 
         LocalDateTime startDate = datesUnknown ? LocalDateTime.now() : request.startDate();
         LocalDateTime endDate = datesUnknown ? startDate.plusDays(CreateEvent.DEFAULT_PERIOD_DAYS) : request.endDate();
 
         Event event = Event.builder()
                 .title(request.title())
-                .description(request.description())
+                .description(description)
                 .url(request.url())
                 .img(request.img())
                 .startDate(startDate)
@@ -293,7 +304,8 @@ public class EventService {
         if (event.isAdminLocked()) {
             return false;
         }
-        return refreshEventCodes(event);
+
+        return refreshEventCodes(event, event.getEventCodes().isEmpty());
     }
 
     @Transactional(readOnly = true)
@@ -381,10 +393,17 @@ public class EventService {
         );
     }
 
-    private boolean refreshEventCodes(Event event) {
-        Set<EventCode> codes = eventCodeClassifier.classify(event.getTitle(), event.getDescription(), event.getImg());
-        if (codes.isEmpty()) {
+    private boolean refreshEventCodes(Event event, boolean replaceCodes) {
+        boolean needsDescription = !StringUtils.hasText(event.getDescription()) && StringUtils.hasText(event.getImg());
+        if (!replaceCodes && !needsDescription) {
             return false;
+        }
+        AnthropicEventCodeAi.Analysis analysis =
+                eventCodeClassifier.analyze(event.getTitle(), event.getDescription(), event.getImg());
+        boolean described = event.fillDescriptionIfEmpty(analysis.summary());
+        Set<EventCode> codes = analysis.codes();
+        if (!replaceCodes || codes.isEmpty()) {
+            return described;
         }
         new HashSet<>(event.getEventCodes()).stream()
                 .filter(code -> !codes.contains(code))

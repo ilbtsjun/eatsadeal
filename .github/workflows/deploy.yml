@@ -10,8 +10,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  test:
+    uses: ./.github/workflows/ci.yml
+
+    deploy:
+      needs: test
+      runs-on: ubuntu-latest
+      steps:
     steps:
       - name: SSH 설정
         env:
