@@ -81,7 +81,8 @@ public class SecurityConfig {
                                 "/api/brands/**",
                                 "/api/categories",
                                 "/api/categories/**",
-                                "/api/events/*/comments"
+                                "/api/events/*/comments",
+                                "/api/seo/**"
                         ).permitAll()
 
                         .requestMatchers(
@@ -135,4 +136,4 @@ public class SecurityConfig {
         return source;
     }
 
-}
+}
