@@ -25,7 +25,10 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
     const [editing, setEditing] = useState(false);
     const isAdmin = user?.role === 'ADMIN';
 
-    usePageTitle(detailEvent?.title || '이벤트');
+    usePageTitle(detailEvent?.title || '이벤트', {
+        description: detailEvent?.description,
+        path: `/events/${event.id}`,
+    });
 
     const renderStatus = (content) => (
         <div className="event-detail-page">

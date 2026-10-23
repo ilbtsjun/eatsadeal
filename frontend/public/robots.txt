@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /mypage
+Disallow: /favorites
+Disallow: /login
+Disallow: /signup
+Disallow: /api/
+
+Sitemap: https://www.eatsadeal.kr/sitemap.xml
