@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -148,6 +149,14 @@ public class Event {
         this.description = description;
         this.url = url;
         this.img = img;
+        return true;
+    }
+
+    public boolean fillDescriptionIfEmpty(String description) {
+        if (StringUtils.hasText(this.description) || !StringUtils.hasText(description)) {
+            return false;
+        }
+        this.description = description;
         return true;
     }
 

@@ -14,6 +14,16 @@ import java.util.regex.Pattern;
 public class EventCodeClassifier {
     private final AnthropicEventCodeAi eventCodeAi;
 
+    public AnthropicEventCodeAi.Analysis analyze(String title, String description, String img) {
+        if (StringUtils.hasText(description) || !StringUtils.hasText(img)) {
+            return new AnthropicEventCodeAi.Analysis(classify(title, description, img), null);
+        }
+        Set<EventCode> byRules = classifyByRules(title);
+        AnthropicEventCodeAi.Analysis byImage = eventCodeAi.analyzeBanner(title, img);
+        Set<EventCode> codes = byRules.isEmpty() ? byImage.codes() : byRules;
+        return new AnthropicEventCodeAi.Analysis(codes, byImage.summary());
+    }
+
     public Set<EventCode> classify(String title, String description, String img) {
         Set<EventCode> byRules = classifyByRules(title, description);
         if (!byRules.isEmpty()) {
