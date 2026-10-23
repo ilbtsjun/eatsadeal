@@ -145,13 +145,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query("""
     SELECT e.id
     FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (e.endDate IS NULL OR e.endDate >= :now)
+    ORDER BY e.id DESC
+""")
+    List<Long> findVisibleIds(@Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT e.id
+    FROM Event e
     WHERE e.id > :afterId
       AND e.isActive = true
       AND e.adminLocked = false
-      AND e.eventCodes IS EMPTY
+      AND (e.eventCodes IS EMPTY OR ((e.description IS NULL OR e.description = '') AND e.img <> ''))
     ORDER BY e.id
 """)
-    List<Long> findActiveIdsWithoutEventCodes(@Param("afterId") Long afterId, Pageable pageable);
+    List<Long> findActiveIdsNeedingClassification(@Param("afterId") Long afterId, Pageable pageable);
 
     boolean existsByUrlAndIdNot(String url, Long id);
 
