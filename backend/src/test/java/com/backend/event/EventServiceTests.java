@@ -24,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
@@ -82,6 +83,12 @@ class EventServiceTests {
     private static final LocalDateTime START = LocalDateTime.of(2026, 1, 1, 0, 0);
     private static final LocalDateTime END = START.plusDays(7);
     private static final String CLIENT_IP = "203.0.113.5";
+
+    @BeforeEach
+    void stubEmptyAnalysis() {
+        lenient().when(eventCodeClassifier.analyze(any(), any(), any()))
+                .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(), null));
+    }
 
     private static EventCode code(int index) {
         return EventCode.values()[index];
@@ -1319,6 +1326,68 @@ class EventServiceTests {
         }
 
         @Test
+        @DisplayName("설명 생성: 설명이 비어 있고 이미지가 있으면 배너 분석을 한 번만 하고, 코드는 규칙을 우선한다")
+        void analyzeUsesBannerOnceAndPrefersRules() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.analyzeBanner("치킨 1+1", "https://image.url/a.png"))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(EnumSet.of(EventCode.MEMBERSHIP), "치킨 한 마리를 사면 한 마리를 더 드려요."));
+
+            AnthropicEventCodeAi.Analysis analysis =
+                    new EventCodeClassifier(ai).analyze("치킨 1+1", null, "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.BUY_ONE_GET_ONE), analysis.codes());
+            assertEquals("치킨 한 마리를 사면 한 마리를 더 드려요.", analysis.summary());
+            verify(ai, times(1)).analyzeBanner(any(), any());
+            verify(ai, never()).classify(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("설명 생성: 규칙으로 못 정하면 배너 분석의 코드를 쓴다")
+        void analyzeUsesBannerCodesWhenRulesEmpty() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+            when(ai.analyzeBanner("이벤트 안내", "https://image.url/a.png"))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(EnumSet.of(EventCode.DISCOUNT_RATE), "전 메뉴 20% 할인"));
+
+            AnthropicEventCodeAi.Analysis analysis =
+                    new EventCodeClassifier(ai).analyze("이벤트 안내", " ", "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.DISCOUNT_RATE), analysis.codes());
+            assertEquals("전 메뉴 20% 할인", analysis.summary());
+        }
+
+        @Test
+        @DisplayName("설명 생성: 설명이 이미 있으면 배너 분석 없이 기존 분류만 한다")
+        void analyzeSkipsBannerWhenDescriptionExists() {
+            AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
+
+            AnthropicEventCodeAi.Analysis analysis =
+                    new EventCodeClassifier(ai).analyze("치킨 1+1", "관리자가 쓴 설명", "https://image.url/a.png");
+
+            assertEquals(EnumSet.of(EventCode.BUY_ONE_GET_ONE), analysis.codes());
+            assertNull(analysis.summary());
+            verifyNoInteractions(ai);
+        }
+
+        @Test
+        @DisplayName("AI 응답 파싱: CODES와 SUMMARY 두 줄을 읽고, NONE 설명은 null로, 긴 설명은 잘라낸다")
+        void parseAiAnalysis() {
+            AnthropicEventCodeAi.Analysis analysis =
+                    AnthropicEventCodeAi.parseAnalysis("CODES: TAKE_OUT, DISCOUNT_PRICE\nSUMMARY: 포장 주문 시 3,000원 할인");
+            assertEquals(EnumSet.of(EventCode.TAKE_OUT, EventCode.DISCOUNT_PRICE), analysis.codes());
+            assertEquals("포장 주문 시 3,000원 할인", analysis.summary());
+
+            AnthropicEventCodeAi.Analysis none = AnthropicEventCodeAi.parseAnalysis("codes: NONE\nsummary: NONE");
+            assertTrue(none.codes().isEmpty());
+            assertNull(none.summary());
+
+            AnthropicEventCodeAi.Analysis longText =
+                    AnthropicEventCodeAi.parseAnalysis("CODES: NONE\nSUMMARY: " + "가".repeat(300));
+            assertEquals(AnthropicEventCodeAi.MAX_SUMMARY_LENGTH, longText.summary().length());
+
+            assertNull(AnthropicEventCodeAi.parseAnalysis(null).summary());
+        }
+
+        @Test
         @DisplayName("AI 응답 파싱: 코드 이름만 뽑고 NONE이나 모르는 값은 무시한다")
         void parseAiResponse() {
             assertEquals(EnumSet.of(EventCode.TAKE_OUT, EventCode.DISCOUNT_RATE),
@@ -1360,8 +1429,8 @@ class EventServiceTests {
             CreateEvent request = createRequest(START, END, 1L, true, null);
             when(eventRepository.findByUrl(request.url())).thenReturn(Optional.empty());
             when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
-            when(eventCodeClassifier.classify(request.title(), request.description(), request.img()))
-                    .thenReturn(Set.of(EventCode.MEMBERSHIP));
+            when(eventCodeClassifier.analyze(request.title(), request.description(), request.img()))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(EventCode.MEMBERSHIP), null));
 
             eventService.upsertCrawledEvent(request);
 
@@ -1388,8 +1457,8 @@ class EventServiceTests {
             Event existing = buildEvent(mock(Brand.class), Set.of(EventCode.TAKE_OUT));
             CreateEvent request = createRequest(START, END, 1L, true, null);
             when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
-            when(eventCodeClassifier.classify(request.title(), request.description(), request.img()))
-                    .thenReturn(Set.of(EventCode.DISCOUNT_RATE));
+            when(eventCodeClassifier.analyze(request.title(), request.description(), request.img()))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(EventCode.DISCOUNT_RATE), null));
 
             eventService.upsertCrawledEvent(request);
 
@@ -1439,11 +1508,71 @@ class EventServiceTests {
         void applyEventCodesFillsCodes() {
             Event event = buildEvent(mock(Brand.class));
             when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
-            when(eventCodeClassifier.classify(event.getTitle(), event.getDescription(), event.getImg()))
-                    .thenReturn(Set.of(EventCode.GIFT_PROMO));
+            when(eventCodeClassifier.analyze(event.getTitle(), event.getDescription(), event.getImg()))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(EventCode.GIFT_PROMO), null));
 
             assertTrue(eventService.applyEventCodes(5L));
             assertEquals(Set.of(EventCode.GIFT_PROMO), event.getEventCodes());
+        }
+
+        @Test
+        @DisplayName("신규 크롤링 이벤트: 설명이 비어 있으면 AI가 만든 설명으로 저장한다")
+        void upsertFillsDescriptionForNewEvent() {
+            CreateEvent request = new CreateEvent("이벤트 제목", null, "https://www.bhc.co.kr/event/currentEvent/100",
+                    "https://image.url/img.png", START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.empty());
+            when(brandRepository.findById(1L)).thenReturn(Optional.of(mock(Brand.class)));
+            when(eventCodeClassifier.analyze(request.title(), null, request.img()))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(EventCode.GIFT_PROMO), "주문 시 굿즈 증정"));
+
+            eventService.upsertCrawledEvent(request);
+
+            ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+            verify(eventRepository).save(captor.capture());
+            assertEquals("주문 시 굿즈 증정", captor.getValue().getDescription());
+            assertEquals(Set.of(EventCode.GIFT_PROMO), captor.getValue().getEventCodes());
+        }
+
+        @Test
+        @DisplayName("기존 이벤트: 크롤러가 설명을 비워 보내도 기존 설명을 지우지 않고 변경으로 보지 않는다")
+        void upsertKeepsExistingDescription() {
+            Event existing = buildEvent(mock(Brand.class));
+            CreateEvent request = new CreateEvent(existing.getTitle(), null, existing.getUrl(),
+                    existing.getImg(), START, END, 1L, true, null);
+            when(eventRepository.findByUrl(request.url())).thenReturn(Optional.of(existing));
+
+            UpsertResult result = eventService.upsertCrawledEvent(request);
+
+            assertEquals(UpsertResult.UNCHANGED, result);
+            assertEquals("기존 설명", existing.getDescription());
+            verifyNoInteractions(eventCodeClassifier);
+        }
+
+        @Test
+        @DisplayName("applyEventCodes: 코드가 이미 있으면 설명만 채우고 코드는 그대로 둔다")
+        void applyEventCodesFillsOnlyDescription() {
+            Event event = Event.builder()
+                    .title("기존 제목").url("https://www.bhc.co.kr/event/currentEvent/old")
+                    .img("https://image.url/old.png").startDate(START).endDate(END)
+                    .brand(mock(Brand.class)).isActive(true).eventCodes(Set.of(EventCode.TAKE_OUT))
+                    .build();
+            when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+            when(eventCodeClassifier.analyze(event.getTitle(), null, event.getImg()))
+                    .thenReturn(new AnthropicEventCodeAi.Analysis(Set.of(EventCode.DISCOUNT_RATE), "포장 주문 10% 할인"));
+
+            assertTrue(eventService.applyEventCodes(5L));
+            assertEquals("포장 주문 10% 할인", event.getDescription());
+            assertEquals(Set.of(EventCode.TAKE_OUT), event.getEventCodes());
+        }
+
+        @Test
+        @DisplayName("applyEventCodes: 코드와 설명이 모두 있으면 AI를 부르지 않는다")
+        void applyEventCodesSkipsCompleteEvent() {
+            Event event = buildEvent(mock(Brand.class), Set.of(EventCode.TAKE_OUT));
+            when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+
+            assertFalse(eventService.applyEventCodes(5L));
+            verifyNoInteractions(eventCodeClassifier);
         }
 
         @Test
@@ -1461,7 +1590,7 @@ class EventServiceTests {
             AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
             when(ai.usedToday()).thenReturn(3);
             when(ai.dailyLimit()).thenReturn(200);
-            when(eventRepository.findActiveIdsWithoutEventCodes(eq(0L), eq(PageRequest.of(0, 2))))
+            when(eventRepository.findActiveIdsNeedingClassification(eq(0L), eq(PageRequest.of(0, 2))))
                     .thenReturn(List.of(4L, 9L));
             when(service.applyEventCodes(4L)).thenReturn(true);
             when(service.applyEventCodes(9L)).thenReturn(false);
@@ -1479,7 +1608,7 @@ class EventServiceTests {
         void backfillLastPageAndLimitClamp() {
             EventService service = mock(EventService.class);
             AnthropicEventCodeAi ai = mock(AnthropicEventCodeAi.class);
-            when(eventRepository.findActiveIdsWithoutEventCodes(eq(7L), eq(PageRequest.of(0, 200))))
+            when(eventRepository.findActiveIdsNeedingClassification(eq(7L), eq(PageRequest.of(0, 200))))
                     .thenReturn(List.of());
 
             EventCodeBackfillService.Result result = new EventCodeBackfillService(eventRepository, service, ai).run(9999, 7L);
@@ -1502,4 +1631,4 @@ class EventServiceTests {
             verifyNoInteractions(eventRepository);
         }
     }
-}
+}

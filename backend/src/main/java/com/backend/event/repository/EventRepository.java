@@ -160,10 +160,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     WHERE e.id > :afterId
       AND e.isActive = true
       AND e.adminLocked = false
-      AND e.eventCodes IS EMPTY
+      AND (e.eventCodes IS EMPTY OR ((e.description IS NULL OR e.description = '') AND e.img <> ''))
     ORDER BY e.id
 """)
-    List<Long> findActiveIdsWithoutEventCodes(@Param("afterId") Long afterId, Pageable pageable);
+    List<Long> findActiveIdsNeedingClassification(@Param("afterId") Long afterId, Pageable pageable);
 
     boolean existsByUrlAndIdNot(String url, Long id);
 
