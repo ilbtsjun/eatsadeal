@@ -1595,7 +1595,7 @@ class EventServiceTests {
             when(service.applyEventCodes(4L)).thenReturn(true);
             when(service.applyEventCodes(9L)).thenReturn(false);
 
-            EventCodeBackfillService.Result result = new EventCodeBackfillService(eventRepository, service, ai).run(2, null);
+            EventCodeBackFillResult result = new EventCodeBackfillService(eventRepository, service, ai).run(2, null);
 
             assertEquals(2, result.processed());
             assertEquals(1, result.classified());
@@ -1611,7 +1611,7 @@ class EventServiceTests {
             when(eventRepository.findActiveIdsNeedingClassification(eq(7L), eq(PageRequest.of(0, 200))))
                     .thenReturn(List.of());
 
-            EventCodeBackfillService.Result result = new EventCodeBackfillService(eventRepository, service, ai).run(9999, 7L);
+            EventCodeBackFillResult result = new EventCodeBackfillService(eventRepository, service, ai).run(9999, 7L);
 
             assertEquals(0, result.processed());
             assertNull(result.nextAfterId());
