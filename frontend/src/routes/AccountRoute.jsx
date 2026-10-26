@@ -3,7 +3,7 @@ import MyPage from '../pages/MyPage.jsx';
 import FavoritesPage from '../pages/FavoritesPage.jsx';
 import AdminPage from '../pages/AdminPage.jsx';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
-import { useAuth } from '../auth/AuthContext.jsx'
+import { useAuth } from '../auth/useAuth.js'
 
 const openEvent = (navigate) => (event) => navigate(`/events/${event.id}`, { state: { event } });
 

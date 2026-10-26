@@ -1,8 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { getSavedUser, handleLogin, handleLogout, handleUpdateUser, setupTokenTimer, clearSession } from './AuthUtil.js'
 import { useLocation } from 'react-router';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './useAuth.js';
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(getSavedUser);
@@ -34,5 +33,3 @@ export function AuthProvider({ children }) {
     const value = useMemo(() => ({ user, loggedOut, login, logout, updateUser }), [user, loggedOut, login, logout, updateUser]);
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export const useAuth = () => useContext(AuthContext);
