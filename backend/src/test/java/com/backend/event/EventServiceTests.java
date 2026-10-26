@@ -5,6 +5,7 @@ import com.backend.brand.entity.Brand;
 import com.backend.brand.repository.BrandRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.common.redis.RedisRateLimiter;
 import com.backend.event.dto.*;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
@@ -1399,9 +1400,12 @@ class EventServiceTests {
         @Test
         @DisplayName("AI: 키가 없으면 호출 없이 빈 집합을 돌려주고 호출 수도 세지 않는다")
         void aiDisabledWithoutApiKey() {
-            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "");
+            RedisRateLimiter rateLimiter = mock(RedisRateLimiter.class);
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "", rateLimiter, redisTemplate);
 
             assertTrue(ai.classify("이벤트 안내", null, null).isEmpty());
+            verifyNoInteractions(rateLimiter);
             assertEquals(0, ai.usedToday());
             assertEquals(10, ai.dailyLimit());
         }
@@ -1409,18 +1413,51 @@ class EventServiceTests {
         @Test
         @DisplayName("AI: 꺼져 있으면 키가 있어도 호출하지 않는다")
         void aiDisabledByFlag() {
-            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(false, true, "claude-haiku-5-5", 10, "sk-test");
+            RedisRateLimiter rateLimiter = mock(RedisRateLimiter.class);
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(false, true, "claude-haiku-5-5", 10, "sk-test", rateLimiter, redisTemplate);
 
             assertTrue(ai.classify("이벤트 안내", null, "https://image.url/a.png").isEmpty());
-            assertEquals(0, ai.usedToday());
+            verifyNoInteractions(rateLimiter);
         }
 
         @Test
         @DisplayName("AI: 키가 있고 켜져 있으면 클라이언트를 만들 수 있다 (호출은 하지 않음)")
         void aiEnabledBuildsClient() {
-            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test");
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test", mock(RedisRateLimiter.class), redisTemplate);
 
             assertEquals(0, ai.usedToday());
+        }
+
+        @Test
+        @DisplayName("AI: 오늘 날짜 키의 호출 수가 상한에 도달하면 AI를 호출하지 않는다")
+        void aiSkippedWhenDailyLimitReached() {
+            RedisRateLimiter rateLimiter = mock(RedisRateLimiter.class);
+            when(rateLimiter.tryAcquire(startsWith("ai:usage:"), eq(10L), eq(Duration.ofDays(2)))).thenReturn(false);
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test", rateLimiter, redisTemplate);
+
+            assertTrue(ai.classify("이벤트 안내", null, null).isEmpty());
+        }
+
+        @Test
+        @DisplayName("AI: Redis 오류로 사용량을 기록하지 못하면 AI를 호출하지 않는다")
+        void aiSkippedWhenRedisFails() {
+            RedisRateLimiter rateLimiter = mock(RedisRateLimiter.class);
+            when(rateLimiter.tryAcquire(anyString(), anyLong(), any())).thenThrow(new RedisConnectionFailureException("연결 실패"));
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test", rateLimiter, redisTemplate);
+
+            assertTrue(ai.classify("이벤트 안내", null, null).isEmpty());
+        }
+
+        @Test
+        @DisplayName("AI 사용량: Redis 값을 돌려주고, 상한을 넘겨 센 값은 상한으로 보여준다")
+        void aiUsedTodayFromRedis() {
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.get(startsWith("ai:usage:"))).thenReturn("7", "15");
+            AnthropicEventCodeAi ai = new AnthropicEventCodeAi(true, true, "claude-haiku-5-5", 10, "sk-test", mock(RedisRateLimiter.class), redisTemplate);
+
+            assertEquals(7, ai.usedToday());
+            assertEquals(10, ai.usedToday());
         }
 
         @Test
