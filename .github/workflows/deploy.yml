@@ -13,10 +13,9 @@ jobs:
   test:
     uses: ./.github/workflows/ci.yml
 
-    deploy:
-      needs: test
-      runs-on: ubuntu-latest
-      steps:
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
     steps:
       - name: SSH 설정
         env:
