@@ -15,6 +15,7 @@ import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.crawler.scheduler.CrawlerScheduler;
 import com.backend.crawler.service.CrawlerService;
 import com.backend.event.dto.CreateEvent;
+import com.backend.event.dto.EventCodeBackFillResult;
 import com.backend.event.dto.UpsertResult;
 import com.backend.event.service.EventCodeBackfillService;
 import com.backend.event.service.EventService;
@@ -153,9 +154,9 @@ class CrawlerServiceTests {
     void crawlOne_classifiesPendingEvents_untilNoMore() {
         givenBrands();
         when(eventCodeBackfillService.run(50, null))
-                .thenReturn(new EventCodeBackfillService.Result(50, 40, 77L, 10, 200));
+                .thenReturn(new EventCodeBackFillResult(50, 40, 77L, 10, 200));
         when(eventCodeBackfillService.run(50, 77L))
-                .thenReturn(new EventCodeBackfillService.Result(3, 3, null, 13, 200));
+                .thenReturn(new EventCodeBackFillResult(3, 3, null, 13, 200));
 
         crawlerService.crawlOne(CrawlTarget.BHC);
 
@@ -169,7 +170,7 @@ class CrawlerServiceTests {
     void crawlOne_classifiesPendingEvents_capsPages() {
         givenBrands();
         when(eventCodeBackfillService.run(anyInt(), any()))
-                .thenReturn(new EventCodeBackfillService.Result(50, 0, 99L, 0, 200));
+                .thenReturn(new EventCodeBackFillResult(50, 0, 99L, 0, 200));
 
         crawlerService.crawlOne(CrawlTarget.BHC);
 

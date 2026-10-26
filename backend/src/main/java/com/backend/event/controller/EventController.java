@@ -113,7 +113,7 @@ public class EventController {
     )
     @PostMapping("/event-codes/backfill")
     @PreAuthorize("hasRole('ADMIN')")
-    public EventCodeBackfillService.Result backfillEventCodes(@RequestParam(defaultValue = "50") int limit,
+    public EventCodeBackFillResult backfillEventCodes(@RequestParam(defaultValue = "50") int limit,
                                                          @RequestParam(required = false) Long afterId) {
         return eventCodeBackfillService.run(limit, afterId);
     }

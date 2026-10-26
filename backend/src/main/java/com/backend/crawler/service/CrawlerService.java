@@ -13,6 +13,7 @@ import com.backend.crawler.entity.CrawlRun;
 import com.backend.crawler.entity.CrawlStatus;
 import com.backend.crawler.repository.CrawlRunRepository;
 import com.backend.event.dto.CreateEvent;
+import com.backend.event.dto.EventCodeBackFillResult;
 import com.backend.event.dto.UpsertResult;
 import com.backend.event.service.EventCodeBackfillService;
 import com.backend.event.service.EventService;
@@ -176,7 +177,7 @@ public class CrawlerService {
             int processed = 0;
             int classified = 0;
             for (int page = 0; page < CLASSIFY_MAX_PAGES; page++) {
-                EventCodeBackfillService.Result result = eventCodeBackfillService.run(CLASSIFY_PAGE_SIZE, afterId);
+                EventCodeBackFillResult result = eventCodeBackfillService.run(CLASSIFY_PAGE_SIZE, afterId);
                 processed += result.processed();
                 classified += result.classified();
                 afterId = result.nextAfterId();
