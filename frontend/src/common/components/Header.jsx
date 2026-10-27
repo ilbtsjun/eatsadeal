@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '@/auth/AuthContext.jsx';
+import { useAuth } from '@/auth/useAuth.js';
 import { useGoLogin } from '@/common/hooks/useGoLogin.js';
 import HeaderSearch from './HeaderSearch.jsx';
 import HeaderUserMenu from './HeaderUserMenu.jsx';

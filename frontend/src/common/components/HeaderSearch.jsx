@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function HeaderSearch({ searchKeyword, onSearch }) {
     const [searchText, setSearchText] = useState(searchKeyword);
-
-    useEffect(() => {
+    const [prevKeyword, setPrevKeyword] = useState(searchKeyword);
+    if (prevKeyword !== searchKeyword) {
+        setPrevKeyword(searchKeyword);
         setSearchText(searchKeyword);
-    }, [searchKeyword]);
+    }
 
     const handleSubmit = (event) => {
         event.preventDefault();

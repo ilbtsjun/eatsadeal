@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import MainPage from '../pages/MainPage.jsx';
-import { useAuth} from '../auth/AuthContext.jsx';
+import { useAuth} from '../auth/useAuth.js';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
 export default function MainRoute() {

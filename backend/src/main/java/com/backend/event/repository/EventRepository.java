@@ -2,6 +2,7 @@ package com.backend.event.repository;
 
 import com.backend.event.entity.Event;
 import com.backend.event.dto.EventCode;
+import jakarta.persistence.Tuple;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -164,6 +165,75 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     ORDER BY e.id
 """)
     List<Long> findActiveIdsNeedingClassification(@Param("afterId") Long afterId, Pageable pageable);
+
+    @Query("""
+    SELECT COUNT(e)
+    FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (e.endDate IS NULL OR e.endDate >= :now)
+""")
+    long countVisible(@Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT COUNT(e)
+    FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND e.startDate >= :since
+      AND (e.endDate IS NULL OR e.endDate >= :now)
+""")
+    long countVisibleStartedSince(@Param("since") LocalDateTime since, @Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT COUNT(e)
+    FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND e.endDate BETWEEN :now AND :until
+""")
+    long countVisibleEndingBetween(@Param("now") LocalDateTime now, @Param("until") LocalDateTime until);
+
+    long countByIsActiveTrueAndHiddenTrue();
+
+    long countByIsActiveTrueAndAdminLockedTrue();
+
+    @Query("SELECT COUNT(e) FROM Event e WHERE e.isActive = true AND e.eventCodes IS EMPTY")
+    long countActiveWithoutEventCode();
+
+    @Query("SELECT COUNT(e) FROM Event e WHERE e.isActive = true AND (e.description IS NULL OR e.description = '')")
+    long countActiveWithoutDescription();
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    JOIN FETCH e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (e.endDate IS NULL OR e.endDate >= :now)
+    ORDER BY e.viewCount DESC, e.id DESC
+""")
+    List<Event> findTopViewed(@Param("now") LocalDateTime now, Pageable pageable);
+
+    @Query("""
+    SELECT b.name AS brandName, COUNT(e) AS eventCount
+    FROM Event e
+    JOIN e.brand b
+    WHERE b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (e.endDate IS NULL OR e.endDate >= :now)
+    GROUP BY b.name
+    ORDER BY COUNT(e) DESC
+""")
+    List<Tuple> countVisibleByBrand(@Param("now") LocalDateTime now);
 
     boolean existsByUrlAndIdNot(String url, Long id);
 

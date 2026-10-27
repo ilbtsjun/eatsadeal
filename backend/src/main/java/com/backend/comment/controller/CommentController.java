@@ -31,16 +31,6 @@ public class CommentController {
     }
 
     @Operation(
-            summary = "회원 댓글 목록 조회",
-            description = "관리자가 특정 회원의 댓글 목록을 조회합니다."
-    )
-    @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<CommentResponse> getUserCommentList(@PathVariable Long userId) {
-        return commentService.getUserCommentList(userId);
-    }
-
-    @Operation(
             summary = "댓글 수정",
             description = "댓글을 수정합니다."
     )
@@ -60,27 +50,5 @@ public class CommentController {
     public MsgResponse deleteComment(@PathVariable Long commentId){
         commentService.deleteComment(commentId);
         return new MsgResponse("삭제에 성공했습니다.", "200");
-    }
-
-    @Operation(
-            summary = "댓글 숨김",
-            description = "댓글을 숨김처리합니다."
-    )
-    @PatchMapping("/{commentId}/hide")
-    @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse hideComment(@PathVariable Long commentId){
-        commentService.hideComment(commentId);
-        return new MsgResponse("숨김에 성공했습니다.", "200");
-    }
-
-    @Operation(
-            summary = "댓글 숨김 해제",
-            description = "댓글을 숨김을 해제합니다."
-    )
-    @PatchMapping("/{commentId}/unhide")
-    @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse unhideComment(@PathVariable Long commentId){
-        commentService.unhideComment(commentId);
-        return new MsgResponse("숨김해제에 성공했습니다.", "200");
     }
 }

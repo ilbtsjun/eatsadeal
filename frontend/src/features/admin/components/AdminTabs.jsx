@@ -1,4 +1,5 @@
 const TABS = [
+    { key: 'dashboard', label: '대시보드' },
     { key: 'brand', label: '브랜드 관리' },
     { key: 'category', label: '카테고리 관리' },
     { key: 'user', label: '회원 관리' },
@@ -21,4 +22,4 @@ export default function AdminTabs({ tab, onChange }) {
             ))}
         </nav>
     );
-}
+}

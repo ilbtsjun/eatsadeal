@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router';
 import LoginPage from '../pages/LoginPage.jsx';
-import { useAuth } from '../auth/AuthContext.jsx';
+import { useAuth } from '../auth/useAuth.js';
 import { useGoBack } from '@/common/hooks/useGoBack.js';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 
