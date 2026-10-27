@@ -1,6 +1,6 @@
 import { Navigate, useLocation, useParams } from 'react-router';
 import EventDetailPage from '../pages/EventDetailPage.jsx';
-import { useAuth } from '../auth/AuthContext.jsx';
+import { useAuth } from '../auth/useAuth.js';
 import { useGoBack } from '@/common/hooks/useGoBack.js';
 import { useGoLogin } from '@/common/hooks/useGoLogin.js';
 

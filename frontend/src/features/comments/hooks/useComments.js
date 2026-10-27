@@ -19,6 +19,12 @@ export function useComments(eventId, user, onLoginClick) {
     const [editText, setEditText] = useState('');
     const [replyTargetId, setReplyTargetId] = useState(null);
     const [replyText, setReplyText] = useState('');
+    const [prevEventId, setPrevEventId] = useState(eventId);
+
+    if (prevEventId !== eventId) {
+        setPrevEventId(eventId);
+        setCommentLoading(true);
+    }
 
     const isAdmin = user?.role === 'ADMIN';
 
@@ -32,29 +38,30 @@ export function useComments(eventId, user, onLoginClick) {
 
     const latestRequestId = useRef(0);
 
-    const loadComments = useCallback(async () => {
+    const loadComments = useCallback(() => {
         const requestId = ++latestRequestId.current;
+        const isLatest = () => requestId === latestRequestId.current;
 
-        try {
-            const data = await getListComments(eventId);
-
-            if (requestId === latestRequestId.current) {
-                setComments(Array.isArray(data) ? data : []);
-                setCommentError('');
-            }
-        } catch (error) {
-            if (requestId === latestRequestId.current) {
-                setCommentError(error.message);
-            }
-        } finally {
-            if (requestId === latestRequestId.current) {
-                setCommentLoading(false);
-            }
-        }
+        return getListComments(eventId)
+            .then((data) => {
+                if (isLatest()) {
+                    setComments(Array.isArray(data) ? data : []);
+                    setCommentError('');
+                }
+            })
+            .catch((error) => {
+                if (isLatest()) {
+                    setCommentError(error.message);
+                }
+            })
+            .finally(() => {
+                if (isLatest()) {
+                    setCommentLoading(false);
+                }
+            });
     }, [eventId]);
 
     useEffect(() => {
-        setCommentLoading(true);
         loadComments();
 
         return () => {

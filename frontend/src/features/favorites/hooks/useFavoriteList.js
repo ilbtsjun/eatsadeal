@@ -6,6 +6,13 @@ export function useFavoriteList(user) {
     const [favorites, setFavorites] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [prevUser, setPrevUser] = useState(user);
+
+    if (prevUser !== user) {
+        setPrevUser(user);
+        setLoading(true);
+        setError('');
+    }
 
     const {
         pendingId,
@@ -15,9 +22,6 @@ export function useFavoriteList(user) {
 
     useEffect(() => {
         let cancelled = false;
-
-        setLoading(true);
-        setError('');
 
         getListFavoriteIds()
             .then(async (data) => {

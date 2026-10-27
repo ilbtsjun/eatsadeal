@@ -10,6 +10,14 @@ export function useEventList({ activeCategory, activeEventCode = 'all', activeSo
     const [error, setError] = useState('');
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    const requestKey = [user?.id, activeCategory, activeEventCode, activeSort, searchKeyword, page].join('|');
+    const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
+
+    if (prevRequestKey !== requestKey) {
+        setPrevRequestKey(requestKey);
+        setLoading(true);
+        setError('');
+    }
 
     useEffect(() => {
         let cancelled = false;
@@ -26,9 +34,6 @@ export function useEventList({ activeCategory, activeEventCode = 'all', activeSo
             params.set('eventCode', activeEventCode);
         if (searchKeyword.trim())
             params.set('keyword', searchKeyword.trim());
-
-        setLoading(true);
-        setError('');
 
         const favoriteRequest = user ? getListFavoriteIds() : Promise.resolve([]);
 
