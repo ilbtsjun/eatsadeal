@@ -1,9 +1,9 @@
 import {api} from "./client.js";
 
-export const getUserInfo = (query) => api.get(`/api/user/admin/user?${query}`);
-export const getUserComments = (id) => api.get(`/api/comments/user/${id}`);
+export const getUserInfo = (query) => api.get(`/api/admin/users?${query}`);
+export const getUserComments = (id) => api.get(`/api/admin/users/${id}/comments`);
 export const suspendUser = (id, suspendTime, reason, release) =>
-    api.patch(`/api/user/admin/${id}/suspension`, {
+    api.patch(`/api/admin/users/${id}/suspension`, {
             suspendTime,
             suspendReason: reason,
             status: !release,

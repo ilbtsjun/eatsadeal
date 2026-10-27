@@ -83,28 +83,6 @@ public class UserController {
     }
 
     @Operation(
-            summary = "유저 정보 조회",
-            description = "JWT 토큰으로 관리자 인증을 한 뒤 유저의 정보를 조회합니다."
-    )
-    @GetMapping("/admin/user")
-    @PreAuthorize("hasRole('ADMIN')")
-    public GetMyPageResponse getUserInfo(@ModelAttribute GetUserInfoRequest request) {
-        return userService.getUserInfo(request);
-    }
-
-    @Operation(
-            summary = "회원 정지",
-            description = "JWT 토큰으로 관리자 인증을 한 뒤 유저의 정지를 처리합니다."
-    )
-    @PatchMapping("/admin/{userID}/suspension")
-    @PreAuthorize("hasRole('ADMIN')")
-    public MsgResponse suspensionUser(@PathVariable Long userID,
-                                    @Valid @RequestBody SuspensionUser request){
-        userService.suspensionUser(userID, request);
-        return new MsgResponse("처리가 완료되었습니다.", "200");
-    }
-
-    @Operation(
             summary = "즐겨찾기 목록을 반환합니다.",
             description = "JWT 토큰으로 로그인한 유저를 찾고, 유저의 즐겨찾기 목록을 반환합니다."
     )

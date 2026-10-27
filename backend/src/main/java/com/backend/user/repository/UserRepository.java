@@ -18,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.email = :id OR u.nickname = :id")
     Optional<User> findByEmailOrNickname(String id);
 
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
+
+    long countByUserStatus(UserStatus userStatus);
+
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
