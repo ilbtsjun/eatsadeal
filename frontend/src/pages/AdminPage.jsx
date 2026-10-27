@@ -8,12 +8,13 @@ import UserManagement from '@/features/admin/components/UserManagement.jsx';
 import BrandCategoryFormModal from '@/features/admin/components/BrandCategoryFormModal.jsx';
 import UserSuspensionModal from '@/features/admin/components/UserSuspensionModal.jsx';
 import ConfirmActionModal from '@/features/admin/components/ConfirmActionModal.jsx';
+import DashboardOverview from '@/features/admin/components/DashboardOverview.jsx';
 import { useAdminCatalog } from '@/features/admin/hooks/useAdminCatalog.js';
 import { useAdminUsers } from '@/features/admin/hooks/useAdminUsers.js';
 import { useAdminCrawler } from '@/features/admin/hooks/useAdminCrawler.js';
 
 export default function AdminPage({ user, onBack }) {
-  const [tab, setTab] = useState('brand');
+  const [tab, setTab] = useState('dashboard');
 
   const {
       brands,
@@ -100,7 +101,9 @@ export default function AdminPage({ user, onBack }) {
 
               {message && <p className="admin-message" role="status">{message}</p>}
 
-              {loading ? (
+              {tab === 'dashboard' ? (
+                  <DashboardOverview />
+              ) : loading ? (
                   <p className="admin-empty">목록을 불러오는 중입니다...</p>
               ) : tab === 'user' ? (
                   <UserManagement
@@ -168,4 +171,4 @@ export default function AdminPage({ user, onBack }) {
           </main>
       </div>
   );
-}
+}

@@ -96,3 +96,32 @@
 .crawl-status-empty { color: #747d8c; background: #f1f2f6; }
 .crawl-status-failed { color: #e84118; background: #fff1f2; }
 .crawl-status-skipped_inactive { color: #a4b0be; background: #f1f2f6; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 18px; }
+.stat-card { display: grid; gap: 6px; padding: 16px; border: 1px solid #f1f2f6; border-radius: 10px; background: #f8f9fa; }
+.stat-card span { color: #747d8c; font-size: 12px; font-weight: 700; }
+.stat-card strong { font-size: 24px; }
+.stat-card.warn { background: #fff8e6; border-color: #ffe0a3; }
+.stat-card.danger { background: #fff7f6; border-color: #ffd1d5; }
+.stat-card.danger strong { color: #e84118; }
+.dashboard-retry { display: flex; justify-content: center; }
+.dashboard-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.dashboard-tags span { padding: 4px 9px; border-radius: 999px; color: #e84118; background: #ffeef0; font-size: 12px; font-weight: 700; }
+.dashboard-usage { display: grid; gap: 8px; margin-top: 18px; }
+.dashboard-usage > div:first-child { display: flex; justify-content: space-between; color: #57606f; font-size: 13px; }
+.bar-track { height: 10px; border-radius: 999px; background: #f1f2f6; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: #ff4757; }
+.bar-fill.danger { background: #e84118; }
+.dashboard-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dashboard-ranking { margin: 15px 0 0; padding: 0; list-style: none; }
+.dashboard-ranking li { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f1f2f6; }
+.dashboard-ranking em { width: 22px; color: #ff4757; font-style: normal; font-weight: 800; }
+.dashboard-ranking div { display: grid; flex: 1; gap: 3px; min-width: 0; }
+.dashboard-ranking a { overflow: hidden; color: #2f3542; font-weight: 700; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-ranking a:hover { color: #ff4757; }
+.dashboard-ranking span { color: #a4b0be; font-size: 12px; }
+.dashboard-ranking strong { color: #57606f; font-size: 14px; }
+.dashboard-bars { display: grid; gap: 10px; margin-top: 15px; }
+.bar-row { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 10px; font-size: 13px; }
+.bar-row span { overflow: hidden; color: #57606f; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row strong { text-align: right; }
+@media (max-width: 760px) { .dashboard-columns { grid-template-columns: 1fr; } }

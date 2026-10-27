@@ -14,3 +14,4 @@ export const getLatestCrawlRuns = () => api.get('/api/crawl/runs/latest');
 export const getCrawlRuns = (limit = 50) => api.get(`/api/crawl/runs?limit=${limit}`);
 export const backfillEventCodes = (limit = 50, afterId) =>
     api.post(`/api/events/event-codes/backfill?limit=${limit}${afterId ? `&afterId=${afterId}` : ''}`);
+export const getAdminDashboard = () => api.get('/api/admin/dashboard');
