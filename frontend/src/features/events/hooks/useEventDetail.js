@@ -8,6 +8,14 @@ export function useEventDetail({ event, user, onLoginClick }) {
     const [loadError, setLoadError] = useState(null);
     const [isFavorite, setIsFavorite] = useState(Boolean(event?.isFavorite));
     const [reloadKey, setReloadKey] = useState(0);
+    const requestKey = `${event.id}|${reloadKey}`;
+    const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
+
+    if (prevRequestKey !== requestKey) {
+        setPrevRequestKey(requestKey);
+        setLoaded(false);
+        setLoadError(null);
+    }
 
     const {
         pendingId,
@@ -17,9 +25,6 @@ export function useEventDetail({ event, user, onLoginClick }) {
 
     useEffect(() => {
         let cancelled = false;
-
-        setLoaded(false);
-        setLoadError(null);
 
         getEvent(event.id)
             .then((data) => {

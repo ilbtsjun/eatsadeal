@@ -38,7 +38,7 @@ const isBrandActive = (brand) =>
 export function useAdminCatalog() {
     const [brands, setBrands] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const {
@@ -50,28 +50,25 @@ export function useAdminCatalog() {
         updateFormField,
     } = useAdminCatalogForm(setMessage);
 
-    const loadLists = useCallback(async () => {
+    const fetchLists = useCallback(() => (
+        Promise.all([getListBrands(), getListCategories()])
+            .then(([brandData, categoryData]) => {
+                setBrands(Array.isArray(brandData) ? brandData : []);
+                setCategories(Array.isArray(categoryData) ? categoryData : []);
+            })
+            .catch((error) => setMessage(error.message))
+            .finally(() => setLoading(false))
+    ), []);
+
+    const loadLists = useCallback(() => {
         setLoading(true);
         setMessage('');
-
-        try {
-            const [brandData, categoryData] = await Promise.all([
-                getListBrands(),
-                getListCategories(),
-            ]);
-
-            setBrands(Array.isArray(brandData) ? brandData : []);
-            setCategories(Array.isArray(categoryData) ? categoryData : []);
-        } catch (error) {
-            setMessage(error.message);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+        return fetchLists();
+    }, [fetchLists]);
 
     useEffect(() => {
-        loadLists();
-    }, [loadLists]);
+        fetchLists();
+    }, [fetchLists]);
 
     const deleteItem = (type, id, name) => {
         setConfirmDelete({ kind: 'delete', type, id, name });
