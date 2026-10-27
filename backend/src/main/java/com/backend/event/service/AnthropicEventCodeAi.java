@@ -8,14 +8,17 @@ import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.TextBlockParam;
 import com.anthropic.models.messages.UrlImageSource;
+import com.backend.common.redis.RedisRateLimiter;
 import com.backend.event.dto.EventCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +31,9 @@ public class AnthropicEventCodeAi {
     private static final long MAX_OUTPUT_TOKENS = 60L;
     private static final long MAX_OUTPUT_TOKENS_WITH_SUMMARY = 300L;
     public static final int MAX_SUMMARY_LENGTH = 255;
+    private static final String USAGE_KEY_PREFIX = "ai:usage:";
+    private static final Duration USAGE_KEY_TTL = Duration.ofDays(2);
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
 
     private static final String SYSTEM_PROMPT = """
             You classify Korean food-franchise promotion events into promotion types.
@@ -64,19 +70,22 @@ public class AnthropicEventCodeAi {
     private final String model;
     private final int dailyLimit;
     private final AnthropicClient client;
-
-    private LocalDate usageDate = LocalDate.now();
-    private int usedToday;
+    private final RedisRateLimiter redisRateLimiter;
+    private final StringRedisTemplate redisTemplate;
 
     public AnthropicEventCodeAi(
             @Value("${app.ai.enabled:true}") boolean enabled,
             @Value("${app.ai.use-image:true}") boolean useImage,
             @Value("${app.ai.model:claude-haiku-5-5}") String model,
             @Value("${app.ai.daily-limit:200}") int dailyLimit,
-            @Value("${ANTHROPIC_API_KEY:}") String apiKey) {
+            @Value("${ANTHROPIC_API_KEY:}") String apiKey,
+            RedisRateLimiter redisRateLimiter,
+            StringRedisTemplate redisTemplate) {
         this.useImage = useImage;
         this.model = model;
         this.dailyLimit = dailyLimit;
+        this.redisRateLimiter = redisRateLimiter;
+        this.redisTemplate = redisTemplate;
         if (enabled && StringUtils.hasText(apiKey)) {
             this.client = AnthropicOkHttpClient.builder()
                     .apiKey(apiKey)
@@ -121,9 +130,14 @@ public class AnthropicEventCodeAi {
         }
     }
 
-    public synchronized int usedToday() {
-        resetIfNewDay();
-        return usedToday;
+    public int usedToday() {
+        try {
+            String value = redisTemplate.opsForValue().get(usageKey());
+            return value == null ? 0 : (int) Math.min(Long.parseLong(value), dailyLimit);
+        } catch (Exception e) {
+            log.warn("[AI] 사용량 조회 실패: {}", e.getMessage());
+            return 0;
+        }
     }
 
     public int dailyLimit() {
@@ -185,21 +199,20 @@ public class AnthropicEventCodeAi {
                         .build()))).build();
     }
 
-    private synchronized boolean tryAcquire() {
-        resetIfNewDay();
-        if (usedToday >= dailyLimit) {
-            log.warn("[AI] 오늘 호출 상한({})에 도달해 AI 분류를 건너뜁니다.", dailyLimit);
+    private boolean tryAcquire() {
+        try {
+            if (!redisRateLimiter.tryAcquire(usageKey(), dailyLimit, USAGE_KEY_TTL)) {
+                log.warn("[AI] 오늘 호출 상한({})에 도달해 AI 분류를 건너뜁니다.", dailyLimit);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[AI] 사용량 기록 실패로 AI 분류를 건너뜁니다: {}", e.getMessage());
             return false;
         }
-        usedToday++;
-        return true;
     }
 
-    private void resetIfNewDay() {
-        LocalDate today = LocalDate.now();
-        if (!today.equals(usageDate)) {
-            usageDate = today;
-            usedToday = 0;
-        }
+    private String usageKey() {
+        return USAGE_KEY_PREFIX + LocalDate.now(ZONE);
     }
 }
