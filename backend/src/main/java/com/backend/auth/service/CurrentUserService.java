@@ -2,6 +2,7 @@ package com.backend.auth.service;
 
 import com.backend.auth.principal.AuthenticatedUser;
 import com.backend.auth.token.JwtTokenProvider;
+import com.backend.common.dto.UserRole;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.user.entity.User;
@@ -55,6 +56,13 @@ public class CurrentUserService {
         }
 
         return userRepository.findById(authenticatedUser.getUserId()).orElse(null);
+    }
+
+    public boolean isAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null
+                && authentication.getPrincipal() instanceof AuthenticatedUser authenticatedUser
+                && authenticatedUser.getRole() == UserRole.ADMIN;
     }
 
     public String getTokenByUser(){

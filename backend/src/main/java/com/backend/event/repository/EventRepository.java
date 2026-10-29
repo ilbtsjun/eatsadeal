@@ -25,7 +25,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     JOIN FETCH e.brand b
     WHERE b.isActive = true
       AND e.isActive = true
-      AND e.hidden = false
+      AND (:includeHidden = true OR e.hidden = false)
       AND (
           e.endDate IS NULL
           OR e.endDate >= :now
@@ -60,7 +60,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     JOIN e.brand b
     WHERE b.isActive = true
       AND e.isActive = true
-      AND e.hidden = false
+      AND (:includeHidden = true OR e.hidden = false)
       AND (
           e.endDate IS NULL
           OR e.endDate >= :now
@@ -94,6 +94,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("categoryId") Long categoryId,
             @Param("eventCode") EventCode eventCode,
             @Param("keyword") String keyword,
+            @Param("includeHidden") boolean includeHidden,
             @Param("now") LocalDateTime now,
             Pageable pageable
     );
