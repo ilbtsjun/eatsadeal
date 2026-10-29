@@ -203,6 +203,7 @@ public class EventService {
                 request.categoryId(),
                 request.eventCode(),
                 normalizedKeyword,
+                currentUserService.isAdmin(),
                 LocalDateTime.now(),
                 pageable
         );
@@ -363,7 +364,8 @@ public class EventService {
                 event.getIsActive(),
                 brand.getId(),
                 brand.getName(),
-                Set.copyOf(event.getEventCodes())
+                Set.copyOf(event.getEventCodes()),
+                event.isHidden()
         );
     }
 

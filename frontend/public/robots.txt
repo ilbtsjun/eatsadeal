@@ -8,3 +8,5 @@ Disallow: /signup
 Disallow: /api/
 
 Sitemap: https://www.eatsadeal.kr/sitemap.xml
+
+#DaumWebMasterTool:9dd1dff512084314f2015c3db058347c7951785db93501f7308d90b1ca039b76:/muGpe/rLcLTp+f7AlrcFg==
