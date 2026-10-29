@@ -41,6 +41,9 @@ public record GetEventListResponse(
         String brandName,
 
         @Schema(description = "이벤트 코드", example = "GIFT_PROMO")
-        Set<EventCode> eventCodes
+        Set<EventCode> eventCodes,
+
+        @Schema(description = "숨김 여부 (관리자에게만 숨긴 이벤트가 보임)", example = "false")
+        Boolean hidden
 ) {
 }
