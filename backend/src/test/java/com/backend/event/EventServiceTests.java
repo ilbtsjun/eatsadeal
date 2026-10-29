@@ -366,24 +366,24 @@ class EventServiceTests {
     class SearchEventsTests {
 
         private Pageable searchAndCapturePageable(EventSearchRequest request) {
-            when(eventRepository.searchEvents(any(), any(), any(), any(), any(), any()))
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any()))
                     .thenReturn(Page.empty());
 
             eventService.searchEvents(request);
 
             ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
-            verify(eventRepository).searchEvents(any(), any(), any(), any(), any(), captor.capture());
+            verify(eventRepository).searchEvents(any(), any(), any(), any(), anyBoolean(), any(), captor.capture());
             return captor.getValue();
         }
 
         private String searchAndCaptureKeyword(EventSearchRequest request) {
-            when(eventRepository.searchEvents(any(), any(), any(), any(), any(), any()))
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any()))
                     .thenReturn(Page.empty());
 
             eventService.searchEvents(request);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-            verify(eventRepository).searchEvents(any(), any(), any(), captor.capture(), any(), any());
+            verify(eventRepository).searchEvents(any(), any(), any(), captor.capture(), anyBoolean(), any(), any());
             return captor.getValue();
         }
 
@@ -452,13 +452,26 @@ class EventServiceTests {
         @Test
         @DisplayName("brandId, categoryId, eventCode 필터가 repository로 그대로 전달된다")
         void filtersArePassedToRepository() {
-            when(eventRepository.searchEvents(any(), any(), any(), any(), any(), any()))
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any()))
                     .thenReturn(Page.empty());
 
             eventService.searchEvents(searchRequest(1L, 2L, code(0), null, "latest", 0, 10));
 
             verify(eventRepository).searchEvents(
-                    eq(1L), eq(2L), eq(code(0)), isNull(), any(LocalDateTime.class), any(Pageable.class));
+                    eq(1L), eq(2L), eq(code(0)), isNull(), eq(false), any(LocalDateTime.class), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("관리자가 검색하면 숨긴 이벤트도 포함하도록 repository에 전달한다")
+        void adminSearchIncludesHidden() {
+            when(currentUserService.isAdmin()).thenReturn(true);
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any()))
+                    .thenReturn(Page.empty());
+
+            eventService.searchEvents(searchRequest(null, "latest", 0, 10));
+
+            verify(eventRepository).searchEvents(
+                    isNull(), isNull(), isNull(), isNull(), eq(true), any(LocalDateTime.class), any(Pageable.class));
         }
 
         @Test
@@ -467,7 +480,7 @@ class EventServiceTests {
             Event event = buildEvent(responseBrand(), Set.of(code(0)));
             ReflectionTestUtils.setField(event, "id", 10L);
             Page<Event> page = new PageImpl<>(List.of(event), PageRequest.of(0, 10), 1);
-            when(eventRepository.searchEvents(any(), any(), any(), any(), any(), any())).thenReturn(page);
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any())).thenReturn(page);
 
             Page<GetEventListResponse> result = eventService.searchEvents(searchRequest(null, "latest", 0, 10));
 
@@ -477,12 +490,13 @@ class EventServiceTests {
             assertEquals("기존 제목", item.title());
             assertEquals(1L, item.brandId());
             assertEquals("BHC", item.brandName());
+            assertFalse(item.hidden());
         }
 
         @Test
         @DisplayName("검색 결과가 없으면 빈 페이지를 반환한다")
         void emptyResult() {
-            when(eventRepository.searchEvents(any(), any(), any(), any(), any(), any()))
+            when(eventRepository.searchEvents(any(), any(), any(), any(), anyBoolean(), any(), any()))
                     .thenReturn(Page.empty());
 
             Page<GetEventListResponse> result = eventService.searchEvents(searchRequest(null, "latest", 0, 10));

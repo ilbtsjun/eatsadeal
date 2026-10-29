@@ -4,7 +4,7 @@ import { getEventCodeName } from '../utils/eventDisplay.js';
 
 export default function EventCard({ event, toggleFavorite, onSelectEvent }) {
     return (
-        <div className="event-card-wrapper">
+        <div className={`event-card-wrapper ${event.hidden ? 'is-hidden' : ''}`}>
             <button type="button" className="event-card" onClick={() => onSelectEvent?.(event)}>
                 <div className="card-image-box">
                     {event.img ? (
@@ -23,6 +23,7 @@ export default function EventCard({ event, toggleFavorite, onSelectEvent }) {
                         />
                     ) : <span className="card-emoji">🍗</span>}
                     <span className="card-dday">{calculateDDay(event.endDate)}</span>
+                    {event.hidden && <span className="card-hidden-badge">숨김</span>}
                 </div>
                 <div className="card-info">
                     <span className="card-brand">{event.brand || '이츠어딜'}</span>
