@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
@@ -23,7 +23,26 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
     } = useEventDetail({ event, user, onLoginClick });
 
     const [editing, setEditing] = useState(false);
+    const [shareMessage, setShareMessage] = useState('');
     const isAdmin = user?.role === 'ADMIN';
+
+    useEffect(() => {
+        if (!shareMessage) return;
+        const timer = setTimeout(() => setShareMessage(''), 2000);
+        return () => clearTimeout(timer);
+    }, [shareMessage]);
+
+    const handleShare = () => {
+        const url = `${window.location.origin}/events/${event.id}`;
+        if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+            navigator.share({ title: detailEvent?.title, url }).catch(() => {});
+            return;
+        }
+        navigator.clipboard
+            .writeText(url)
+            .then(() => setShareMessage('링크를 복사했어요'))
+            .catch(() => setShareMessage('링크를 복사하지 못했어요'));
+    };
 
     usePageTitle(detailEvent?.title || '이벤트', {
         description: detailEvent?.description,
@@ -186,16 +205,30 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                                 '이벤트에 대한 자세한 할인 내용을 확인해보세요.'}
                         </p>
 
-                        {detailEvent?.url && (
-                            <a
-                                className="original-event-link"
-                                href={detailEvent.url}
-                                target="_blank"
-                                rel="noreferrer"
+                        <div className="detail-actions">
+                            {detailEvent?.url && (
+                                <a
+                                    className="original-event-link"
+                                    href={detailEvent.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    원문 이벤트 보러가기 ↗
+                                </a>
+                            )}
+                            <button
+                                type="button"
+                                className="detail-share-button"
+                                onClick={handleShare}
                             >
-                                원문 이벤트 보러가기 ↗
-                            </a>
-                        )}
+                                공유하기
+                            </button>
+                            {shareMessage && (
+                                <span className="detail-share-message" role="status">
+                                    {shareMessage}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </article>
 
