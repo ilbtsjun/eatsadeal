@@ -5,6 +5,7 @@ import './EventCardList.css';
 
 export default function EventCardList({
                                           activeCategory = 'all',
+                                          activeBrand = 'all',
                                           activeEventCode = 'all',
                                           activeSort = 'latest',
                                           searchKeyword = '',
@@ -20,6 +21,7 @@ export default function EventCardList({
         totalElements,
         toggleFavorite } = useEventList({
         activeCategory,
+        activeBrand,
         activeEventCode,
         activeSort,
         searchKeyword,

@@ -38,6 +38,99 @@
     color: white;
 }
 
+/* 브랜드 아코디언 */
+.brand-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+
+.brand-panel.open {
+    grid-template-rows: 1fr;
+}
+
+.brand-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 브랜드 버튼 스타일 */
+.brand-scroller {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-bottom: 4px;
+}
+
+.brand-list {
+    display: flex;
+    flex: 1;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px;
+    scrollbar-width: none;
+}
+
+.brand-list::-webkit-scrollbar {
+    display: none;
+}
+
+.brand-arrow {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #dfe4ea;
+    border-radius: 50%;
+    background: #fff;
+    color: #2f3542;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.brand-arrow:hover:not(:disabled) {
+    border-color: #ff4757;
+    color: #ff4757;
+}
+
+.brand-arrow:disabled {
+    color: #b2bec3;
+    background: #f1f2f6;
+    cursor: not-allowed;
+}
+
+.brand-scroller.no-overflow .brand-arrow {
+    display: none;
+}
+
+.brand-btn {
+    padding: 6px 14px;
+    background-color: #fff5f6;
+    border: 1px solid #ffd1d6;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #2f3542;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.brand-btn:hover {
+    border-color: #ff4757;
+    color: #ff4757;
+}
+
+.brand-btn.active {
+    background-color: #ff4757;
+    border-color: #ff4757;
+    color: #fff;
+}
+
 /* 할인 종류(이벤트 코드) 버튼 스타일 */
 .event-code-list {
     display: flex;
