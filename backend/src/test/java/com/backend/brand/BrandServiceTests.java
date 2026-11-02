@@ -103,6 +103,10 @@ class BrandServiceTests {
             Brand bhc = buildBrand(2L, "BHC");
             bhc.deactive();
             when(brandRepository.findAll(any(Sort.class))).thenReturn(List.of(bbq, bhc));
+            when(brandCategoryRepository.findAll()).thenReturn(List.of(
+                    link(bbq, categoryWithId(10L)),
+                    link(bbq, categoryWithId(20L)),
+                    link(bhc, categoryWithId(10L))));
 
             List<GetBrandListResponse> result = brandService.getBrandList();
 
@@ -114,7 +118,21 @@ class BrandServiceTests {
             assertEquals(2L, result.get(1).id());
             assertEquals("BHC", result.get(1).name());
             assertFalse(result.get(1).isActive(), "비활성 브랜드도 목록에 포함되고 isActive=false로 내려간다");
+            assertEquals(List.of(10L, 20L), result.get(0).categoryIds());
+            assertEquals(List.of(10L), result.get(1).categoryIds());
             verify(brandRepository).findAll(Sort.by(Sort.Direction.ASC, "name"));
+            verify(brandCategoryRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("성공: 카테고리가 연결되지 않은 브랜드는 categoryIds가 빈 리스트")
+        void noCategory() {
+            when(brandRepository.findAll(any(Sort.class))).thenReturn(List.of(buildBrand(1L, "BBQ")));
+            when(brandCategoryRepository.findAll()).thenReturn(List.of());
+
+            List<GetBrandListResponse> result = brandService.getBrandList();
+
+            assertEquals(List.of(), result.get(0).categoryIds());
         }
 
         @Test
