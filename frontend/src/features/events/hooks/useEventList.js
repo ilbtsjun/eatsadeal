@@ -4,13 +4,13 @@ import { EVENT_CODE_NAMES } from '../utils/eventDisplay.js';
 
 const PAGE_SIZE = 20;
 
-export function useEventList({ activeCategory, activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange }) {
+export function useEventList({ activeCategory, activeBrand = 'all', activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const requestKey = [user?.id, activeCategory, activeEventCode, activeSort, searchKeyword, page].join('|');
+    const requestKey = [user?.id, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page].join('|');
     const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
 
     if (prevRequestKey !== requestKey) {
@@ -30,6 +30,8 @@ export function useEventList({ activeCategory, activeEventCode = 'all', activeSo
 
         if (activeCategory !== 'all' && /^\d+$/.test(String(activeCategory)))
             params.set('categoryId', activeCategory);
+        if (activeBrand !== 'all' && /^\d+$/.test(String(activeBrand)))
+            params.set('brandId', activeBrand);
         if (EVENT_CODE_NAMES[activeEventCode])
             params.set('eventCode', activeEventCode);
         if (searchKeyword.trim())
@@ -60,7 +62,7 @@ export function useEventList({ activeCategory, activeEventCode = 'all', activeSo
             });
 
         return () => { cancelled = true; };
-    }, [user, activeCategory, activeEventCode, activeSort, searchKeyword, page]);
+    }, [user, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page]);
 
     useEffect(() => {
         if (!loading && totalPages > 0 && page >= totalPages) {

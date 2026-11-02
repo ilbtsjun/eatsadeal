@@ -9,6 +9,7 @@ import { useEventSearchParams } from '@/features/events/hooks/useEventSearchPara
 export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPrivacy}) {
     const {
         category,
+        brand,
         eventCode,
         sort,
         keyword,
@@ -26,7 +27,9 @@ export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPriva
 
             <CategoryFilter
                 activeCategory={category}
-                onCategoryChange={(c) => updateSearchParams({ category: c })}
+                onCategoryChange={(c) => updateSearchParams({ category: c, brand: 'all' })}
+                activeBrand={brand}
+                onBrandChange={(b) => updateSearchParams({ brand: b })}
                 activeEventCode={eventCode}
                 onEventCodeChange={(code) => updateSearchParams({ eventCode: code })}
                 activeSort={sort}
@@ -37,6 +40,7 @@ export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPriva
 
             <EventCardList
                 activeCategory={category}
+                activeBrand={brand}
                 activeEventCode={eventCode}
                 activeSort={sort}
                 searchKeyword={keyword}
