@@ -103,10 +103,12 @@ class BrandServiceTests {
             Brand bhc = buildBrand(2L, "BHC");
             bhc.deactive();
             when(brandRepository.findAll(any(Sort.class))).thenReturn(List.of(bbq, bhc));
+            Category chicken = categoryWithId(10L);
+            Category pizza = categoryWithId(20L);
             when(brandCategoryRepository.findAll()).thenReturn(List.of(
-                    link(bbq, categoryWithId(10L)),
-                    link(bbq, categoryWithId(20L)),
-                    link(bhc, categoryWithId(10L))));
+                    link(bbq, chicken),
+                    link(bbq, pizza),
+                    link(bhc, chicken)));
 
             List<GetBrandListResponse> result = brandService.getBrandList();
 
