@@ -3,7 +3,8 @@ import { EVENT_CODE_NAMES } from '@/features/events/utils/eventDisplay.js';
 import './CategoryFilter.css';
 
 export default function CategoryFilter({ activeCategory, onCategoryChange, activeEventCode = 'all', onEventCodeChange, activeSort, onSortChange }) {
-    const { categories } = useCategories();
+    const { categories, categoryBrands, brandPanelOpen, selectCategory } =
+        useCategories({ activeCategory, onCategoryChange });
     return (
     <div className="category-filter-container">
       <div className="category-list" aria-label="음식 카테고리">
@@ -11,10 +12,25 @@ export default function CategoryFilter({ activeCategory, onCategoryChange, activ
             <button key={category.id}
                     type="button"
                     className={`category-btn ${activeCategory === category.id ? 'active' : ''}`}
-                    onClick={() => onCategoryChange(category.id)}>
+                    aria-expanded={category.id === 'all' ? undefined : activeCategory === category.id && brandPanelOpen}
+                    onClick={() => selectCategory(category.id)}>
                 {category.name}
             </button>)
         }
+      </div>
+      <div className={`brand-panel ${brandPanelOpen ? 'open' : ''}`} aria-hidden={!brandPanelOpen}>
+        <div className="brand-panel-inner">
+          <div className="brand-list" aria-label="브랜드">
+            {[{ id: 'all', name: '전체' }, ...categoryBrands].map((brand) =>
+                <button key={brand.id}
+                        type="button"
+                        tabIndex={brandPanelOpen ? 0 : -1}
+                        className={`brand-btn ${brand.id === 'all' ? 'active' : ''}`}>
+                    {brand.name}
+                </button>)
+            }
+          </div>
+        </div>
       </div>
       <div className="event-code-list" aria-label="할인 종류">
         {[['all', '전체'], ...Object.entries(EVENT_CODE_NAMES)].map(([code, name]) =>
