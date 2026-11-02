@@ -55,17 +55,57 @@
 }
 
 /* 브랜드 버튼 스타일 */
+.brand-scroller {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-bottom: 4px;
+}
+
 .brand-list {
     display: flex;
+    flex: 1;
     flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
-    width: 100%;
-    margin-top: 10px;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 2px 2px 8px;
-    scrollbar-width: thin;
+    padding: 2px;
+    scrollbar-width: none;
+}
+
+.brand-list::-webkit-scrollbar {
+    display: none;
+}
+
+.brand-arrow {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #dfe4ea;
+    border-radius: 50%;
+    background: #fff;
+    color: #2f3542;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.brand-arrow:hover:not(:disabled) {
+    border-color: #ff4757;
+    color: #ff4757;
+}
+
+.brand-arrow:disabled {
+    color: #b2bec3;
+    background: #f1f2f6;
+    cursor: not-allowed;
+}
+
+.brand-scroller.no-overflow .brand-arrow {
+    display: none;
 }
 
 .brand-btn {

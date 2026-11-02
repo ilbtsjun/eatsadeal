@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getListBrands, getListCategories } from '@/api/index.js';
 
 const ALL = { id: 'all', name: '전체' };
 
-export function useCategories({ activeCategory = 'all', onCategoryChange } = {}) {
+export function useCategories({ activeCategory = 'all', onCategoryChange, activeBrand = 'all', onBrandChange } = {}) {
     const [categories, setCategories] = useState([ALL]);
     const [brands, setBrands] = useState([]);
     const [collapsedCategory, setCollapsedCategory] = useState(null);
+    const brandListRef = useRef(null);
+    const [brandScroll, setBrandScroll] = useState({ prev: false, next: false });
 
     useEffect(() => {
         let cancelled = false;
@@ -41,8 +43,30 @@ export function useCategories({ activeCategory = 'all', onCategoryChange } = {})
         return () => { cancelled = true; };
     }, []);
 
+    useEffect(() => {
+        const list = brandListRef.current;
+        if (!list) return undefined;
+
+        const update = () => {
+            const maxScroll = list.scrollWidth - list.clientWidth;
+            setBrandScroll({ prev: list.scrollLeft > 0, next: list.scrollLeft < maxScroll - 1 });
+        };
+
+        list.scrollLeft = 0;
+        const frame = requestAnimationFrame(update);
+        const observer = new ResizeObserver(update);
+        observer.observe(list);
+        list.addEventListener('scroll', update, { passive: true });
+
+        return () => {
+            cancelAnimationFrame(frame);
+            observer.disconnect();
+            list.removeEventListener('scroll', update);
+        };
+    }, [activeCategory, brands]);
+
     const categoryBrands = activeCategory === 'all'
-        ? []
+        ? brands
         : brands.filter((brand) => brand.categoryIds.includes(String(activeCategory)));
     const brandPanelOpen = categoryBrands.length > 0 && collapsedCategory !== activeCategory;
 
@@ -55,5 +79,23 @@ export function useCategories({ activeCategory = 'all', onCategoryChange } = {})
         onCategoryChange?.(categoryId);
     };
 
-    return { categories, categoryBrands, brandPanelOpen, selectCategory };
+    const selectBrand = (brandId) => {
+        onBrandChange?.(brandId === activeBrand ? 'all' : brandId);
+    };
+
+    const scrollBrands = (direction) => {
+        const list = brandListRef.current;
+        list?.scrollBy({ left: direction * list.clientWidth * 0.8, behavior: 'smooth' });
+    };
+
+    return {
+        categories,
+        categoryBrands,
+        brandPanelOpen,
+        selectCategory,
+        selectBrand,
+        brandListRef,
+        brandScroll,
+        scrollBrands,
+    };
 }
