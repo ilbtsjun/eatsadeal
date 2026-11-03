@@ -1,3 +1,4 @@
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { useEventList } from '../hooks/useEventList.js';
 import EventCard from './EventCard.jsx';
 import Pagination from './Pagination.jsx';
@@ -19,7 +20,8 @@ export default function EventCardList({
         error,
         totalPages,
         totalElements,
-        toggleFavorite } = useEventList({
+        toggleFavorite,
+        reload } = useEventList({
         activeCategory,
         activeBrand,
         activeEventCode,
@@ -30,8 +32,8 @@ export default function EventCardList({
         onPageChange,
     });
 
-    if (loading) return <p>이벤트 정보를 불러오는 중입니다...</p>;
-    if (error) return <p>오류가 발생했습니다: {error}</p>;
+    if (loading) return <StatusMessage type="loading" size="inline" message="이벤트 정보를 불러오는 중입니다..." />;
+    if (error) return <StatusMessage type="error" size="inline" title="이벤트를 불러오지 못했어요" message={error} onRetry={reload} />;
 
     return (
         <div className="card-list-container">

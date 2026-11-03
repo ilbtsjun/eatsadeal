@@ -10,7 +10,8 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
     const [error, setError] = useState('');
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const requestKey = [user?.id, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page].join('|');
+    const [reloadKey, setReloadKey] = useState(0);
+    const requestKey = [user?.id, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page, reloadKey].join('|');
     const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
 
     if (prevRequestKey !== requestKey) {
@@ -62,7 +63,9 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
             });
 
         return () => { cancelled = true; };
-    }, [user, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page]);
+    }, [user, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page, reloadKey]);
+
+    const reload = () => setReloadKey((key) => key + 1);
 
     useEffect(() => {
         if (!loading && totalPages > 0 && page >= totalPages) {
@@ -97,5 +100,6 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
         totalPages,
         totalElements,
         toggleFavorite,
+        reload,
     };
 }

@@ -15,12 +15,14 @@ export function useProfile({user, onUserUpdate}){
     const [profileMessage, setProfileMessage] = useState('');
     const [profileError, setProfileError] = useState('');
     const [profileLoading, setProfileLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
         const loadProfile = async () => {
             setProfileLoading(true);
-            setProfileError('');
+            setLoadError('');
             try {
                 const data = await getCurrentUser();
                 if (cancelled)
@@ -30,7 +32,7 @@ export function useProfile({user, onUserUpdate}){
             } catch (error) {
                 if (cancelled)
                     return;
-                setProfileError( error.message || '회원정보를 불러오지 못했습니다.' );
+                setLoadError(error.message || '회원정보를 불러오지 못했습니다.');
             } finally {
                 if (!cancelled) {
                     setProfileLoading(false);
@@ -40,7 +42,9 @@ export function useProfile({user, onUserUpdate}){
 
         loadProfile();
         return () => { cancelled = true; };
-    }, [user]);
+    }, [user, reloadKey]);
+
+    const reload = () => setReloadKey((key) => key + 1);
 
     const updateForm = (event) => {
         const { name, value } = event.target;
@@ -92,6 +96,8 @@ export function useProfile({user, onUserUpdate}){
     return { profile,
         profileForm,
         profileLoading,
+        loadError,
+        reload,
         profileMessage,
         profileError,
         editingProfile,

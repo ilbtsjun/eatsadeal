@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from 'react';
 import {
     getEvent,
     getMyComments,
@@ -6,53 +6,51 @@ import {
 } from '@/api/index.js';
 
 const COMMENTS_PER_PAGE = 10;
+
 const getCommentId = (comment) => comment?.commentId ? String(comment.commentId) : null;
 
-export function useUserComments({ user, }){
+export function useUserComments({ user }) {
     const [comments, setComments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
+    const [prevUser, setPrevUser] = useState(user);
     const [commentPage, setCommentPage] = useState(0);
     const [commentToDelete, setCommentToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
     const [eventTitles, setEventTitles] = useState({});
 
-    const currentCommentPage = Math.min(commentPage, Math.max(0, Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1));
+    if (prevUser !== user) {
+        setPrevUser(user);
+        setLoading(true);
+        setError('');
+    }
 
     useEffect(() => {
         let cancelled = false;
-
-        const loadComments = async () => {
-            try {
-                const data = await getMyComments();
+        getMyComments()
+            .then((data) => {
                 if (cancelled) return;
-
-                const serverComments = Array.isArray(data)
-                    ? data
-                    : data?.comments || data?.content || [];
-
-                setComments(serverComments);
-            } catch (requestError) {
-                if (cancelled) return;
-
-                setComments([]);
-                console.error(requestError);
-                throw(requestError);
-            }
-        };
-
-        loadComments();
-
+                setComments(Array.isArray(data) ? data : data?.comments || data?.content || []);
+            })
+            .catch((requestError) => {
+                if (!cancelled) setError(requestError.message || '댓글을 불러오지 못했습니다.');
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
         return () => {
             cancelled = true;
         };
-    }, [user]);
+    }, [user, reloadKey]);
 
     useEffect(() => {
         let cancelled = false;
         const eventIds = [
             ...new Set(comments.map((comment) => comment.eventId).filter(Boolean)),
         ];
-
         if (!eventIds.length) return undefined;
-
 
         Promise.all(eventIds.map(async (eventId) => {
             try {
@@ -73,11 +71,36 @@ export function useUserComments({ user, }){
     }, [comments]);
 
     const commentPageCount = Math.ceil(comments.length / COMMENTS_PER_PAGE);
+    const currentCommentPage = Math.min(commentPage, Math.max(0, commentPageCount - 1));
+    const pageStart = currentCommentPage * COMMENTS_PER_PAGE;
+    const pagedComments = comments.slice(pageStart, pageStart + COMMENTS_PER_PAGE);
 
-    const deleteComment = async (comment) => {
-        const commentId = getCommentId(comment);
-        if (!commentId) return;
+    const getEventTitle = (eventId) => eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`;
 
+    const reload = () => {
+        setLoading(true);
+        setError('');
+        setReloadKey((key) => key + 1);
+    };
+
+    const goPrevPage = () => setCommentPage(Math.max(0, currentCommentPage - 1));
+    const goNextPage = () => setCommentPage(Math.min(commentPageCount - 1, currentCommentPage + 1));
+
+    const openDelete = (comment) => {
+        setDeleteError('');
+        setCommentToDelete(comment);
+    };
+
+    const closeDelete = () => {
+        if (!deleting) setCommentToDelete(null);
+    };
+
+    const deleteComment = async () => {
+        const commentId = getCommentId(commentToDelete);
+        if (!commentId || deleting) return;
+
+        setDeleting(true);
+        setDeleteError('');
         try {
             await deleteCommentRequest(commentId);
             setComments((current) =>
@@ -87,24 +110,30 @@ export function useUserComments({ user, }){
                         : item
                 )
             );
-        } catch (requestError) {
-            console.error(requestError);
-            throw(requestError);
-        } finally {
             setCommentToDelete(null);
+        } catch (requestError) {
+            setDeleteError(requestError.message || '댓글을 삭제하지 못했습니다.');
+        } finally {
+            setDeleting(false);
         }
     };
 
     return {
-        COMMENTS_PER_PAGE,
-        comments,
-        deleteComment,
+        pagedComments,
+        pageStart,
+        loading,
+        error,
+        reload,
         currentCommentPage,
-        setCommentPage,
-        getCommentId,
-        commentToDelete,
-        setCommentToDelete,
         commentPageCount,
-        eventTitles,
-    }
+        goPrevPage,
+        goNextPage,
+        getEventTitle,
+        commentToDelete,
+        deleting,
+        deleteError,
+        openDelete,
+        closeDelete,
+        deleteComment,
+    };
 }

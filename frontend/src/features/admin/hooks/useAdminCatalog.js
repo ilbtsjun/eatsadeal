@@ -39,6 +39,7 @@ export function useAdminCatalog() {
     const [brands, setBrands] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [listError, setListError] = useState('');
     const [message, setMessage] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const {
@@ -56,12 +57,13 @@ export function useAdminCatalog() {
                 setBrands(Array.isArray(brandData) ? brandData : []);
                 setCategories(Array.isArray(categoryData) ? categoryData : []);
             })
-            .catch((error) => setMessage(error.message))
+            .catch((error) => setListError(error.message))
             .finally(() => setLoading(false))
     ), []);
 
     const loadLists = useCallback(() => {
         setLoading(true);
+        setListError('');
         setMessage('');
         return fetchLists();
     }, [fetchLists]);
@@ -170,6 +172,7 @@ export function useAdminCatalog() {
         brands,
         categories,
         loading,
+        listError,
         message,
         setMessage,
         loadLists,

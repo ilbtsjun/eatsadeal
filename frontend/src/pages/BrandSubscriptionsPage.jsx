@@ -1,4 +1,5 @@
 import Header from '@/common/components/Header';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './BrandSubscriptionsPage.css';
 import { getFallbackImage } from '@/common/utils/BrandUtil.js';
 import { useBrandSubscriptions } from '@/features/account/hooks/useBrandSubscriptions.js';
@@ -8,6 +9,7 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
         brands,
         loading,
         error,
+        reload,
         subscribedIds,
         pendingId,
         toggleError,
@@ -22,8 +24,8 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
                 <h1>브랜드 구독</h1>
                 <p className="subscriptions-intro">관심 있는 브랜드를 구독하면 새 이벤트 소식을 받아볼 수 있어요.</p>
                 {toggleError && <p className="subscriptions-error" role="alert">{toggleError}</p>}
-                {loading && <p className="subscriptions-message">브랜드 목록을 불러오는 중입니다...</p>}
-                {!loading && error && <p className="subscriptions-error">오류가 발생했습니다: {error}</p>}
+                {loading && <StatusMessage type="loading" message="브랜드 목록을 불러오는 중입니다..." />}
+                {!loading && error && <StatusMessage type="error" title="브랜드 목록을 불러오지 못했어요" message={error} onRetry={reload} />}
                 {!loading && !error && (brands.length ? (
                     <div className="subscriptions-list">
                         {brands.map((brand) => {

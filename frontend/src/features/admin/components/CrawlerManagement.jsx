@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
+import { CRAWL_ALL, CRAWL_GROUPS } from '@/features/admin/constants/crawlTargets.js';
 
 const STATUS_LABEL = {
     SUCCESS: '성공',
@@ -57,64 +58,18 @@ function CrawlRunTable({ runs, showTime }) {
     );
 }
 
-const CRAWL_ALL = { path: '/api/crawl', label: '전체' };
-const CRAWL_GROUPS = [
-    {
-        key: 'chicken',
-        label: '치킨',
-        path: '/api/crawl/chicken',
-        brands: [
-            { path: '/api/crawl/bhc', label: 'BHC' },
-            { path: '/api/crawl/bbq', label: 'BBQ' },
-            { path: '/api/crawl/kyochon', label: '교촌' },
-            { path: '/api/crawl/pelicana', label: '페리카나' },
-            { path: '/api/crawl/goobne', label: '굽네' },
-        ],
-    },
-    {
-        key: 'pizza',
-        label: '피자',
-        path: '/api/crawl/pizza',
-        brands: [
-            { path: '/api/crawl/dominos', label: '도미노' },
-            { path: '/api/crawl/papajohns', label: '파파존스' },
-            { path: '/api/crawl/pizzamaru', label: '피자마루' },
-            { path: '/api/crawl/pizzaetang', label: '피자에땅' },
-            { path: '/api/crawl/pizzaschool', label: '피자스쿨' },
-        ],
-    },
-    {
-        key: 'hamburger',
-        label: '햄버거',
-        path: '/api/crawl/hamburger',
-        brands: [
-            { path: '/api/crawl/burgerking', label: '버거킹' },
-            { path: '/api/crawl/frankburger', label: '프랭크버거' },
-            { path: '/api/crawl/kfc', label: 'KFC' },
-            { path: '/api/crawl/lotteria', label: '롯데리아' },
-            { path: '/api/crawl/momstouch', label: '맘스터치' },
-        ],
-    },
-];
-
-export default function CrwalerManagement({
+export default function CrawlerManagement({
     crawlerLoading,
     onRunCrawler,
     latestRuns = [],
+    statusCounts = {},
     recentRuns = [],
     runsLoading = false,
+    runsError = '',
     onLoadRuns,
     classifyLoading = false,
     onClassifyEventCodes,
 }){
-    useEffect(() => {
-        onLoadRuns?.();
-    }, [onLoadRuns]);
-
-    const counts = latestRuns.reduce((acc, run) => {
-        acc[run.status] = (acc[run.status] ?? 0) + 1;
-        return acc;
-    }, {});
     const firstRun = latestRuns[0];
     const lastRun = latestRuns[latestRuns.length - 1];
 
@@ -185,10 +140,20 @@ export default function CrwalerManagement({
                     </button>
                 </div>
 
-                {latestRuns.length === 0 ? (
-                    <p className="admin-empty">
-                        {runsLoading ? '불러오는 중입니다...' : '아직 기록된 크롤링이 없습니다.'}
-                    </p>
+                {runsError ? (
+                    <StatusMessage
+                        type="error"
+                        size="inline"
+                        title="크롤링 기록을 불러오지 못했어요"
+                        message={runsError}
+                        onRetry={onLoadRuns}
+                    />
+                ) : latestRuns.length === 0 ? (
+                    runsLoading ? (
+                        <StatusMessage type="loading" size="inline" message="크롤링 기록을 불러오는 중입니다..." />
+                    ) : (
+                        <p className="admin-empty">아직 기록된 크롤링이 없습니다.</p>
+                    )
                 ) : (
                     <>
                         <p className="panel-description">
@@ -196,9 +161,9 @@ export default function CrwalerManagement({
                         </p>
                         <div className="crawl-run-summary">
                             {Object.keys(STATUS_LABEL).map((status) => (
-                                counts[status] ? (
+                                statusCounts[status] ? (
                                     <span key={status} className={`crawl-status crawl-status-${status.toLowerCase()}`}>
-                                        {STATUS_LABEL[status]} {counts[status]}
+                                        {STATUS_LABEL[status]} {statusCounts[status]}
                                     </span>
                                 ) : null
                             ))}
@@ -216,4 +181,4 @@ export default function CrwalerManagement({
             )}
         </section>
     )
-}
+}

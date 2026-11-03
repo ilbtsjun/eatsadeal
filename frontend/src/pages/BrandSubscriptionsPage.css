@@ -15,6 +15,6 @@
 .subscription-toggle:hover { border-color: #ff4757; color: #ff4757; }
 .subscription-toggle.is-subscribed { border-color: #ff4757; color: #fff; background: #ff4757; }
 
-.subscriptions-message, .subscriptions-empty, .subscriptions-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
+.subscriptions-container .status-message, .subscriptions-empty, .subscriptions-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
 .subscriptions-error { color: #e84118; }
 @media (max-width: 600px) { .subscriptions-container { width: min(100% - 28px, 900px); } .subscription-row { padding: 12px 14px; } }

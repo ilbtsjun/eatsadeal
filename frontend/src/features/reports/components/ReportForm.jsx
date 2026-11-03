@@ -1,44 +1,23 @@
-import { useState } from 'react';
-import { createReport } from '@/api/index.js';
+import { useReportForm } from '../hooks/useReportForm.js';
 import './ReportForm.css';
 
 const TITLE_MAX = 100;
 const CONTENT_MAX = 2000;
 
 export default function ReportForm({ onCancel, onSubmitted }) {
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState('');
-    const [done, setDone] = useState(false);
-
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-        if (submitting)
-            return;
-
-        const trimmedTitle = title.trim();
-        const trimmedContent = content.trim();
-        if (!trimmedTitle || !trimmedContent) {
-            setError('제목과 내용을 모두 입력해주세요.');
-            return;
-        }
-
-        setSubmitting(true);
-        setError('');
-        try {
-            await createReport({ title: trimmedTitle, content: trimmedContent });
-            setDone(true);
-            onSubmitted?.();
-        } catch (requestError) {
-            setError(requestError.message || '제보 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    const {
+        title,
+        content,
+        submitting,
+        error,
+        done,
+        hasInput,
+        handleTitleChange,
+        handleContentChange,
+        handleSubmit,
+    } = useReportForm({ onSubmitted });
 
     const handleCancel = () => {
-        const hasInput = title.trim() || content.trim();
         if (hasInput && !window.confirm('작성 중인 내용이 사라집니다. 취소할까요?')) return;
         onCancel?.();
     };
@@ -69,7 +48,7 @@ export default function ReportForm({ onCancel, onSubmitted }) {
                 value={title}
                 maxLength={TITLE_MAX}
                 placeholder="제보 제목을 입력해주세요"
-                onChange={(event) => setTitle(event.target.value)}
+                onChange={handleTitleChange}
                 disabled={submitting}
             />
 
@@ -81,7 +60,7 @@ export default function ReportForm({ onCancel, onSubmitted }) {
                 maxLength={CONTENT_MAX}
                 rows={8}
                 placeholder="새로운 이벤트 정보, 잘못된 정보, 건의사항 등을 자유롭게 적어주세요"
-                onChange={(event) => setContent(event.target.value)}
+                onChange={handleContentChange}
                 disabled={submitting}
             />
             <span className="report-counter">{content.length} / {CONTENT_MAX}</span>
@@ -98,4 +77,4 @@ export default function ReportForm({ onCancel, onSubmitted }) {
             </div>
         </form>
     );
-}
+}

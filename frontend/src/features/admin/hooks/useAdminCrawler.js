@@ -6,20 +6,22 @@ export function useAdminCrawler(setMessage) {
     const [latestRuns, setLatestRuns] = useState([]);
     const [recentRuns, setRecentRuns] = useState([]);
     const [runsLoading, setRunsLoading] = useState(false);
+    const [runsError, setRunsError] = useState('');
     const [classifyLoading, setClassifyLoading] = useState(false);
 
     const loadRuns = useCallback(async () => {
         setRunsLoading(true);
+        setRunsError('');
         try {
             const [latest, recent] = await Promise.all([getLatestCrawlRuns(), getCrawlRuns(50)]);
             setLatestRuns(latest ?? []);
             setRecentRuns(recent ?? []);
         } catch (error) {
-            setMessage(`크롤링 이력을 불러오지 못했습니다: ${error.message}`);
+            setRunsError(error.message);
         } finally {
             setRunsLoading(false);
         }
-    }, [setMessage]);
+    }, []);
 
     const runCrawler = async (path, label) => {
         setCrawlerLoading(true);
@@ -72,5 +74,10 @@ export function useAdminCrawler(setMessage) {
         }
     };
 
-    return { crawlerLoading, runCrawler, latestRuns, recentRuns, runsLoading, loadRuns, classifyLoading, classifyEventCodes };
-}
+    const statusCounts = latestRuns.reduce((acc, run) => {
+        acc[run.status] = (acc[run.status] ?? 0) + 1;
+        return acc;
+    }, {});
+
+    return { crawlerLoading, runCrawler, latestRuns, statusCounts, recentRuns, runsLoading, runsError, loadRuns, classifyLoading, classifyEventCodes };
+}
