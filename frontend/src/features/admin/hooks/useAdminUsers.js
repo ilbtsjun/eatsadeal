@@ -6,6 +6,7 @@ export function useAdminUsers() {
     const [userNickname, setUserNickname] = useState('');
     const [userComments, setUserComments] = useState([]);
     const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState('');
     const [userMessage, setUserMessage] = useState('');
     const [suspendModal, setSuspendModal] = useState(null);
     const [suspendError, setSuspendError] = useState('');
@@ -16,6 +17,7 @@ export function useAdminUsers() {
         setUserMessage('');
         setSelectedUser(null);
         setUserComments([]);
+        setCommentsError('');
 
         const keyword = userNickname.trim();
         if (!keyword) {
@@ -52,7 +54,7 @@ export function useAdminUsers() {
             const comments = await getUserComments(result.id);
             setUserComments(Array.isArray(comments) ? comments : []);
         } catch (error) {
-            setUserMessage(`회원 정보는 조회했지만 댓글을 불러오지 못했습니다: ${error.message}`);
+            setCommentsError(error.message);
         } finally {
             setCommentsLoading(false);
         }
@@ -132,6 +134,7 @@ export function useAdminUsers() {
         setUserNickname,
         userComments,
         commentsLoading,
+        commentsError,
         userMessage,
         suspendModal,
         suspendError,

@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
 import { useAdminDashboard } from '@/features/admin/hooks/useAdminDashboard.js';
 
@@ -15,16 +16,19 @@ export default function DashboardOverview() {
     const { dashboard, loading, error, loadDashboard } = useAdminDashboard();
 
     if (loading) {
-        return <p className="admin-empty">대시보드를 불러오는 중입니다...</p>;
+        return <StatusMessage type="loading" size="inline" message="대시보드를 불러오는 중입니다..." />;
     }
 
     if (error || !dashboard) {
         return (
             <section className="admin-panel">
-                <p className="admin-empty">대시보드를 불러오지 못했습니다. {error}</p>
-                <div className="dashboard-retry">
-                    <button type="button" className="create-placeholder" onClick={loadDashboard}>다시 시도</button>
-                </div>
+                <StatusMessage
+                    type="error"
+                    size="inline"
+                    title="대시보드를 불러오지 못했어요"
+                    message={error}
+                    onRetry={loadDashboard}
+                />
             </section>
         );
     }

@@ -1,6 +1,9 @@
+import StatusMessage from '@/common/components/StatusMessage.jsx';
+
 export default function UserComments({
                                          comments,
                                          loading,
+                                         error,
                                      }) {
     return (
         <div className="user-comments">
@@ -10,9 +13,9 @@ export default function UserComments({
             </div>
 
             {loading ? (
-                <p className="admin-empty">
-                    댓글을 불러오는 중입니다...
-                </p>
+                <StatusMessage type="loading" size="inline" message="댓글을 불러오는 중입니다..." />
+            ) : error ? (
+                <StatusMessage type="error" size="inline" title="댓글을 불러오지 못했어요" message={error} />
             ) : comments.length === 0 ? (
                 <p className="admin-empty">
                     작성한 댓글이 없습니다.

@@ -103,7 +103,6 @@
 .stat-card.warn { background: #fff8e6; border-color: #ffe0a3; }
 .stat-card.danger { background: #fff7f6; border-color: #ffd1d5; }
 .stat-card.danger strong { color: #e84118; }
-.dashboard-retry { display: flex; justify-content: center; }
 .dashboard-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .dashboard-tags span { padding: 4px 9px; border-radius: 999px; color: #e84118; background: #ffeef0; font-size: 12px; font-weight: 700; }
 .dashboard-usage { display: grid; gap: 8px; margin-top: 18px; }

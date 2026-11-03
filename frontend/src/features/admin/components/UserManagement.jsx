@@ -10,6 +10,7 @@ export default function UserManagement({
                                            userMessage,
                                            userComments,
                                            commentsLoading,
+                                           commentsError,
                                            onSuspend,
                                            onRelease,
 }){
@@ -49,6 +50,7 @@ export default function UserManagement({
                     <UserComments
                         comments={userComments}
                         loading={commentsLoading}
+                        error={commentsError}
                     />
                 </div>
             )}
