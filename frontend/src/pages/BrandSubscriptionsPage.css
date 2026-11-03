@@ -1,0 +1,20 @@
+.subscriptions-page { min-height: 100vh; background: #f8f9fa; color: #2f3542; }
+.subscriptions-container { width: min(100% - 40px, 900px); margin: auto; padding: 28px 0 60px; }
+.subscriptions-back { border: 0; padding: 0; color: #747d8c; background: transparent; cursor: pointer; }
+.subscriptions-container h1 { margin: 28px 0 5px; font-size: 32px; }
+.subscriptions-intro { margin: 0 0 22px; color: #747d8c; }
+.subscriptions-list { display: grid; gap: 12px; margin-top: 20px; }
+
+.subscription-row { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border: 1px solid #eaeaea; border-radius: 14px; background: #fff; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.subscription-row:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); border-color: #ff4757; }
+.subscription-brand { display: flex; flex: 1; align-items: center; gap: 14px; min-width: 0; color: #2f3542; text-decoration: none; }
+.subscription-brand strong { overflow: hidden; font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.subscription-brand-img { flex-shrink: 0; width: 48px; height: 48px; padding: 4px; box-sizing: border-box; border: 1px solid #eaeaea; border-radius: 10px; background: #fff; object-fit: contain; }
+
+.subscription-toggle { flex-shrink: 0; padding: 3px 10px; border: 1px solid #ffd1d6; border-radius: 999px; color: #2f3542; background: #fff5f6; cursor: pointer; font-size: 12px; white-space: nowrap; transition: all .2s; }
+.subscription-toggle:hover { border-color: #ff4757; color: #ff4757; }
+.subscription-toggle.is-subscribed { border-color: #ff4757; color: #fff; background: #ff4757; }
+
+.subscriptions-message, .subscriptions-empty, .subscriptions-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
+.subscriptions-error { color: #e84118; }
+@media (max-width: 600px) { .subscriptions-container { width: min(100% - 28px, 900px); } .subscription-row { padding: 12px 14px; } }

@@ -6,3 +6,7 @@ export const deactivateBrand = (id) => api.del(`/api/brands/${id}`)
 export const getBrand = (id) => api.get(`/api/brands/${id}`);
 export const createBrand = (body) => api.post(`/api/brands`, body);
 export const updateBrand = (id, body) => api.patch(`/api/brands/${id}`, body);
+export const setBrandSubscribe =  (id, on) => {
+    const url = `/api/brands/${id}/subscription`;
+    return on ? api.post(url) : api.del(url);
+};

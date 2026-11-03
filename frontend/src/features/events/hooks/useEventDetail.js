@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getEvent } from '@/api/index.js';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
+import { useSubscribedBrandIds } from '@/features/account/hooks/useSubscribedBrandIds.js';
 
 export function useEventDetail({ event, user, onLoginClick }) {
     const [detailEvent, setDetailEvent] = useState(event);
@@ -22,6 +23,16 @@ export function useEventDetail({ event, user, onLoginClick }) {
         toggleError,
         toggleFavorite: toggleFavoriteRequest,
     } = useFavoriteToggle();
+
+    const {
+        subscribedIds,
+        pendingId: subscribePendingId,
+        toggleError: subscribeError,
+        toggleBrandSubscribe,
+    } = useSubscribedBrandIds(user);
+
+    const brandId = detailEvent?.brandId;
+    const isSubscribed = brandId != null && subscribedIds.has(brandId);
 
     useEffect(() => {
         let cancelled = false;
@@ -63,6 +74,16 @@ export function useEventDetail({ event, user, onLoginClick }) {
         );
     };
 
+    const handleToggleSubscribe = () => {
+        if (!user) {
+            onLoginClick?.();
+            return;
+        }
+        if (brandId == null) return;
+
+        return toggleBrandSubscribe(brandId);
+    };
+
     return {
         detailEvent,
         loaded,
@@ -72,5 +93,9 @@ export function useEventDetail({ event, user, onLoginClick }) {
         toggleError,
         handleToggleFavorite,
         reload,
+        isSubscribed,
+        subscribePendingId,
+        subscribeError,
+        handleToggleSubscribe,
     };
 }

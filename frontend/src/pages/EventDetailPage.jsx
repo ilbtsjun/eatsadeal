@@ -20,6 +20,10 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         toggleError,
         handleToggleFavorite,
         reload,
+        isSubscribed,
+        subscribePendingId,
+        subscribeError,
+        handleToggleSubscribe,
     } = useEventDetail({ event, user, onLoginClick });
 
     const [editing, setEditing] = useState(false);
@@ -154,9 +158,20 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                     </div>
 
                     <div className="detail-content">
-                    <span className="detail-brand">
-                        {detailEvent?.brand || '이츠어딜'}
-                    </span>
+                    <div className="detail-brand-row">
+                        <span className="detail-brand">
+                            {detailEvent?.brand || '이츠어딜'}
+                        </span>
+                        <button
+                            type="button"
+                            className={`detail-subscribe ${isSubscribed ? 'is-subscribed' : ''}`}
+                            aria-pressed={isSubscribed}
+                            disabled={subscribePendingId != null && subscribePendingId === detailEvent?.brandId}
+                            onClick={handleToggleSubscribe}
+                        >
+                            {isSubscribed ? '구독 중' : '브랜드 구독'}
+                        </button>
+                    </div>
 
                         <h1>{detailEvent?.title}</h1>
 
@@ -197,6 +212,11 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                         {toggleError && (
                             <p className="favorite-error" role="alert">
                                 {toggleError}
+                            </p>
+                        )}
+                        {subscribeError && (
+                            <p className="favorite-error" role="alert">
+                                {subscribeError}
                             </p>
                         )}
 

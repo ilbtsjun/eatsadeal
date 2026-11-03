@@ -1,5 +1,6 @@
 package com.backend.user.controller;
 
+import com.backend.brand.service.BrandSubscriptionService;
 import com.backend.common.dto.MsgResponse;
 import com.backend.favorite.service.FavoriteService;
 import com.backend.user.dto.*;
@@ -20,6 +21,7 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final FavoriteService favoriteService;
+    private final BrandSubscriptionService brandSubscriptionService;
 
     @Operation(
             summary = "이메일 중복 확인",
@@ -90,5 +92,15 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public List<Long> getFavoriteList() {
         return favoriteService.getFavoriteList();
+    }
+
+    @Operation(
+            summary = "브랜드 구독 목록을 반환합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 유저의 브랜드 구독 목록을 반환합니다."
+    )
+    @GetMapping("/me/subscriptions")
+    @PreAuthorize("isAuthenticated()")
+    public List<Long> getBrandSubscriptionList() {
+        return brandSubscriptionService.getMySubscription();
     }
 }

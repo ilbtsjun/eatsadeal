@@ -14,6 +14,10 @@
 .favorite-error { margin: 12px 0 0; color: #e84118; font-size: 13px; }
 .detail-content { padding: 34px; }
 .detail-brand { color: #747d8c; font-size: 14px; font-weight: 700; }
+.detail-brand-row { display: inline-flex; align-items: center; gap: 8px; }
+.detail-subscribe { padding: 3px 10px; border: 1px solid #ffd1d6; border-radius: 999px; color: #2f3542; background: #fff5f6; cursor: pointer; font-size: 12px; white-space: nowrap; transition: all .2s; }
+.detail-subscribe:hover { border-color: #ff4757; color: #ff4757; }
+.detail-subscribe.is-subscribed { border-color: #ff4757; color: #fff; background: #ff4757; }
 .detail-content h1 { margin: 10px 0 18px; color: #2f3542; font-size: 28px; line-height: 1.35; }
 .detail-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .detail-tags span { padding: 6px 9px; border-radius: 6px; color: #ff4757; background: #fff1f2; font-size: 12px; font-weight: 700; }

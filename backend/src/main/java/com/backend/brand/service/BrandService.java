@@ -44,7 +44,7 @@ public class BrandService {
 
         return brandRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
                 .stream()
-                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getImg(),
+                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getUrl(), brand.getImg(),
                         brand.getIsActive(), categoryIdsByBrand.getOrDefault(brand.getId(), List.of())))
                 .toList();
     }

@@ -115,6 +115,7 @@ class BrandServiceTests {
             assertEquals(2, result.size());
             assertEquals(1L, result.get(0).id());
             assertEquals("BBQ", result.get(0).name());
+            assertEquals("https://www.bbq.co.kr", result.get(0).url());
             assertEquals("https://image.url/bbq.png", result.get(0).img());
             assertTrue(result.get(0).isActive());
             assertEquals(2L, result.get(1).id());

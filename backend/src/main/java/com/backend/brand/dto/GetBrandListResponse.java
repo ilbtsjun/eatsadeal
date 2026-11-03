@@ -12,6 +12,9 @@ public record GetBrandListResponse(
         @Schema(description = "브랜드 이름", example = "BHC")
         String name,
 
+        @Schema(description = "브랜드 홈페이지 URL", example = "https://www.bhc.co.kr")
+        String url,
+
         @Schema(description = "브랜드 이미지 URL", example = "https://www.bhc.co.kr/_next/static/media/ico_logo_footer.643042c8.svg")
         String img,
 
