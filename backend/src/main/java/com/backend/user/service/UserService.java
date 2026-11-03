@@ -119,11 +119,11 @@ public class UserService {
         User user = null;
         if(request.id() == null){
             user = userRepository.findByEmailOrNickname(request.nickname())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         }
         else{
             user = userRepository.findById(request.id())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         }
         return GetMyPageResponse.from(user);
     }
