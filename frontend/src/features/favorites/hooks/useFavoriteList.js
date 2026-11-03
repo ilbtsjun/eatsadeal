@@ -7,6 +7,7 @@ export function useFavoriteList(user) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [prevUser, setPrevUser] = useState(user);
+    const [reloadKey, setReloadKey] = useState(0);
 
     if (prevUser !== user) {
         setPrevUser(user);
@@ -67,7 +68,13 @@ export function useFavoriteList(user) {
         return () => {
             cancelled = true;
         };
-    }, [user]);
+    }, [user, reloadKey]);
+
+    const reload = () => {
+        setLoading(true);
+        setError('');
+        setReloadKey((key) => key + 1);
+    };
 
     const toggleFavorite = (event) => {
         return toggleFavoriteRequest(event, (nextFavorite) => {
@@ -88,5 +95,6 @@ export function useFavoriteList(user) {
         toggleError,
         pendingId,
         toggleFavorite,
+        reload,
     };
 }

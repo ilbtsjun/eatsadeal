@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Header from '@/common/components/Header';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './EventDetailPage.css';
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
 import EventEditModal from '@/features/events/components/EventEditModal.jsx';
@@ -40,19 +41,14 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                 >
                     ← 할인정보 목록으로
                 </button>
-                <section className="detail-status" role="status">
-                    {content}
-                </section>
+                {content}
             </main>
         </div>
     );
 
     if (!loaded) {
         return renderStatus(
-            <>
-                <span className="detail-spinner" aria-hidden="true" />
-                <p>이벤트를 불러오는 중입니다…</p>
-            </>
+            <StatusMessage type="loading" message="이벤트를 불러오는 중입니다…" />
         );
     }
 
@@ -62,20 +58,12 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
 
     if (loadError && !detailEvent?.title) {
         return renderStatus(
-            <>
-            <span className="detail-status-emoji" aria-hidden="true">
-                😵
-            </span>
-                <h1>이벤트를 불러오지 못했어요</h1>
-                <p>{loadError.message}</p>
-                <button
-                    type="button"
-                    className="detail-status-button"
-                    onClick={() => window.location.reload()}
-                >
-                    다시 시도
-                </button>
-            </>
+            <StatusMessage
+                type="error"
+                title="이벤트를 불러오지 못했어요"
+                message={loadError.message}
+                onRetry={reload}
+            />
         );
     }
 

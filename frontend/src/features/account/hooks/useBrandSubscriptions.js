@@ -6,6 +6,7 @@ export function useBrandSubscriptions(user) {
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     const {
         subscribedIds,
@@ -33,7 +34,13 @@ export function useBrandSubscriptions(user) {
             });
 
         return () => { cancelled = true; };
-    }, []);
+    }, [reloadKey]);
 
-    return { brands, loading, error, subscribedIds, pendingId, toggleError, toggleBrandSubscribe };
+    const reload = () => {
+        setLoading(true);
+        setError('');
+        setReloadKey((key) => key + 1);
+    };
+
+    return { brands, loading, error, reload, subscribedIds, pendingId, toggleError, toggleBrandSubscribe };
 }
