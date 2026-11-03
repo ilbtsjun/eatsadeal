@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Header from '@/common/components/Header';
 import './EventDetailPage.css';
-import { usePageTitle } from '@/common/hooks/usePageTitle.js';
-import { getFallbackImage } from '@/common/utils/BrandUtil.js';
-import { calculateDDay, formatDate } from '@/common/utils/DateUtil.js';
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
-import { getEventCodeName } from '@/features/events/utils/eventDisplay.js';
 import EventEditModal from '@/features/events/components/EventEditModal.jsx';
+import EventDetailImage from '@/features/events/components/EventDetailImage.jsx';
+import EventDetailInfo from '@/features/events/components/EventDetailInfo.jsx';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 
@@ -24,34 +22,12 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         subscribePendingId,
         subscribeError,
         handleToggleSubscribe,
+        shareMessage,
+        handleShare,
     } = useEventDetail({ event, user, onLoginClick });
 
     const [editing, setEditing] = useState(false);
-    const [shareMessage, setShareMessage] = useState('');
     const isAdmin = user?.role === 'ADMIN';
-
-    useEffect(() => {
-        if (!shareMessage) return;
-        const timer = setTimeout(() => setShareMessage(''), 2000);
-        return () => clearTimeout(timer);
-    }, [shareMessage]);
-
-    const handleShare = () => {
-        const url = `${window.location.origin}/events/${event.id}`;
-        if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
-            navigator.share({ title: detailEvent?.title, url }).catch(() => {});
-            return;
-        }
-        navigator.clipboard
-            .writeText(url)
-            .then(() => setShareMessage('링크를 복사했어요'))
-            .catch(() => setShareMessage('링크를 복사하지 못했어요'));
-    };
-
-    usePageTitle(detailEvent?.title || '이벤트', {
-        description: detailEvent?.description,
-        path: `/events/${event.id}`,
-    });
 
     const renderStatus = (content) => (
         <div className="event-detail-page">
@@ -117,139 +93,24 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                 </button>
 
                 <article className="event-detail-card">
-                    <div className="detail-image-box">
-                        {detailEvent?.img ? (
-                            <img
-                                src={detailEvent.img}
-                                alt={detailEvent.title}
-                                className="detail-image"
-                                onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = getFallbackImage(
-                                        detailEvent.brand
-                                    );
-                                }}
-                            />
-                        ) : (
-                            <span className="detail-emoji">🍗</span>
-                        )}
-
-                        <span className="detail-dday">
-                        {calculateDDay(detailEvent?.endDate)}
-                    </span>
-
-                        <button
-                            type="button"
-                            className={`detail-favorite ${isFavorite ? 'is-favorite' : ''}`}
-                            aria-label={isFavorite ? '찜 취소' : '찜하기'}
-                            aria-pressed={isFavorite}
-                            disabled={pendingId === event.id}
-                            onClick={handleToggleFavorite}
-                        >
-                            <svg
-                                className="favorite-icon"
-                                viewBox="0 0 24 24"
-                                aria-hidden="true"
-                            >
-                                <path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" />
-                            </svg>
-                            찜하기
-                        </button>
-                    </div>
-
-                    <div className="detail-content">
-                    <div className="detail-brand-row">
-                        <span className="detail-brand">
-                            {detailEvent?.brand || '이츠어딜'}
-                        </span>
-                        <button
-                            type="button"
-                            className={`detail-subscribe ${isSubscribed ? 'is-subscribed' : ''}`}
-                            aria-pressed={isSubscribed}
-                            disabled={subscribePendingId != null && subscribePendingId === detailEvent?.brandId}
-                            onClick={handleToggleSubscribe}
-                        >
-                            {isSubscribed ? '구독 중' : '브랜드 구독'}
-                        </button>
-                    </div>
-
-                        <h1>{detailEvent?.title}</h1>
-
-                        {isAdmin && (
-                            <div className="detail-admin-bar">
-                                <button
-                                    type="button"
-                                    className="detail-edit-button"
-                                    onClick={() => setEditing(true)}
-                                >
-                                    이벤트 수정
-                                </button>
-                                {detailEvent?.hidden && (
-                                    <span className="detail-admin-badge">숨김</span>
-                                )}
-                                {detailEvent?.adminLocked && (
-                                    <span className="detail-admin-badge">크롤러 잠금</span>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="detail-tags">
-                        <span>
-                            {getEventCodeName(detailEvent?.eventCodes)}
-                        </span>
-                            <span>
-                            {formatDate(detailEvent?.startDate)} ~{' '}
-                                {formatDate(detailEvent?.endDate)}
-                        </span>
-                            <span>
-                            조회수{' '}
-                                {Number(
-                                    detailEvent?.viewCount || 0
-                                ).toLocaleString()}
-                        </span>
-                        </div>
-
-                        {toggleError && (
-                            <p className="favorite-error" role="alert">
-                                {toggleError}
-                            </p>
-                        )}
-                        {subscribeError && (
-                            <p className="favorite-error" role="alert">
-                                {subscribeError}
-                            </p>
-                        )}
-
-                        <p className="detail-description">
-                            {detailEvent?.description ||
-                                '이벤트에 대한 자세한 할인 내용을 확인해보세요.'}
-                        </p>
-
-                        <div className="detail-actions">
-                            {detailEvent?.url && (
-                                <a
-                                    className="original-event-link"
-                                    href={detailEvent.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    원문 이벤트 보러가기 ↗
-                                </a>
-                            )}
-                            <button
-                                type="button"
-                                className="detail-share-button"
-                                onClick={handleShare}
-                            >
-                                공유하기
-                            </button>
-                            {shareMessage && (
-                                <span className="detail-share-message" role="status">
-                                    {shareMessage}
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                    <EventDetailImage
+                        detailEvent={detailEvent}
+                        isFavorite={isFavorite}
+                        favoriteDisabled={pendingId === event.id}
+                        onToggleFavorite={handleToggleFavorite}
+                    />
+                    <EventDetailInfo
+                        detailEvent={detailEvent}
+                        isAdmin={isAdmin}
+                        onEdit={() => setEditing(true)}
+                        isSubscribed={isSubscribed}
+                        subscribeDisabled={subscribePendingId != null && subscribePendingId === detailEvent?.brandId}
+                        onToggleSubscribe={handleToggleSubscribe}
+                        toggleError={toggleError}
+                        subscribeError={subscribeError}
+                        shareMessage={shareMessage}
+                        onShare={handleShare}
+                    />
                 </article>
 
                 {editing && (

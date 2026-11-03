@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getEvent } from '@/api/index.js';
+import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
 import { useSubscribedBrandIds } from '@/features/account/hooks/useSubscribedBrandIds.js';
 
@@ -9,6 +10,7 @@ export function useEventDetail({ event, user, onLoginClick }) {
     const [loadError, setLoadError] = useState(null);
     const [isFavorite, setIsFavorite] = useState(Boolean(event?.isFavorite));
     const [reloadKey, setReloadKey] = useState(0);
+    const [shareMessage, setShareMessage] = useState('');
     const requestKey = `${event.id}|${reloadKey}`;
     const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
 
@@ -60,7 +62,30 @@ export function useEventDetail({ event, user, onLoginClick }) {
         };
     }, [event.id, reloadKey]);
 
+    useEffect(() => {
+        if (!shareMessage) return;
+        const timer = setTimeout(() => setShareMessage(''), 2000);
+        return () => clearTimeout(timer);
+    }, [shareMessage]);
+
+    usePageTitle(detailEvent?.title || '이벤트', {
+        description: detailEvent?.description,
+        path: `/events/${event.id}`,
+    });
+
     const reload = () => setReloadKey((key) => key + 1);
+
+    const handleShare = () => {
+        const url = `${window.location.origin}/events/${event.id}`;
+        if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+            navigator.share({ title: detailEvent?.title, url }).catch(() => {});
+            return;
+        }
+        navigator.clipboard
+            .writeText(url)
+            .then(() => setShareMessage('링크를 복사했어요'))
+            .catch(() => setShareMessage('링크를 복사하지 못했어요'));
+    };
 
     const handleToggleFavorite = () => {
         if (!user) {
@@ -97,5 +122,7 @@ export function useEventDetail({ event, user, onLoginClick }) {
         subscribePendingId,
         subscribeError,
         handleToggleSubscribe,
+        shareMessage,
+        handleShare,
     };
 }
