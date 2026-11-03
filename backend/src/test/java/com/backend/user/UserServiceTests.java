@@ -2,6 +2,7 @@ package com.backend.user;
 
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
+import com.backend.brand.repository.BrandSubscriptionRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.user.dto.*;
@@ -50,6 +51,9 @@ class UserServiceTests {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private BrandSubscriptionRepository brandSubscriptionRepository;
 
     @InjectMocks
     private UserService userService;
@@ -443,6 +447,7 @@ class UserServiceTests {
             userService.quit(new QuitUser("raw-password"));
 
             verify(authService, times(1)).addBlackList(TOKEN, EXPIRATION);
+            verify(brandSubscriptionRepository).deleteByUser(user);
             assertEquals(UserStatus.WITHDRAWN, user.getUserStatus());
             assertNull(user.getPhoneNumber());
         }
