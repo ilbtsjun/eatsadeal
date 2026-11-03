@@ -42,6 +42,7 @@ export default function HeaderUserMenu({ user, logout, goLogin, onNavigate }) {
                         {user.role === 'ADMIN' ? '관리자' : user.nickname}
                     </div>
                     <button type="button" onClick={() => handleMenuClick('/favorites')}>찜한 목록</button>
+                    <button type="button" onClick={() => handleMenuClick('/subscriptions')}>브랜드 구독</button>
                     <button type="button" onClick={() => handleMenuClick('/mypage')}>마이페이지</button>
                     {user.role === 'ADMIN' && (
                         <button type="button" onClick={() => handleMenuClick('/admin')}>관리자 페이지</button>

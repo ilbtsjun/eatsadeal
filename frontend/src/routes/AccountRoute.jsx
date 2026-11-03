@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import MyPage from '../pages/MyPage.jsx';
 import FavoritesPage from '../pages/FavoritesPage.jsx';
+import BrandSubscriptionsPage from '../pages/BrandSubscriptionsPage.jsx';
 import AdminPage from '../pages/AdminPage.jsx';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { useAuth } from '../auth/useAuth.js'
@@ -22,6 +23,14 @@ export function FavoritesRoute() {
     return <FavoritesPage user={user}
                           onBack={() => navigate('/')}
                           onOpenEvent={openEvent(navigate)} />;
+}
+
+export function BrandSubscriptionsRoute() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    usePageTitle('브랜드 구독');
+    return <BrandSubscriptionsPage user={user}
+                                   onBack={() => navigate('/')} />;
 }
 
 export function AdminRoute() {
