@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
 import { getHighlight } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
+
+const fetchHighlight = () => getHighlight().then((data) => data.content?.[0] ?? null);
 
 export function useHighlightEvent() {
-    const [event, setEvent] = useState(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        getHighlight()
-            .then((data) => { if (!cancelled) setEvent(data.content?.[0] ?? null); })
-            .catch(() => { if (!cancelled) setEvent(null); });
-        return () => { cancelled = true; };
-    }, []);
-
+    const { data: event } = useFetch(fetchHighlight);
     return event;
 }

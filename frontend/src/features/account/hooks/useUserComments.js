@@ -1,49 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     getEvent,
     getMyComments,
     deleteComment as deleteCommentRequest
 } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 const COMMENTS_PER_PAGE = 10;
 
 const getCommentId = (comment) => comment?.commentId ? String(comment.commentId) : null;
 
+const toCommentList = (data) => (Array.isArray(data) ? data : data?.comments || data?.content || []);
+
 export function useUserComments({ user }) {
-    const [comments, setComments] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [reloadKey, setReloadKey] = useState(0);
-    const [prevUser, setPrevUser] = useState(user);
+    const request = useMemo(() => (user ? () => getMyComments().then(toCommentList) : null), [user]);
+    const {
+        data: comments,
+        setData: setComments,
+        loading,
+        loadError,
+        reload,
+    } = useFetch(request, { initialData: [], fallbackMessage: '댓글을 불러오지 못했습니다.' });
     const [commentPage, setCommentPage] = useState(0);
     const [commentToDelete, setCommentToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState('');
     const [eventTitles, setEventTitles] = useState({});
-
-    if (prevUser !== user) {
-        setPrevUser(user);
-        setLoading(true);
-        setError('');
-    }
-
-    useEffect(() => {
-        let cancelled = false;
-        getMyComments()
-            .then((data) => {
-                if (cancelled) return;
-                setComments(Array.isArray(data) ? data : data?.comments || data?.content || []);
-            })
-            .catch((requestError) => {
-                if (!cancelled) setError(requestError.message || '댓글을 불러오지 못했습니다.');
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [user, reloadKey]);
 
     useEffect(() => {
         let cancelled = false;
@@ -76,12 +58,6 @@ export function useUserComments({ user }) {
     const pagedComments = comments.slice(pageStart, pageStart + COMMENTS_PER_PAGE);
 
     const getEventTitle = (eventId) => eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`;
-
-    const reload = () => {
-        setLoading(true);
-        setError('');
-        setReloadKey((key) => key + 1);
-    };
 
     const goPrevPage = () => setCommentPage(Math.max(0, currentCommentPage - 1));
     const goNextPage = () => setCommentPage(Math.min(commentPageCount - 1, currentCommentPage + 1));
@@ -122,7 +98,7 @@ export function useUserComments({ user }) {
         pagedComments,
         pageStart,
         loading,
-        error,
+        loadError,
         reload,
         currentCommentPage,
         commentPageCount,

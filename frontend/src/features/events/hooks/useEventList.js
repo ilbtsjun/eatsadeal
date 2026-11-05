@@ -1,28 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getListEvents, getListFavoriteIds, setFavorite } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 import { EVENT_CODE_NAMES } from '../utils/eventDisplay.js';
 
 const PAGE_SIZE = 20;
+const EMPTY_RESULT = { events: [], totalPages: 0, totalElements: 0 };
 
 export function useEventList({ activeCategory, activeBrand = 'all', activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange }) {
-    const [events, setEvents] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-    const [reloadKey, setReloadKey] = useState(0);
-    const requestKey = [user?.id, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page, reloadKey].join('|');
-    const [prevRequestKey, setPrevRequestKey] = useState(requestKey);
+    const [actionError, setActionError] = useState('');
 
-    if (prevRequestKey !== requestKey) {
-        setPrevRequestKey(requestKey);
-        setLoading(true);
-        setError('');
-    }
-
-    useEffect(() => {
-        let cancelled = false;
-
+    const request = useMemo(() => () => {
         const params = new URLSearchParams({
             page: String(page),
             size: String(PAGE_SIZE),
@@ -40,32 +27,28 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
 
         const favoriteRequest = user ? getListFavoriteIds() : Promise.resolve([]);
 
-        Promise.all([getListEvents(params), favoriteRequest])
+        return Promise.all([getListEvents(params), favoriteRequest])
             .then(([data, favoriteIds]) => {
-                if (cancelled)
-                    return;
                 const favoriteSet = new Set(Array.isArray(favoriteIds) ? favoriteIds.map(Number) : []);
-                setTotalPages(Number(data.totalPages || 0));
-                setTotalElements(Number(data.totalElements || data.content?.length || 0));
-                setEvents((data.content || []).map((event) => ({
-                    ...event,
-                    brand: event.brandName,
-                    isFavorite: favoriteSet.has(Number(event.id)),
-                })));
-            })
-            .catch((requestError) => {
-                if (!cancelled)
-                    setError(requestError.message);
-            })
-            .finally(() => {
-                if (!cancelled)
-                    setLoading(false);
+                return {
+                    totalPages: Number(data.totalPages || 0),
+                    totalElements: Number(data.totalElements || data.content?.length || 0),
+                    events: (data.content || []).map((event) => ({
+                        ...event,
+                        brand: event.brandName,
+                        isFavorite: favoriteSet.has(Number(event.id)),
+                    })),
+                };
             });
+    }, [user, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page]);
 
-        return () => { cancelled = true; };
-    }, [user, activeCategory, activeBrand, activeEventCode, activeSort, searchKeyword, page, reloadKey]);
-
-    const reload = () => setReloadKey((key) => key + 1);
+    const {
+        data: { events, totalPages, totalElements },
+        setData,
+        loading,
+        loadError,
+        reload,
+    } = useFetch(request, { initialData: EMPTY_RESULT, fallbackMessage: '이벤트를 불러오지 못했습니다.' });
 
     useEffect(() => {
         if (!loading && totalPages > 0 && page >= totalPages) {
@@ -80,23 +63,28 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
         }
 
         const nextFavorite = !event.isFavorite;
+        setActionError('');
 
         try {
             await setFavorite(event.id, nextFavorite);
-            setEvents((current) => current.map((item) => (
-                item.id === event.id
-                    ? { ...item, isFavorite: nextFavorite }
-                    : item
-            )));
+            setData((current) => ({
+                ...current,
+                events: current.events.map((item) => (
+                    item.id === event.id
+                        ? { ...item, isFavorite: nextFavorite }
+                        : item
+                )),
+            }));
         } catch (requestError) {
-            setError(requestError.message);
+            setActionError(requestError.message || '찜하기에 실패했습니다.');
         }
     };
 
     return {
         events,
         loading,
-        error,
+        loadError,
+        actionError,
         totalPages,
         totalElements,
         toggleFavorite,

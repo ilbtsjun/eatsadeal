@@ -338,3 +338,9 @@
         font-size: 13px;
     }
 }
+
+.event-action-error {
+    margin: 0 0 12px;
+    color: #e84118;
+    font-size: 13px;
+}

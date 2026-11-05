@@ -1,5 +1,6 @@
-import {useEffect, useState} from "react";
+import { useMemo, useState } from "react";
 import { getCurrentUser, updateCurrentUser, } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 const toProfileForm = (profile = {}) => ({
     nickname: profile.nickname || '',
@@ -9,42 +10,24 @@ const toProfileForm = (profile = {}) => ({
 });
 
 export function useProfile({user, onUserUpdate}){
-    const [profile, setProfile] = useState(user || {});
-    const [profileForm, setProfileForm] = useState(() => toProfileForm(user));
+    const request = useMemo(() => (user ? () => getCurrentUser() : null), [user]);
+    const {
+        data: profile,
+        setData: setProfile,
+        loading: profileLoading,
+        loadError,
+        reload,
+    } = useFetch(request, { initialData: user || {}, fallbackMessage: '회원정보를 불러오지 못했습니다.' });
+    const [profileForm, setProfileForm] = useState(() => toProfileForm(profile));
+    const [formSource, setFormSource] = useState(profile);
     const [editingProfile, setEditingProfile] = useState(false);
     const [profileMessage, setProfileMessage] = useState('');
     const [profileError, setProfileError] = useState('');
-    const [profileLoading, setProfileLoading] = useState(true);
-    const [loadError, setLoadError] = useState('');
-    const [reloadKey, setReloadKey] = useState(0);
 
-    useEffect(() => {
-        let cancelled = false;
-        const loadProfile = async () => {
-            setProfileLoading(true);
-            setLoadError('');
-            try {
-                const data = await getCurrentUser();
-                if (cancelled)
-                    return;
-                setProfile(data);
-                setProfileForm(toProfileForm(data));
-            } catch (error) {
-                if (cancelled)
-                    return;
-                setLoadError(error.message || '회원정보를 불러오지 못했습니다.');
-            } finally {
-                if (!cancelled) {
-                    setProfileLoading(false);
-                }
-            }
-        };
-
-        loadProfile();
-        return () => { cancelled = true; };
-    }, [user, reloadKey]);
-
-    const reload = () => setReloadKey((key) => key + 1);
+    if (formSource !== profile) {
+        setFormSource(profile);
+        setProfileForm(toProfileForm(profile));
+    }
 
     const updateForm = (event) => {
         const { name, value } = event.target;
@@ -81,7 +64,6 @@ export function useProfile({user, onUserUpdate}){
 
             const saved = await getCurrentUser();
             setProfile(saved);
-            setProfileForm(toProfileForm(saved));
 
             if (saved.nickname && saved.nickname !== user?.nickname) {
                 onUserUpdate?.({ nickname: saved.nickname });

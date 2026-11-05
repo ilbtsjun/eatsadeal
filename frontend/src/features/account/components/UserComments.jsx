@@ -8,7 +8,7 @@ export default function UserComments({ user, onOpenEvent }){
         pagedComments,
         pageStart,
         loading,
-        error,
+        loadError,
         reload,
         currentCommentPage,
         commentPageCount,
@@ -29,12 +29,12 @@ export default function UserComments({ user, onOpenEvent }){
                 <h2>내가 작성한 댓글</h2>
                 {loading ? (
                     <StatusMessage type="loading" size="inline" message="댓글을 불러오는 중입니다." />
-                ) : error ? (
+                ) : loadError ? (
                     <StatusMessage
                         type="error"
                         size="inline"
                         title="댓글을 불러오지 못했어요"
-                        message={error}
+                        message={loadError}
                         onRetry={reload}
                     />
                 ) : pagedComments.length ? <>
