@@ -1,5 +1,6 @@
 import { logout } from '@/api/index.js';
 import { getToken, setToken, removeToken, getTokenExp } from "./TokenUtil.js"
+import { clearConsentPromptDismissed } from '@/features/notifications/utils/consentPromptStorage.js';
 
 const SAVED_USER_KEY = 'eats-a-deal-user';
 
@@ -32,6 +33,7 @@ export function getSavedUser() {
 export function clearSession() {
     removeToken();
     localStorage.removeItem(SAVED_USER_KEY);
+    clearConsentPromptDismissed();
 }
 
 export function expireSession(){
@@ -77,4 +79,4 @@ export function setupTokenTimer() {
     }
     const timer = setTimeout(expireSession, Math.min(remain, 2 ** 31 - 1));
     return () => clearTimeout(timer);
-}
+}
