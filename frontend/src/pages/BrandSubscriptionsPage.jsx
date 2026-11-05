@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import Header from '@/common/components/Header';
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './BrandSubscriptionsPage.css';
@@ -34,12 +35,7 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
                             const subscribed = subscribedIds.has(brand.id);
                             return (
                                 <div className="subscription-row" key={brand.id}>
-                                    <a
-                                        className="subscription-brand"
-                                        href={brand.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
+                                    <Link className="subscription-brand" to={brand.eventsPath}>
                                         <img
                                             className="subscription-brand-img"
                                             src={brand.img || getFallbackImage(brand.name)}
@@ -50,7 +46,17 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
                                             }}
                                         />
                                         <strong>{brand.name}</strong>
-                                    </a>
+                                    </Link>
+                                    {brand.url && (
+                                        <a
+                                            className="subscription-homepage"
+                                            href={brand.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            홈페이지
+                                        </a>
+                                    )}
                                     <button
                                         type="button"
                                         className={`subscription-toggle ${subscribed ? 'is-subscribed' : ''}`}
