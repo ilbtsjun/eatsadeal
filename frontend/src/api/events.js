@@ -3,6 +3,7 @@ import {api} from './client.js';
 export const getListEvents = (params) => api.get(`/api/events?${new URLSearchParams(params)}`);
 export const getEvent = (id) => api.get(`/api/events/${id}`);
 export const getListFavoriteIds = () => api.get('/api/user/me/favorites');
+export const getListFavoriteEvents = () => api.get('/api/user/me/favorites/events');
 export const setFavorite = (id, on) => {
     const url = `/api/events/${id}/favorite`;
     return on ? api.post(url) : api.del(url);
