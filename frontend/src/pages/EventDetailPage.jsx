@@ -7,7 +7,6 @@ import EventEditModal from '@/features/events/components/EventEditModal.jsx';
 import EventDetailImage from '@/features/events/components/EventDetailImage.jsx';
 import EventDetailInfo from '@/features/events/components/EventDetailInfo.jsx';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
-import ConsentModal from '@/features/notifications/components/ConsentModal.jsx';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 
 export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
@@ -24,7 +23,6 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         subscribePendingId,
         subscribeError,
         handleToggleSubscribe,
-        consentPrompt,
         shareMessage,
         handleShare,
     } = useEventDetail({ event, user, onLoginClick });
@@ -111,18 +109,6 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                             setEditing(false);
                             reload();
                         }}
-                    />
-                )}
-
-                {consentPrompt.isOpen && (
-                    <ConsentModal
-                        draft={consentPrompt.draft}
-                        saving={consentPrompt.saving}
-                        error={consentPrompt.error}
-                        canSave={consentPrompt.canSave}
-                        onToggle={consentPrompt.toggleDraft}
-                        onSave={consentPrompt.save}
-                        onDismiss={consentPrompt.dismiss}
                     />
                 )}
 

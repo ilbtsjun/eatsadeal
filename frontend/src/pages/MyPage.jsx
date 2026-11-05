@@ -3,7 +3,6 @@ import UserProfile from '@/features/account/components/UserProfile.jsx';
 import PasswordChange from '@/features/account/components/PasswordChange.jsx';
 import UserComments from '@/features/account/components/UserComments.jsx';
 import UserQuit from '@/features/account/components/UserQuit.jsx';
-import ConsentSettings from '@/features/notifications/components/ConsentSettings.jsx';
 import './MyPage.css';
 
 export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpdate }) {
@@ -16,10 +15,9 @@ export default function MyPage({ user, onLogout, onBack, onOpenEvent, onUserUpda
           <p className="mypage-intro">내 정보와 활동을 관리할 수 있습니다.</p>
           <UserProfile user={user} onUserUpdate={onUserUpdate}/>
           <PasswordChange />
-          <ConsentSettings />
           <UserComments user={user} onOpenEvent={onOpenEvent}/>
           <UserQuit onLogout={onLogout} onBack={onBack} />
         </main>
       </div>
   );
-}
+}
