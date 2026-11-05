@@ -52,7 +52,15 @@ export function useCategories({ activeCategory = 'all', onCategoryChange, active
             setBrandScroll({ prev: list.scrollLeft > 0, next: list.scrollLeft < maxScroll - 1 });
         };
 
-        list.scrollLeft = 0;
+        const active = list.querySelector('.brand-btn.active');
+        if (active) {
+            const listRect = list.getBoundingClientRect();
+            const activeRect = active.getBoundingClientRect();
+            if (activeRect.left < listRect.left || activeRect.right > listRect.right)
+                list.scrollLeft += activeRect.left - listRect.left - (list.clientWidth - activeRect.width) / 2;
+        } else {
+            list.scrollLeft = 0;
+        }
         const frame = requestAnimationFrame(update);
         const observer = new ResizeObserver(update);
         observer.observe(list);
@@ -63,7 +71,7 @@ export function useCategories({ activeCategory = 'all', onCategoryChange, active
             observer.disconnect();
             list.removeEventListener('scroll', update);
         };
-    }, [activeCategory, brands]);
+    }, [activeCategory, activeBrand, brands]);
 
     const categoryBrands = activeCategory === 'all'
         ? brands
