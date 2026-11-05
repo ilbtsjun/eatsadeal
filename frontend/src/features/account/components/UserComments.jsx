@@ -54,8 +54,8 @@ export default function UserComments({ user, onOpenEvent }){
                                     className="my-comment-event"
                                     onClick={() => eventId && onOpenEvent?.({
                                         id: eventId,
-                                        title: getEventTitle(eventId) })}>
-                                {getEventTitle(eventId)}</button>
+                                        title: getEventTitle(comment) })}>
+                                {getEventTitle(comment)}</button>
                             <p>{comment.content || comment.comment}</p>
                         </article>;
                     })}

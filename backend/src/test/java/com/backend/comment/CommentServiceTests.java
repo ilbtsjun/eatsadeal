@@ -1,18 +1,25 @@
 package com.backend.comment;
 
+import com.backend.auth.service.CurrentUserService;
+import com.backend.comment.dto.MyCommentResponse;
 import com.backend.comment.entity.Comment;
 import com.backend.comment.entity.CommentStatus;
+import com.backend.comment.repository.CommentRepository;
+import com.backend.comment.service.CommentService;
 import com.backend.event.entity.Event;
+import com.backend.event.repository.EventRepository;
 import com.backend.user.entity.User;
+import com.backend.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class CommentServiceTests {
 
@@ -216,6 +223,37 @@ class CommentServiceTests {
             comment.unhide();
 
             assertEquals(CommentStatus.ACTIVE, comment.getCommentStatus());
+        }
+    }
+
+    @Nested
+    @DisplayName("getMyCommentList")
+    class GetMyCommentListTests {
+
+        private final CommentRepository commentRepository = mock(CommentRepository.class);
+        private final CurrentUserService currentUserService = mock(CurrentUserService.class);
+        private final CommentService commentService = new CommentService(
+                commentRepository, currentUserService, mock(EventRepository.class), mock(UserRepository.class));
+
+        @Test
+        @DisplayName("이벤트 제목을 담아 반환하고, 숨김 댓글은 안내 문구로 바꾼다")
+        void includesEventTitle() {
+            when(event.getId()).thenReturn(7L);
+            when(event.getTitle()).thenReturn("별 하나 페스티벌");
+            Comment active = newComment();
+            Comment hidden = newComment();
+            hidden.hide();
+            when(currentUserService.getRequiredUser()).thenReturn(user);
+            when(commentRepository.findByUserWithEvent(user)).thenReturn(List.of(active, hidden));
+
+            List<MyCommentResponse> result = commentService.getMyCommentList();
+
+            assertEquals(2, result.size());
+            assertEquals(7L, result.get(0).eventId());
+            assertEquals("별 하나 페스티벌", result.get(0).eventTitle());
+            assertEquals("원본 댓글", result.get(0).content());
+            assertEquals(CommentStatus.HIDDEN, result.get(1).status());
+            assertEquals("숨김 처리된 댓글입니다.", result.get(1).content());
         }
     }
 }

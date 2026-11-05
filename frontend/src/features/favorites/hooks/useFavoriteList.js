@@ -1,27 +1,11 @@
 import { useMemo } from 'react';
-import { getEvent, getListFavoriteIds } from '@/api/index.js';
+import { getListFavoriteEvents } from '@/api/index.js';
 import { useFetch } from '@/common/hooks/useFetch.js';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
 
 const fetchFavorites = async () => {
-    const data = await getListFavoriteIds();
-    const rawFavorites = Array.isArray(data)
-        ? data
-        : data?.favorites || data?.content || [];
-
-    const ids = rawFavorites
-        .map((item) => (
-            typeof item === 'object'
-                ? item.id || item.eventId
-                : item
-        ))
-        .filter(Boolean);
-
-    const details = await Promise.allSettled(ids.map((id) => getEvent(id)));
-
-    return details
-        .filter((result) => result.status === 'fulfilled')
-        .map((result) => ({ ...result.value, isFavorite: true }));
+    const events = await getListFavoriteEvents();
+    return events.map((event) => ({ ...event, isFavorite: true }));
 };
 
 export function useFavoriteList(user) {

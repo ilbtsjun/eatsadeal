@@ -1,5 +1,7 @@
 package com.backend.event.dto;
 
+import com.backend.brand.entity.Brand;
+import com.backend.event.entity.Event;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -46,4 +48,22 @@ public record GetEventListResponse(
         @Schema(description = "숨김 여부 (관리자에게만 숨긴 이벤트가 보임)", example = "false")
         Boolean hidden
 ) {
+    public static GetEventListResponse from(Event event) {
+        Brand brand = event.getBrand();
+        return new GetEventListResponse(
+                event.getId(),
+                event.getTitle(),
+                event.getDescription(),
+                event.getUrl(),
+                event.getImg(),
+                event.getStartDate(),
+                event.getEndDate(),
+                event.getViewCount(),
+                event.getIsActive(),
+                brand.getId(),
+                brand.getName(),
+                Set.copyOf(event.getEventCodes()),
+                event.isHidden()
+        );
+    }
 }

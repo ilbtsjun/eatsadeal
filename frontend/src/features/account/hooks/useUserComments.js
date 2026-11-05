@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-    getEvent,
     getMyComments,
     deleteComment as deleteCommentRequest
 } from '@/api/index.js';
@@ -25,39 +24,12 @@ export function useUserComments({ user }) {
     const [commentToDelete, setCommentToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState('');
-    const [eventTitles, setEventTitles] = useState({});
-
-    useEffect(() => {
-        let cancelled = false;
-        const eventIds = [
-            ...new Set(comments.map((comment) => comment.eventId).filter(Boolean)),
-        ];
-        if (!eventIds.length) return undefined;
-
-        Promise.all(eventIds.map(async (eventId) => {
-            try {
-                const event = await getEvent(eventId);
-                return [String(eventId), event.title || `이벤트 ${eventId}`];
-            } catch {
-                return [String(eventId), `이벤트 ${eventId}`];
-            }
-        })).then((entries) => {
-            if (!cancelled) {
-                setEventTitles(Object.fromEntries(entries));
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [comments]);
-
     const commentPageCount = Math.ceil(comments.length / COMMENTS_PER_PAGE);
     const currentCommentPage = Math.min(commentPage, Math.max(0, commentPageCount - 1));
     const pageStart = currentCommentPage * COMMENTS_PER_PAGE;
     const pagedComments = comments.slice(pageStart, pageStart + COMMENTS_PER_PAGE);
 
-    const getEventTitle = (eventId) => eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`;
+    const getEventTitle = (comment) => comment.eventTitle || `이벤트 ${comment.eventId || ''}`;
 
     const goPrevPage = () => setCommentPage(Math.max(0, currentCommentPage - 1));
     const goNextPage = () => setCommentPage(Math.min(commentPageCount - 1, currentCommentPage + 1));
