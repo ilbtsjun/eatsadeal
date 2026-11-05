@@ -17,6 +17,7 @@ export default function SignupPage({
     showLoginPrompt,
     nicknameMessage,
     error,
+    notice,
     loading,
     authCode,
     setAuthCode,
@@ -144,6 +145,7 @@ export default function SignupPage({
               <form className="signup-form" onSubmit={handleVerify}>
                 <label htmlFor="signup-auth-code">이메일 인증번호</label>
                 <input id="signup-auth-code" value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="이메일로 받은 인증번호를 입력하세요" required />
+                {notice && <p className="signup-notice" role="status">{notice}</p>}
                 {error && <p className="signup-error" role="alert">{error}</p>}
                 <div className="signup-step-buttons">
                   <button type="button" className="signup-previous" onClick={() => setStep(2)}>이전</button>

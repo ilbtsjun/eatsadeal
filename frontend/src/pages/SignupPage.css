@@ -19,6 +19,7 @@
 .check-message { margin: -3px 0 0; color: #e84118; font-size: 12px; }
 .check-message.success { color: #20bf6b; }
 .signup-error { margin: 5px 0 0; color: #e84118; font-size: 13px; }
+.signup-notice { margin: 5px 0 0; color: #20bf6b; font-size: 13px; }
 .signup-submit { flex: 1; margin-top: 12px; padding: 13px; border: 0; border-radius: 9px; color: #fff; background: #ff4757; cursor: pointer; font-size: 15px; font-weight: 700; }
 .signup-submit:hover { background: #e84118; }
 .signup-submit:disabled { opacity: .6; cursor: wait; }
