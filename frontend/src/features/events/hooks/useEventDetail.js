@@ -31,6 +31,7 @@ export function useEventDetail({ event, user, onLoginClick }) {
         pendingId: subscribePendingId,
         toggleError: subscribeError,
         toggleBrandSubscribe,
+        consentPrompt,
     } = useSubscribedBrandIds(user);
 
     const brandId = detailEvent?.brandId;
@@ -122,7 +123,8 @@ export function useEventDetail({ event, user, onLoginClick }) {
         subscribePendingId,
         subscribeError,
         handleToggleSubscribe,
+        consentPrompt,
         shareMessage,
         handleShare,
     };
-}
+}
