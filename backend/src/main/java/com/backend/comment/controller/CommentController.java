@@ -2,6 +2,7 @@ package com.backend.comment.controller;
 
 
 import com.backend.comment.dto.CommentResponse;
+import com.backend.comment.dto.MyCommentResponse;
 import com.backend.comment.dto.UpdateComment;
 import com.backend.comment.service.CommentService;
 import com.backend.common.dto.MsgResponse;
@@ -26,7 +27,7 @@ public class CommentController {
             description = "자신의 댓글 목록을 조회합니다."
     )
     @GetMapping
-    public List<CommentResponse> getMyCommentList(){
+    public List<MyCommentResponse> getMyCommentList(){
         return commentService.getMyCommentList();
     }
 
