@@ -3,10 +3,12 @@ import { getBrand } from '@/api/index.js';
 
 export function useAdminCatalogForm(setMessage) {
     const [form, setForm] = useState(null);
+    const [formError, setFormError] = useState('');
     const openCreate = (type) => {
         if (type !== 'brand' && type !== 'category')
             return;
         setMessage('');
+        setFormError('');
         setForm(type === 'brand'
             ? { type: 'brand', name: '', url: '', img: '', categoryIds: [] }
             : { type: 'category', name: '', img: '', categoryIds: [] }
@@ -17,6 +19,7 @@ export function useAdminCatalogForm(setMessage) {
         if (!item || (type !== 'brand' && type !== 'category'))
             return;
         setMessage('');
+        setFormError('');
 
         if (type === 'category') {
             setForm({
@@ -50,6 +53,7 @@ export function useAdminCatalogForm(setMessage) {
 
     const toggleCategory = (categoryId) => {
         const id = Number(categoryId);
+        setFormError('');
 
         setForm((current) => {
             if (!current) return current;
@@ -66,7 +70,8 @@ export function useAdminCatalogForm(setMessage) {
 
     const updateFormField = (field, value) => {
         setForm((current) => current ? { ...current, [field]: value } : current);
+        setFormError('');
     };
 
-    return { form, setForm, openCreate, openEdit, toggleCategory, updateFormField };
+    return { form, setForm, formError, setFormError, openCreate, openEdit, toggleCategory, updateFormField };
 }

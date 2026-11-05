@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { getUserInfo, getUserComments, suspendUser } from '@/api/index.js'
 
+const pickUser = (data) => (Array.isArray(data) ? data[0] : data) ?? null;
+
 export function useAdminUsers() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [userNickname, setUserNickname] = useState('');
@@ -35,7 +37,7 @@ export function useAdminUsers() {
         for (const query of queries) {
             try {
                 const data = await getUserInfo(query);
-                result = Array.isArray(data) ? data[0] : data;
+                result = pickUser(data);
                 if (result) break;
             } catch (error) {
                 lastError = error;
@@ -118,7 +120,8 @@ export function useAdminUsers() {
         try {
             await suspendUser(selectedUser.id, suspendTime, reason, release);
 
-            setSelectedUser(await getUserInfo(`id=${selectedUser.id}`));
+            const updatedUser = pickUser(await getUserInfo(`id=${selectedUser.id}`));
+            setSelectedUser((current) => updatedUser ?? current);
             setSuspendModal(null);
             setUserMessage(release ? '회원 정지가 해제되었습니다.' : '회원이 정지되었습니다.');
         } catch (error) {

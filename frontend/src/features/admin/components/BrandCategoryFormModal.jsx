@@ -3,6 +3,7 @@ import Modal from '@/common/components/Modal.jsx';
 export default function BrandCategoryFormModal({
                                                    form,
                                                    categories,
+                                                   formError,
                                                    onClose,
                                                    onSubmit,
                                                    onToggleCategory,
@@ -62,6 +63,7 @@ export default function BrandCategoryFormModal({
                     {form.type === 'category' ? '카테고리 링크(URL)' : '이미지 URL'}
                     <input value={form.img} onChange={onImageChange} required />
                 </label>
+                {formError && <p className="admin-modal-error" role="alert">{formError}</p>}
                 <button className="modal-submit" type="submit">저장</button>
             </form>
         </Modal>

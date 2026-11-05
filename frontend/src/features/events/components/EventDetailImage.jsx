@@ -25,7 +25,6 @@ export default function EventDetailImage({ detailEvent, isFavorite, favoriteDisa
             <button
                 type="button"
                 className={`detail-favorite ${isFavorite ? 'is-favorite' : ''}`}
-                aria-label={isFavorite ? '찜 취소' : '찜하기'}
                 aria-pressed={isFavorite}
                 disabled={favoriteDisabled}
                 onClick={onToggleFavorite}
@@ -37,7 +36,7 @@ export default function EventDetailImage({ detailEvent, isFavorite, favoriteDisa
                 >
                     <path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" />
                 </svg>
-                찜하기
+                {isFavorite ? '찜 완료' : '찜하기'}
             </button>
         </div>
     );
