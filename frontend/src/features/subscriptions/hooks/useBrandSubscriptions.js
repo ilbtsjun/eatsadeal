@@ -13,6 +13,7 @@ export function useBrandSubscriptions(user) {
         pendingId,
         toggleError,
         toggleBrandSubscribe,
+        consentPrompt,
     } = useSubscribedBrandIds(user);
 
     useEffect(() => {
@@ -42,5 +43,5 @@ export function useBrandSubscriptions(user) {
         setReloadKey((key) => key + 1);
     };
 
-    return { brands, loading, error, reload, subscribedIds, pendingId, toggleError, toggleBrandSubscribe };
+    return { brands, loading, error, reload, subscribedIds, pendingId, toggleError, toggleBrandSubscribe, consentPrompt };
 }

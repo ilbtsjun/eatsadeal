@@ -2,7 +2,8 @@ import Header from '@/common/components/Header';
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './BrandSubscriptionsPage.css';
 import { getFallbackImage } from '@/common/utils/BrandUtil.js';
-import { useBrandSubscriptions } from '@/features/account/hooks/useBrandSubscriptions.js';
+import { useBrandSubscriptions } from '@/features/subscriptions/hooks/useBrandSubscriptions.js';
+import ConsentModal from '@/features/notifications/components/ConsentModal.jsx';
 
 export default function BrandSubscriptionsPage({ user, onBack }) {
     const {
@@ -14,6 +15,7 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
         pendingId,
         toggleError,
         toggleBrandSubscribe,
+        consentPrompt,
     } = useBrandSubscriptions(user);
 
     return (
@@ -63,6 +65,17 @@ export default function BrandSubscriptionsPage({ user, onBack }) {
                         })}
                     </div>
                 ) : <p className="subscriptions-empty">구독할 수 있는 브랜드가 없습니다.</p>)}
+                {consentPrompt.isOpen && (
+                    <ConsentModal
+                        draft={consentPrompt.draft}
+                        saving={consentPrompt.saving}
+                        error={consentPrompt.error}
+                        canSave={consentPrompt.canSave}
+                        onToggle={consentPrompt.toggleDraft}
+                        onSave={consentPrompt.save}
+                        onDismiss={consentPrompt.dismiss}
+                    />
+                )}
             </main>
         </div>
     );
