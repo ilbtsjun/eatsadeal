@@ -47,7 +47,7 @@ export default function DashboardOverview() {
                         <h2>이벤트</h2>
                         <p className="panel-description">지금 노출 중인 이벤트와 손볼 이벤트 수입니다.</p>
                     </div>
-                    <button type="button" className="create-placeholder" onClick={loadDashboard}>새로고침</button>
+                    <button type="button" className="create-placeholder" onClick={reload}>새로고침</button>
                 </div>
                 <div className="stat-grid">
                     <StatCard label="노출 중" value={events.visible} />

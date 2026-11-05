@@ -7,6 +7,7 @@ import EventEditModal from '@/features/events/components/EventEditModal.jsx';
 import EventDetailImage from '@/features/events/components/EventDetailImage.jsx';
 import EventDetailInfo from '@/features/events/components/EventDetailInfo.jsx';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
+import ConsentModal from '@/features/notifications/components/ConsentModal.jsx';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 
 export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
@@ -14,15 +15,17 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         detailEvent,
         loaded,
         loadError,
+        notFound,
         isFavorite,
         pendingId,
         toggleError,
         handleToggleFavorite,
         reload,
         isSubscribed,
-        subscribePendingId,
+        subscribeDisabled,
         subscribeError,
         handleToggleSubscribe,
+        consentPrompt,
         shareMessage,
         handleShare,
     } = useEventDetail({ event, user, onLoginClick });
@@ -52,7 +55,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
         );
     }
 
-    if (loadError?.status === 404) {
+    if (notFound) {
         return <NotFoundPage />;
     }
 
@@ -61,7 +64,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
             <StatusMessage
                 type="error"
                 title="이벤트를 불러오지 못했어요"
-                message={loadError.message}
+                message={loadError}
                 onRetry={reload}
             />
         );
@@ -92,7 +95,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                         isAdmin={isAdmin}
                         onEdit={() => setEditing(true)}
                         isSubscribed={isSubscribed}
-                        subscribeDisabled={subscribePendingId != null && subscribePendingId === detailEvent?.brandId}
+                        subscribeDisabled={subscribeDisabled}
                         onToggleSubscribe={handleToggleSubscribe}
                         toggleError={toggleError}
                         subscribeError={subscribeError}
@@ -109,6 +112,18 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                             setEditing(false);
                             reload();
                         }}
+                    />
+                )}
+
+                {consentPrompt.isOpen && (
+                    <ConsentModal
+                        draft={consentPrompt.draft}
+                        saving={consentPrompt.saving}
+                        error={consentPrompt.error}
+                        canSave={consentPrompt.canSave}
+                        onToggle={consentPrompt.toggleDraft}
+                        onSave={consentPrompt.save}
+                        onDismiss={consentPrompt.dismiss}
                     />
                 )}
 
