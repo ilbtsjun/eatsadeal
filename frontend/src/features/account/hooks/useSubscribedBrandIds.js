@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getListBrandSubscriptions } from '@/api/index.js';
 import { useBrandSubscribeToggle } from './useBrandSubscribeToggle.js';
-import { useConsentPrompt } from '@/features/notifications/hooks/useConsentPrompt.js';
 
 const EMPTY_IDS = new Set();
 
@@ -13,8 +12,6 @@ export function useSubscribedBrandIds(user) {
         toggleError,
         toggleBrandSubscribe: toggleBrandSubscribeRequest,
     } = useBrandSubscribeToggle();
-
-    const consentPrompt = useConsentPrompt(user);
 
     useEffect(() => {
         if (!user) return undefined;
@@ -34,15 +31,12 @@ export function useSubscribedBrandIds(user) {
     const toggleBrandSubscribe = (brandId) => {
         return toggleBrandSubscribeRequest(
             { id: brandId, isSubscribe: subscribedIds.has(brandId) },
-            (nextSubscribe) => {
-                setSubscribedIds((current) => {
-                    const updated = new Set(current);
-                    if (nextSubscribe) updated.add(brandId);
-                    else updated.delete(brandId);
-                    return updated;
-                });
-                if (nextSubscribe) consentPrompt.promptAfterSubscribe();
-            }
+            (nextSubscribe) => setSubscribedIds((current) => {
+                const updated = new Set(current);
+                if (nextSubscribe) updated.add(brandId);
+                else updated.delete(brandId);
+                return updated;
+            })
         );
     };
 
@@ -51,6 +45,5 @@ export function useSubscribedBrandIds(user) {
         pendingId,
         toggleError,
         toggleBrandSubscribe,
-        consentPrompt,
     };
 }
