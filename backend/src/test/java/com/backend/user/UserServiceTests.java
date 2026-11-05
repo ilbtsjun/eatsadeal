@@ -5,6 +5,7 @@ import com.backend.auth.service.CurrentUserService;
 import com.backend.brand.repository.BrandSubscriptionRepository;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.notification.service.NotificationSettingService;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
@@ -54,6 +55,9 @@ class UserServiceTests {
 
     @Mock
     private BrandSubscriptionRepository brandSubscriptionRepository;
+
+    @Mock
+    private NotificationSettingService notificationSettingService;
 
     @InjectMocks
     private UserService userService;
@@ -448,6 +452,7 @@ class UserServiceTests {
 
             verify(authService, times(1)).addBlackList(TOKEN, EXPIRATION);
             verify(brandSubscriptionRepository).deleteByUser(user);
+            verify(notificationSettingService).deleteConsents(user);
             assertEquals(UserStatus.WITHDRAWN, user.getUserStatus());
             assertNull(user.getPhoneNumber());
         }
@@ -462,6 +467,7 @@ class UserServiceTests {
             assertBusinessException(() -> userService.quit(new QuitUser("wrong-password")), ErrorCode.PASSWORD_NOT_MATCHED);
 
             verifyNoInteractions(authService);
+            verify(notificationSettingService, never()).deleteConsents(any());
             verify(currentUserService, never()).getTokenByUser();
             assertEquals(UserStatus.ACTIVE, user.getUserStatus());
             assertEquals("user@test.com", user.getEmail());
