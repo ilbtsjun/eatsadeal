@@ -1,80 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { getEvent, getListFavoriteIds } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
 
-export function useFavoriteList(user) {
-    const [favorites, setFavorites] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [prevUser, setPrevUser] = useState(user);
-    const [reloadKey, setReloadKey] = useState(0);
+const fetchFavorites = async () => {
+    const data = await getListFavoriteIds();
+    const rawFavorites = Array.isArray(data)
+        ? data
+        : data?.favorites || data?.content || [];
 
-    if (prevUser !== user) {
-        setPrevUser(user);
-        setLoading(true);
-        setError('');
-    }
+    const ids = rawFavorites
+        .map((item) => (
+            typeof item === 'object'
+                ? item.id || item.eventId
+                : item
+        ))
+        .filter(Boolean);
+
+    const details = await Promise.allSettled(ids.map((id) => getEvent(id)));
+
+    return details
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => ({ ...result.value, isFavorite: true }));
+};
+
+export function useFavoriteList(user) {
+    const request = useMemo(() => (user ? () => fetchFavorites() : null), [user]);
+    const {
+        data: favorites,
+        setData: setFavorites,
+        loading,
+        loadError,
+        reload,
+    } = useFetch(request, { initialData: [], fallbackMessage: '찜한 목록을 불러오지 못했습니다.' });
 
     const {
         pendingId,
         toggleError,
         toggleFavorite: toggleFavoriteRequest,
     } = useFavoriteToggle();
-
-    useEffect(() => {
-        let cancelled = false;
-
-        getListFavoriteIds()
-            .then(async (data) => {
-                const rawFavorites = Array.isArray(data)
-                    ? data
-                    : data?.favorites || data?.content || [];
-
-                const ids = rawFavorites
-                    .map((item) => (
-                        typeof item === 'object'
-                            ? item.id || item.eventId
-                            : item
-                    ))
-                    .filter(Boolean);
-
-                const details = await Promise.allSettled(
-                    ids.map((id) => getEvent(id))
-                );
-
-                if (!cancelled) {
-                    setFavorites(
-                        details
-                            .filter((result) => result.status === 'fulfilled')
-                            .map((result) => ({
-                                ...result.value,
-                                isFavorite: true,
-                            }))
-                    );
-                    setError('');
-                }
-            })
-            .catch((requestError) => {
-                if (!cancelled) {
-                    setError(requestError.message);
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user, reloadKey]);
-
-    const reload = () => {
-        setLoading(true);
-        setError('');
-        setReloadKey((key) => key + 1);
-    };
 
     const toggleFavorite = (event) => {
         return toggleFavoriteRequest(event, (nextFavorite) => {
@@ -91,7 +55,7 @@ export function useFavoriteList(user) {
     return {
         favorites,
         loading,
-        error,
+        loadError,
         toggleError,
         pendingId,
         toggleFavorite,

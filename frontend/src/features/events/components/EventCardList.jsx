@@ -17,7 +17,8 @@ export default function EventCardList({
                                       }) {
     const { events,
         loading,
-        error,
+        loadError,
+        actionError,
         totalPages,
         totalElements,
         toggleFavorite,
@@ -33,13 +34,14 @@ export default function EventCardList({
     });
 
     if (loading) return <StatusMessage type="loading" size="inline" message="이벤트 정보를 불러오는 중입니다..." />;
-    if (error) return <StatusMessage type="error" size="inline" title="이벤트를 불러오지 못했어요" message={error} onRetry={reload} />;
+    if (loadError) return <StatusMessage type="error" size="inline" title="이벤트를 불러오지 못했어요" message={loadError} onRetry={reload} />;
 
     return (
         <div className="card-list-container">
             <div className="event-list-heading">
                 <p className="event-result-count">총 <strong>{totalElements}</strong>개의 할인정보</p>
             </div>
+            {actionError && <p className="event-action-error" role="alert">{actionError}</p>}
             {events.length === 0 ? (
                 <p className="empty-events">선택한 조건의 할인 정보가 없습니다.</p>
             ) : (

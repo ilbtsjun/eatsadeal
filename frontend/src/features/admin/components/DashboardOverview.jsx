@@ -13,21 +13,21 @@ function StatCard({ label, value, tone }) {
 }
 
 export default function DashboardOverview() {
-    const { dashboard, loading, error, loadDashboard } = useAdminDashboard();
+    const { dashboard, loading, loadError, reload } = useAdminDashboard();
 
     if (loading) {
         return <StatusMessage type="loading" size="inline" message="대시보드를 불러오는 중입니다..." />;
     }
 
-    if (error || !dashboard) {
+    if (loadError || !dashboard) {
         return (
             <section className="admin-panel">
                 <StatusMessage
                     type="error"
                     size="inline"
                     title="대시보드를 불러오지 못했어요"
-                    message={error}
-                    onRetry={loadDashboard}
+                    message={loadError}
+                    onRetry={reload}
                 />
             </section>
         );
