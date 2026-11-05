@@ -27,6 +27,7 @@ export default function AdminPage({ user, onBack }) {
       loadLists,
       form,
       setForm,
+      formError,
       confirmDelete,
       setConfirmDelete,
       deleteItem,
@@ -164,6 +165,7 @@ export default function AdminPage({ user, onBack }) {
               <BrandCategoryFormModal
                   form={form}
                   categories={categories}
+                  formError={formError}
                   onClose={() => setForm(null)}
                   onSubmit={submitForm}
                   onToggleCategory={toggleCategory}
