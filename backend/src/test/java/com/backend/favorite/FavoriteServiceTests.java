@@ -1,8 +1,11 @@
 package com.backend.favorite;
 
 import com.backend.auth.service.CurrentUserService;
+import com.backend.brand.entity.Brand;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.event.dto.EventCode;
+import com.backend.event.dto.GetEventListResponse;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.entity.Favorite;
@@ -21,6 +24,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -231,6 +235,51 @@ class FavoriteServiceTests {
             BusinessException authException = givenNotLoggedIn();
 
             BusinessException thrown = assertThrows(BusinessException.class, () -> favoriteService.getFavoriteList());
+
+            assertSame(authException, thrown);
+            verifyNoInteractions(favoriteRepository);
+        }
+    }
+
+    @Nested
+    @DisplayName("getFavoriteEventList")
+    class GetFavoriteEventListTests {
+
+        private Event mockListEvent(Long id, String title, Brand brand) {
+            Event event = mockEvent(id);
+            when(event.getTitle()).thenReturn(title);
+            when(event.getBrand()).thenReturn(brand);
+            when(event.getEventCodes()).thenReturn(Set.of(EventCode.GIFT_PROMO));
+            return event;
+        }
+
+        @Test
+        @DisplayName("성공: 즐겨찾기한 이벤트를 목록 응답으로 바꿔 repository 순서대로 반환한다")
+        void success() {
+            User user = mockUser();
+            Brand brand = mock(Brand.class);
+            when(brand.getId()).thenReturn(5L);
+            when(brand.getName()).thenReturn("BHC");
+            Event first = mockListEvent(30L, "첫 이벤트", brand);
+            Event second = mockListEvent(10L, "둘째 이벤트", brand);
+            when(currentUserService.getRequiredUser()).thenReturn(user);
+            when(favoriteRepository.findVisibleEventsByUser(user)).thenReturn(List.of(first, second));
+
+            List<GetEventListResponse> result = favoriteService.getFavoriteEventList();
+
+            assertEquals(List.of(30L, 10L), result.stream().map(GetEventListResponse::id).toList());
+            assertEquals("첫 이벤트", result.get(0).title());
+            assertEquals(5L, result.get(0).brandId());
+            assertEquals("BHC", result.get(0).brandName());
+            assertEquals(Set.of(EventCode.GIFT_PROMO), result.get(0).eventCodes());
+        }
+
+        @Test
+        @DisplayName("실패: 로그인하지 않았으면 예외가 그대로 전파되고 조회하지 않는다")
+        void notLoggedIn() {
+            BusinessException authException = givenNotLoggedIn();
+
+            BusinessException thrown = assertThrows(BusinessException.class, () -> favoriteService.getFavoriteEventList());
 
             assertSame(authException, thrown);
             verifyNoInteractions(favoriteRepository);
