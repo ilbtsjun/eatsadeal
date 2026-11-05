@@ -2,7 +2,7 @@ import Header from '@/common/components/Header';
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './BrandSubscriptionsPage.css';
 import { getFallbackImage } from '@/common/utils/BrandUtil.js';
-import { useBrandSubscriptions } from '@/features/account/hooks/useBrandSubscriptions.js';
+import { useBrandSubscriptions } from '@/features/subscriptions/hooks/useBrandSubscriptions.js';
 
 export default function BrandSubscriptionsPage({ user, onBack }) {
     const {

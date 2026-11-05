@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getEvent } from '@/api/index.js';
 import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
-import { useSubscribedBrandIds } from '@/features/account/hooks/useSubscribedBrandIds.js';
+import { useSubscribedBrandIds } from '@/features/subscriptions/hooks/useSubscribedBrandIds.js';
 
 export function useEventDetail({ event, user, onLoginClick }) {
     const [detailEvent, setDetailEvent] = useState(event);
