@@ -6,7 +6,13 @@ const fetchActiveBrands = async () => {
     const data = await getListBrands();
     return (Array.isArray(data) ? data : [])
         .filter((brand) => brand.id != null && brand.name && brand.isActive)
-        .map((brand) => ({ id: brand.id, name: brand.name, url: brand.url, img: brand.img }));
+        .map((brand) => ({
+            id: brand.id,
+            name: brand.name,
+            url: brand.url,
+            img: brand.img,
+            eventsPath: `/?brand=${brand.id}`,
+        }));
 };
 
 export function useBrandSubscriptions(user) {
