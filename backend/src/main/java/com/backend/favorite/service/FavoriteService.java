@@ -4,6 +4,7 @@ import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
+import com.backend.event.dto.GetEventListResponse;
 import com.backend.event.entity.Event;
 import com.backend.event.repository.EventRepository;
 import com.backend.favorite.entity.Favorite;
@@ -73,5 +74,13 @@ public class FavoriteService {
     public List<Long> getFavoriteList() {
         User user = currentUserService.getRequiredUser();
         return favoriteRepository.findVisibleEventIdsByUser(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GetEventListResponse> getFavoriteEventList() {
+        User user = currentUserService.getRequiredUser();
+        return favoriteRepository.findVisibleEventsByUser(user).stream()
+                .map(GetEventListResponse::from)
+                .toList();
     }
 }
