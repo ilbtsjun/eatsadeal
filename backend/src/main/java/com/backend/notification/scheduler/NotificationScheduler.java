@@ -3,6 +3,7 @@ package com.backend.notification.scheduler;
 import com.backend.mail.service.MailService;
 import com.backend.notification.dto.EventDigest;
 import com.backend.notification.service.BrandNotificationService;
+import com.backend.notification.service.NotificationSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,6 +21,7 @@ import java.util.List;
 public class NotificationScheduler {
     private final BrandNotificationService brandNotificationService;
     private final MailService mailService;
+    private final NotificationSettingService notificationSettingService;
 
     @Scheduled(cron = "${app.notification.cron:0 0 9 * * *}", zone = "Asia/Seoul")
     public void sendDailyDigest() {
@@ -36,6 +38,16 @@ public class NotificationScheduler {
             log.info("[NOTIFICATION SCHEDULE] 완료: 대상 {}명, 성공 {}, 실패 {}", digests.size(), sent, digests.size() - sent);
         } catch (Exception e) {
             log.error("[NOTIFICATION SCHEDULE] 알림 메일 발송 실패", e);
+        }
+    }
+
+    @Scheduled(cron = "${app.notification.reconfirm-cron:0 0 10 * * *}", zone = "Asia/Seoul")
+    public void sendConsentReconfirmNotices() {
+        log.info("[CONSENT RECONFIRM SCHEDULE] 수신 동의 재확인 메일 발송 시작");
+        try {
+            notificationSettingService.sendConsentReconfirmNotices(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        } catch (Exception e) {
+            log.error("[CONSENT RECONFIRM SCHEDULE] 재확인 메일 발송 실패", e);
         }
     }
 }

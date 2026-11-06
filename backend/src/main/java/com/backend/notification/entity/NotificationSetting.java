@@ -68,4 +68,8 @@ public class NotificationSetting {
         this.emailAgreedAt = agreed ? LocalDateTime.now() : null;
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void markConsentNotified(LocalDateTime notifiedAt) {
+        this.consentNotifiedAt = notifiedAt;
+    }
 }

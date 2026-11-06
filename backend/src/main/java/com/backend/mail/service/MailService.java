@@ -4,6 +4,7 @@ import com.backend.common.log.CudLogging;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlRunResponse;
 import com.backend.event.dto.GetEventListResponse;
+import com.backend.notification.dto.ConsentType;
 import com.backend.notification.dto.EventDigest;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -21,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -38,6 +40,7 @@ public class MailService {
     private String siteUrl;
 
     private static final DateTimeFormatter DIGEST_DATE = DateTimeFormatter.ofPattern("M/d");
+    private static final DateTimeFormatter NOTICE_DATE = DateTimeFormatter.ofPattern("yyyy년 M월 d일");
 
     @Async
     @CudLogging("회원가입 메일 송신")
@@ -157,6 +160,60 @@ public class MailService {
             log.error("알림 메일 전송 실패 [userId: {}]: {}", digest.userId(), e.getMessage());
             return false;
         }
+    }
+
+    @Async
+    @CudLogging("수신 동의 처리 결과 메일 송신")
+    public void sendConsentResultMessage(String email, Map<ConsentType, Boolean> changes, LocalDateTime processedAt) {
+        String subject = "[EatsADeal] 광고성 정보 수신 동의 처리 결과 안내";
+
+        StringBuilder body = new StringBuilder("<h3>광고성 정보 수신 동의 처리 결과를 알려드립니다.</h3>");
+        body.append("<p><b>전송자:</b> EatsADeal<br>")
+                .append("<b>처리 일자:</b> ").append(processedAt.format(NOTICE_DATE)).append("</p><ul>");
+        for (Map.Entry<ConsentType, Boolean> change : changes.entrySet()) {
+            body.append("<li>").append(change.getKey().getTitle()).append(": ")
+                    .append(change.getValue() ? "동의" : "철회").append("</li>");
+        }
+        body.append("</ul>");
+        appendConsentFooter(body);
+
+        try {
+            MimeMessage message = createMail(email, subject, body.toString());
+            javaMailSender.send(message);
+        } catch (MailException | MessagingException e) {
+            log.error("동의 처리 결과 메일 전송 실패 [Target: {}]: {}", email, e.getMessage());
+        }
+    }
+
+    public boolean sendConsentReconfirmMessage(String email, String nickname, LocalDateTime agreedAt, String unsubscribeToken) {
+        String subject = "[EatsADeal] 광고성 정보 수신 동의 여부 확인 안내";
+
+        StringBuilder body = new StringBuilder();
+        body.append("<h3>").append(HtmlUtils.htmlEscape(nickname))
+                .append("님의 광고성 정보 수신 동의 내역을 안내드립니다.</h3>");
+        body.append("<p><b>전송자:</b> EatsADeal<br>")
+                .append("<b>동의 일자:</b> ").append(agreedAt.format(NOTICE_DATE)).append("<br>")
+                .append("<b>동의 항목:</b> ").append(ConsentType.AD_EMAIL.getTitle()).append("</p>");
+        body.append("<p>현재 수신 동의 상태가 유지되고 있으며, 별도 조치가 없으면 계속 이메일로 이벤트 소식을 보내드립니다.<br>")
+                .append("더 이상 받지 않으시려면 <a href=\"").append(siteUrl).append("/unsubscribe?token=")
+                .append(encodeToken(unsubscribeToken)).append("\">수신거부</a>를 눌러주세요.</p>");
+        appendConsentFooter(body);
+
+        try {
+            MimeMessage message = createMail(email, subject, body.toString());
+            javaMailSender.send(message);
+            return true;
+        } catch (MailException | MessagingException e) {
+            log.error("수신 동의 재확인 메일 전송 실패 [Target: {}]: {}", email, e.getMessage());
+            return false;
+        }
+    }
+
+    private void appendConsentFooter(StringBuilder body) {
+        body.append("<hr><p style=\"color:#747d8c;font-size:12px\">")
+                .append("수신 동의 여부는 <a href=\"").append(siteUrl).append("/mypage\">마이페이지</a>에서 언제든 변경할 수 있습니다.<br>")
+                .append("전송자: EatsADeal | 문의: ").append(HtmlUtils.htmlEscape(reportRecipient))
+                .append("</p>");
     }
 
     private void appendDigestSection(StringBuilder body, String title, List<GetEventListResponse> events) {
