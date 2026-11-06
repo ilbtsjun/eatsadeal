@@ -1141,6 +1141,32 @@ class EventServiceTests {
     }
 
     @Nested
+    @DisplayName("deactivateExpiredEvents")
+    class DeactivateExpiredEventsTests {
+
+        @Test
+        @DisplayName("넘겨받은 현재 시각으로 만료 이벤트를 비활성화하고 처리 건수를 반환한다")
+        void deactivatesWithGivenTime() {
+            LocalDateTime now = LocalDateTime.of(2026, 11, 7, 0, 0);
+            when(eventRepository.deactivateExpiredEvents(now)).thenReturn(3L);
+
+            long count = eventService.deactivateExpiredEvents(now);
+
+            assertEquals(3L, count);
+            verify(eventRepository).deactivateExpiredEvents(now);
+        }
+
+        @Test
+        @DisplayName("만료 이벤트가 없으면 0을 반환한다")
+        void returnsZeroWhenNothingExpired() {
+            LocalDateTime now = LocalDateTime.of(2026, 11, 7, 0, 0);
+            when(eventRepository.deactivateExpiredEvents(now)).thenReturn(0L);
+
+            assertEquals(0L, eventService.deactivateExpiredEvents(now));
+        }
+    }
+
+    @Nested
     @DisplayName("deactivateMissing")
     class DeactivateMissingTests {
 

@@ -68,7 +68,7 @@ class CrawlerServiceTests {
         crawlerService = new CrawlerService(eventService, eventCodeBackfillService, brandRepository, crawlRunRepository,
                 new ArrayList<>(crawlers.values()));
         lenient().when(eventService.upsertCrawledEvent(any(CreateEvent.class))).thenReturn(UpsertResult.CREATED);
-        scheduler = new CrawlerScheduler(crawlerService, mailService);
+        scheduler = new CrawlerScheduler(crawlerService, eventService, mailService);
         ReflectionTestUtils.setField(scheduler, "alertEnabled", true);
     }
 
@@ -389,13 +389,35 @@ class CrawlerServiceTests {
     }
 
     @Test
-    @DisplayName("스케줄러: 문제가 없으면 메일을 보내지 않는다")
+    @DisplayName("스케줄러: 문제가 없으면 메일을 보내지 않고, 크롤링 뒤 만료 이벤트를 비활성화한다")
     void scheduler_noProblem_sendsNothing() {
         givenBrands(CrawlTarget.LOTTERIA);
 
         scheduler.crawlPeriodically();
 
         verifyNoInteractions(mailService);
+        verify(eventService).deactivateExpiredEvents(any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("스케줄러: 크롤링이 예외로 중단돼도 만료 이벤트 비활성화는 실행한다")
+    void scheduler_crawlException_stillDeactivatesExpired() {
+        when(brandRepository.findAll()).thenThrow(new RuntimeException("db down"));
+
+        scheduler.crawlPeriodically();
+
+        verify(eventService).deactivateExpiredEvents(any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("스케줄러: 만료 이벤트 비활성화가 실패해도 예외를 던지지 않고 실행 실패 메일도 보내지 않는다")
+    void scheduler_deactivateFailure_isSwallowed() {
+        givenBrands(CrawlTarget.LOTTERIA);
+        when(eventService.deactivateExpiredEvents(any(LocalDateTime.class))).thenThrow(new RuntimeException("db down"));
+
+        assertDoesNotThrow(() -> scheduler.crawlPeriodically());
+
+        verify(mailService, never()).sendCrawlErrorMessage(any());
     }
 
     @Test
