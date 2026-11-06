@@ -31,4 +31,6 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
             ON DUPLICATE KEY UPDATE id = id
             """, nativeQuery = true)
     void insertIfAbsent(@Param("userId") Long userId, @Param("token") String token);
+
+    Optional<NotificationSetting> findByUnsubscribeToken(String token);
 }

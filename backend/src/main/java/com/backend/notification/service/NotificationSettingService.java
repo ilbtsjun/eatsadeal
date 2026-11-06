@@ -63,6 +63,17 @@ public class NotificationSettingService {
         consentHistoryRepository.deleteByUser(user);
     }
 
+    @Transactional
+    public void unsubscribe(String token) {
+        NotificationSetting setting = notificationSettingRepository.findByUnsubscribeToken(token)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유효하지 않은 수신거부 링크입니다."));
+
+        if (setting.getEmailAgreed()) {
+            setting.agreeEmail(false);
+            saveHistory(setting.getUser(), ConsentType.AD_EMAIL, false, ConsentSource.UNSUBSCRIBE_LINK);
+        }
+    }
+
     private void saveHistory(User user, ConsentType type, Boolean agreed, ConsentSource source) {
         consentHistoryRepository.save(ConsentHistory.builder()
                 .user(user)
