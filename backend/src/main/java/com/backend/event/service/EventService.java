@@ -191,6 +191,12 @@ public class EventService {
         return missing.size();
     }
 
+    @Transactional
+    @CudLogging("만료 이벤트 비활성화")
+    public long deactivateExpiredEvents(LocalDateTime now) {
+        return eventRepository.deactivateExpiredEvents(now);
+    }
+
     @Transactional(readOnly = true)
     @QueryTrace("searchEvents")
     public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
