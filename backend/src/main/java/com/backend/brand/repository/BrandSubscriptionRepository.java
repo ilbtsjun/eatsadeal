@@ -2,6 +2,7 @@ package com.backend.brand.repository;
 
 import com.backend.brand.entity.Brand;
 import com.backend.brand.entity.BrandSubscription;
+import com.backend.notification.dto.NotificationTarget;
 import com.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -28,4 +29,18 @@ public interface BrandSubscriptionRepository extends JpaRepository<BrandSubscrip
     @Modifying
     @Query("DELETE FROM BrandSubscription bs WHERE bs.user = :user")
     void deleteByUser(@Param("user") User user);
+
+    @Query("""
+    SELECT new com.backend.notification.dto.NotificationTarget(u.id, u.email, u.nickname, b.id)
+    FROM BrandSubscription bs
+    JOIN bs.user u
+    JOIN bs.brand b
+    JOIN NotificationSetting ns ON ns.user = u
+    WHERE ns.marketingAgreed = true
+      AND ns.emailAgreed = true
+      AND u.userStatus = com.backend.user.dto.UserStatus.ACTIVE
+      AND b.isActive = true
+    ORDER BY u.id, b.id
+""")
+    List<NotificationTarget> findNotificationTargets();
 }
