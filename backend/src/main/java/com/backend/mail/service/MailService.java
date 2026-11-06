@@ -3,6 +3,8 @@ package com.backend.mail.service;
 import com.backend.common.log.CudLogging;
 import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlRunResponse;
+import com.backend.event.dto.GetEventListResponse;
+import com.backend.notification.dto.EventDigest;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -28,6 +31,11 @@ public class MailService {
 
     @Value("${report.mail.to}")
     private String reportRecipient;
+
+    @Value("${app.site-url:https://www.eatsadeal.kr}")
+    private String siteUrl;
+
+    private static final DateTimeFormatter DIGEST_DATE = DateTimeFormatter.ofPattern("M/d");
 
     @Async
     @CudLogging("회원가입 메일 송신")
@@ -124,6 +132,45 @@ public class MailService {
             log.error("크롤링 알림 메일 전송 실패 {}", e.getMessage());
             return false;
         }
+    }
+
+    public boolean sendEventDigestMessage(EventDigest digest) {
+        String subject = "(광고) [EatsADeal] 구독 브랜드 소식 " + digest.totalCount() + "건";
+
+        StringBuilder body = new StringBuilder();
+        body.append("<h3>").append(HtmlUtils.htmlEscape(digest.nickname()))
+                .append("님이 구독한 브랜드의 이벤트 소식입니다.</h3>");
+        appendDigestSection(body, "새 이벤트", digest.newEvents());
+        appendDigestSection(body, "내일 마감", digest.endingSoonEvents());
+        body.append("<hr><p><a href=\"").append(siteUrl).append("/subscriptions\">구독 브랜드 관리</a></p>");
+
+        try {
+            MimeMessage message = createMail(digest.email(), subject, body.toString());
+            javaMailSender.send(message);
+            return true;
+        } catch (MailException | MessagingException e) {
+            log.error("알림 메일 전송 실패 [userId: {}]: {}", digest.userId(), e.getMessage());
+            return false;
+        }
+    }
+
+    private void appendDigestSection(StringBuilder body, String title, List<GetEventListResponse> events) {
+        if (events.isEmpty()) {
+            return;
+        }
+        body.append("<h4>").append(title).append(" ").append(events.size()).append("건</h4><ul>");
+        for (GetEventListResponse event : events) {
+            body.append("<li><a href=\"").append(siteUrl).append("/events/").append(event.id()).append("\">")
+                    .append("[").append(HtmlUtils.htmlEscape(event.brandName())).append("] ")
+                    .append(HtmlUtils.htmlEscape(event.title())).append("</a> (")
+                    .append(formatPeriod(event.startDate(), event.endDate())).append(")</li>");
+        }
+        body.append("</ul>");
+    }
+
+    private String formatPeriod(LocalDateTime start, LocalDateTime end) {
+        String from = start == null ? "" : start.format(DIGEST_DATE);
+        return from + " ~ " + (end == null ? "상시" : end.format(DIGEST_DATE));
     }
 
     public MimeMessage createMail(String mail, String title, String body) throws MessagingException {
