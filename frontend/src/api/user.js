@@ -7,3 +7,5 @@ export const deleteCurrentUser = (password) => api.del('/api/user/me', { passwor
 export const getListBrandSubscriptions = () => api.get('/api/user/me/subscriptions');
 export const getMyConsents = () => api.get('/api/user/me/consents');
 export const updateMyConsents = (consents) => api.patch('/api/user/me/consents', consents);
+export const unsubscribeByToken = (token) =>
+    api.post('/api/notifications/unsubscribe', { token }, { skipAuth: true });
