@@ -67,7 +67,7 @@ class BrandNotificationServiceTests {
     }
 
     private NotificationTarget target(Long userId, Long brandId) {
-        return new NotificationTarget(userId, "user" + userId + "@test.com", "회원" + userId, brandId);
+        return new NotificationTarget(userId, "user" + userId + "@test.com", "회원" + userId, brandId, "token" + userId);
     }
 
     private void givenTargets(NotificationTarget... targets) {
@@ -126,6 +126,7 @@ class BrandNotificationServiceTests {
             assertEquals(1L, first.userId());
             assertEquals("user1@test.com", first.email());
             assertEquals("회원1", first.nickname());
+            assertEquals("token1", first.unsubscribeToken());
             assertEquals(List.of(10L, 20L), idsOf(first.newEvents()));
             EventDigest second = digests.get(1);
             assertEquals(2L, second.userId());

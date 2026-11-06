@@ -2,6 +2,7 @@ package com.backend.mail;
 
 import com.backend.event.dto.GetEventListResponse;
 import com.backend.mail.service.MailService;
+import com.backend.notification.dto.ConsentType;
 import com.backend.notification.dto.EventDigest;
 import jakarta.mail.Address;
 import jakarta.mail.Message;
@@ -23,7 +24,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -40,6 +43,9 @@ class MailServiceTests {
     private static final String SENDER = "sender@eatsadeal.com";
     private static final String RECEIVER = "user@test.com";
     private static final String CODE = "123456";
+    private static final String SITE_URL = "https://www.eatsadeal.kr";
+    private static final String CONTACT = "report@eatsadeal.com";
+    private static final String TOKEN = "abc-DEF_123";
 
     @Mock
     private JavaMailSender javaMailSender;
@@ -50,6 +56,8 @@ class MailServiceTests {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(mailService, "senderEmail", SENDER);
+        ReflectionTestUtils.setField(mailService, "siteUrl", SITE_URL);
+        ReflectionTestUtils.setField(mailService, "reportRecipient", CONTACT);
     }
 
 
@@ -197,25 +205,17 @@ class MailServiceTests {
     @DisplayName("sendEventDigestMessage")
     class SendEventDigestMessageTests {
 
-        private static final String SITE_URL = "https://www.eatsadeal.kr";
-
-        @BeforeEach
-        void setUpSiteUrl() {
-            ReflectionTestUtils.setField(mailService, "siteUrl", SITE_URL);
-            ReflectionTestUtils.setField(mailService, "reportRecipient", "report@eatsadeal.com");
-        }
-
         private GetEventListResponse digestEvent(Long id, String brandName, String title, LocalDateTime endDate) {
             return new GetEventListResponse(id, title, null, "https://event.url/" + id, "https://image.url/" + id + ".png",
                     LocalDateTime.of(2026, 11, 1, 0, 0), endDate, 0L, true, 1L, brandName, Set.of(), false);
         }
 
         private EventDigest digest(List<GetEventListResponse> newEvents, List<GetEventListResponse> endingSoonEvents) {
-            return new EventDigest(1L, RECEIVER, "회원1", newEvents, endingSoonEvents);
+            return new EventDigest(1L, RECEIVER, "회원1", newEvents, endingSoonEvents, TOKEN);
         }
 
         @Test
-        @DisplayName("성공: (광고) 제목과 건수, 두 섹션, 상세·구독 관리 링크가 담긴 메일을 보내고 true를 반환한다")
+        @DisplayName("성공: (광고) 제목과 건수, 두 섹션, 상세·구독 관리·수신거부 링크가 담긴 메일을 보내고 true를 반환한다")
         void success() throws Exception {
             when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
             EventDigest digest = digest(
@@ -235,8 +235,23 @@ class MailServiceTests {
             assertTrue(body.contains(SITE_URL + "/events/20"));
             assertTrue(body.contains("11/1 ~ 11/30"));
             assertTrue(body.contains(SITE_URL + "/subscriptions"));
+            assertTrue(body.contains(SITE_URL + "/unsubscribe?token=" + TOKEN));
             assertTrue(body.contains("전송자: EatsADeal"));
-            assertTrue(body.contains("문의: report@eatsadeal.com"));
+            assertTrue(body.contains("문의: " + CONTACT));
+        }
+
+        @Test
+        @DisplayName("원클릭 수신거부 헤더(List-Unsubscribe, List-Unsubscribe-Post)를 붙인다")
+        void addsOneClickUnsubscribeHeaders() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+
+            mailService.sendEventDigestMessage(digest(
+                    List.of(digestEvent(10L, "BHC", "새 이벤트 제목", null)), List.of()));
+
+            MimeMessage sent = captureSentMessage();
+            assertEquals("<" + SITE_URL + "/api/notifications/unsubscribe/one-click?token=" + TOKEN + ">",
+                    sent.getHeader("List-Unsubscribe", null));
+            assertEquals("List-Unsubscribe=One-Click", sent.getHeader("List-Unsubscribe-Post", null));
         }
 
         @Test
@@ -244,7 +259,7 @@ class MailServiceTests {
         void escapesHtmlAndShowsOngoing() throws Exception {
             when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
             EventDigest digest = new EventDigest(1L, RECEIVER, "<i>회원</i>",
-                    List.of(digestEvent(10L, "<b>BHC</b>", "1+1 & 반값", null)), List.of());
+                    List.of(digestEvent(10L, "<b>BHC</b>", "1+1 & 반값", null)), List.of(), TOKEN);
 
             mailService.sendEventDigestMessage(digest);
 
@@ -280,6 +295,95 @@ class MailServiceTests {
 
             assertFalse(result);
             verify(javaMailSender, times(1)).send(any(MimeMessage.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("sendConsentResultMessage")
+    class SendConsentResultMessageTests {
+
+        private static final LocalDateTime PROCESSED_AT = LocalDateTime.of(2026, 11, 6, 14, 30);
+
+        private Map<ConsentType, Boolean> changes() {
+            Map<ConsentType, Boolean> changes = new LinkedHashMap<>();
+            changes.put(ConsentType.MARKETING_USE, true);
+            changes.put(ConsentType.AD_EMAIL, false);
+            return changes;
+        }
+
+        @Test
+        @DisplayName("성공: (광고) 없는 제목, 처리 일자, 항목별 동의/철회를 순서대로, 마이페이지 링크와 문의처를 담는다")
+        void success() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+
+            mailService.sendConsentResultMessage(RECEIVER, changes(), PROCESSED_AT);
+
+            MimeMessage sent = captureSentMessage();
+            assertEquals(RECEIVER, recipientOf(sent));
+            assertEquals("[EatsADeal] 광고성 정보 수신 동의 처리 결과 안내", sent.getSubject());
+            String body = (String) sent.getContent();
+            assertTrue(body.contains("2026년 11월 6일"));
+            String marketing = ConsentType.MARKETING_USE.getTitle() + ": 동의";
+            String email = ConsentType.AD_EMAIL.getTitle() + ": 철회";
+            assertTrue(body.contains(marketing));
+            assertTrue(body.contains(email));
+            assertTrue(body.indexOf(marketing) < body.indexOf(email), "변경 항목은 넘겨받은 순서대로 표시한다");
+            assertTrue(body.contains(SITE_URL + "/mypage"));
+            assertTrue(body.contains("전송자: EatsADeal"));
+            assertTrue(body.contains("문의: " + CONTACT));
+            assertNull(sent.getHeader("List-Unsubscribe"), "광고 메일이 아니므로 수신거부 헤더를 붙이지 않는다");
+        }
+
+        @Test
+        @DisplayName("발송 실패(MailException): 예외를 밖으로 던지지 않고 로그만 남긴다")
+        void mailExceptionIsSwallowed() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            doThrow(new MailSendException("SMTP 서버 연결 실패")).when(javaMailSender).send(any(MimeMessage.class));
+
+            assertDoesNotThrow(() -> mailService.sendConsentResultMessage(RECEIVER, changes(), PROCESSED_AT));
+
+            verify(javaMailSender, times(1)).send(any(MimeMessage.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("sendConsentReconfirmMessage")
+    class SendConsentReconfirmMessageTests {
+
+        private static final LocalDateTime AGREED_AT = LocalDateTime.of(2024, 11, 5, 20, 0);
+
+        @Test
+        @DisplayName("성공: 동의 일자·항목, 유지 안내, 수신거부·마이페이지 링크를 담아 보내고 true를 반환한다")
+        void success() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+
+            boolean result = mailService.sendConsentReconfirmMessage(RECEIVER, "<i>회원</i>", AGREED_AT, TOKEN);
+
+            assertTrue(result);
+            MimeMessage sent = captureSentMessage();
+            assertEquals(RECEIVER, recipientOf(sent));
+            assertEquals("[EatsADeal] 광고성 정보 수신 동의 여부 확인 안내", sent.getSubject());
+            String body = (String) sent.getContent();
+            assertTrue(body.contains("&lt;i&gt;회원&lt;/i&gt;님"));
+            assertFalse(body.contains("<i>회원</i>"));
+            assertTrue(body.contains("2024년 11월 5일"));
+            assertTrue(body.contains(ConsentType.AD_EMAIL.getTitle()));
+            assertTrue(body.contains("유지"));
+            assertTrue(body.contains(SITE_URL + "/unsubscribe?token=" + TOKEN));
+            assertTrue(body.contains(SITE_URL + "/mypage"));
+            assertTrue(body.contains("전송자: EatsADeal"));
+            assertTrue(body.contains("문의: " + CONTACT));
+        }
+
+        @Test
+        @DisplayName("발송 실패(MailException): 예외를 던지지 않고 false를 반환한다")
+        void mailExceptionReturnsFalse() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            doThrow(new MailSendException("SMTP 서버 연결 실패")).when(javaMailSender).send(any(MimeMessage.class));
+
+            boolean result = mailService.sendConsentReconfirmMessage(RECEIVER, "회원1", AGREED_AT, TOKEN);
+
+            assertFalse(result);
         }
     }
 }

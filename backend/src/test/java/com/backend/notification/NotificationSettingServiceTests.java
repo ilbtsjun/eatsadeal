@@ -3,6 +3,7 @@ package com.backend.notification;
 import com.backend.auth.service.CurrentUserService;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
+import com.backend.mail.service.MailService;
 import com.backend.notification.dto.ConsentSource;
 import com.backend.notification.dto.ConsentType;
 import com.backend.notification.dto.GetConsentResponse;
@@ -21,9 +22,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,6 +44,11 @@ class NotificationSettingServiceTests {
 
     @Mock
     private CurrentUserService currentUserService;
+
+    @Mock
+    private MailService mailService;
+
+    private static final String EMAIL = "user@test.com";
 
     @InjectMocks
     private NotificationSettingService notificationSettingService;
@@ -78,6 +87,13 @@ class NotificationSettingServiceTests {
         return captor.getAllValues();
     }
 
+    @SuppressWarnings("unchecked")
+    private Map<ConsentType, Boolean> captureResultMailChanges() {
+        ArgumentCaptor<Map<ConsentType, Boolean>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(mailService).sendConsentResultMessage(eq(EMAIL), captor.capture(), any(LocalDateTime.class));
+        return captor.getValue();
+    }
+
     private BusinessException givenNotLoggedIn() {
         BusinessException authException = new BusinessException(ErrorCode.UNAUTHORIZED);
         when(currentUserService.getRequiredUser()).thenThrow(authException);
@@ -101,7 +117,7 @@ class NotificationSettingServiceTests {
             assertFalse(response.emailAgreed());
             assertNull(response.emailAgreedAt());
             verify(notificationSettingRepository, never()).save(any());
-            verify(notificationSettingRepository, never()).insertIfAbsent(any());
+            verify(notificationSettingRepository, never()).insertIfAbsent(any(), any());
         }
 
         @Test
@@ -140,11 +156,12 @@ class NotificationSettingServiceTests {
         void firstAgreeBoth() {
             NotificationSetting setting = buildSetting(false, false);
             User user = givenLoggedInForUpdate(setting);
+            when(user.getEmail()).thenReturn(EMAIL);
 
             GetConsentResponse response = notificationSettingService.updateConsents(
                     new UpdateConsentRequest(true, true, ConsentSource.SUBSCRIBE_POPUP));
 
-            verify(notificationSettingRepository).insertIfAbsent(1L);
+            verify(notificationSettingRepository).insertIfAbsent(eq(1L), anyString());
             assertTrue(response.marketingAgreed());
             assertNotNull(response.marketingAgreedAt());
             assertTrue(response.emailAgreed());
@@ -159,10 +176,15 @@ class NotificationSettingServiceTests {
                 assertEquals(ConsentSource.SUBSCRIBE_POPUP, history.getSource());
                 assertNotNull(history.getCreatedAt());
             });
+
+            Map<ConsentType, Boolean> changes = captureResultMailChanges();
+            assertEquals(List.of(ConsentType.MARKETING_USE, ConsentType.AD_EMAIL), new ArrayList<>(changes.keySet()));
+            assertTrue(changes.get(ConsentType.MARKETING_USE));
+            assertTrue(changes.get(ConsentType.AD_EMAIL));
         }
 
         @Test
-        @DisplayName("성공: 기존 값과 같으면 동의 일시를 바꾸지 않고 이력도 저장하지 않는다")
+        @DisplayName("성공: 기존 값과 같으면 동의 일시를 바꾸지 않고 이력과 결과 메일도 남기지 않는다")
         void sameValuesKeepsHistory() {
             NotificationSetting setting = buildSetting(true, true);
             LocalDateTime marketingAgreedAt = setting.getMarketingAgreedAt();
@@ -175,6 +197,7 @@ class NotificationSettingServiceTests {
             assertEquals(marketingAgreedAt, response.marketingAgreedAt());
             assertEquals(emailAgreedAt, response.emailAgreedAt());
             verify(consentHistoryRepository, never()).save(any());
+            verifyNoInteractions(mailService);
         }
 
         @Test
@@ -182,7 +205,8 @@ class NotificationSettingServiceTests {
         void changeOnlyEmail() {
             NotificationSetting setting = buildSetting(true, false);
             LocalDateTime marketingAgreedAt = setting.getMarketingAgreedAt();
-            givenLoggedInForUpdate(setting);
+            User user = givenLoggedInForUpdate(setting);
+            when(user.getEmail()).thenReturn(EMAIL);
 
             GetConsentResponse response = notificationSettingService.updateConsents(
                     new UpdateConsentRequest(true, true, ConsentSource.MYPAGE));
@@ -195,13 +219,15 @@ class NotificationSettingServiceTests {
             assertEquals(ConsentType.AD_EMAIL, histories.get(0).getConsentType());
             assertTrue(histories.get(0).getAgreed());
             assertEquals(ConsentSource.MYPAGE, histories.get(0).getSource());
+            assertEquals(Map.of(ConsentType.AD_EMAIL, true), captureResultMailChanges());
         }
 
         @Test
         @DisplayName("성공: 철회하면 동의 일시가 null이 되고 철회 이력이 저장된다")
         void withdrawBoth() {
             NotificationSetting setting = buildSetting(true, true);
-            givenLoggedInForUpdate(setting);
+            User user = givenLoggedInForUpdate(setting);
+            when(user.getEmail()).thenReturn(EMAIL);
 
             GetConsentResponse response = notificationSettingService.updateConsents(
                     new UpdateConsentRequest(false, false, ConsentSource.MYPAGE));
@@ -213,6 +239,7 @@ class NotificationSettingServiceTests {
 
             List<ConsentHistory> histories = captureHistories(2);
             histories.forEach(history -> assertFalse(history.getAgreed()));
+            assertEquals(Map.of(ConsentType.MARKETING_USE, false, ConsentType.AD_EMAIL, false), captureResultMailChanges());
         }
 
         @Test
@@ -225,7 +252,7 @@ class NotificationSettingServiceTests {
                             new UpdateConsentRequest(true, true, ConsentSource.MYPAGE)));
 
             assertEquals(ErrorCode.NOT_FOUND, exception.getErrorCode());
-            verifyNoInteractions(consentHistoryRepository);
+            verifyNoInteractions(consentHistoryRepository, mailService);
         }
 
         @Test
@@ -238,7 +265,7 @@ class NotificationSettingServiceTests {
                             new UpdateConsentRequest(true, true, ConsentSource.MYPAGE)));
 
             assertSame(authException, thrown);
-            verifyNoInteractions(notificationSettingRepository, consentHistoryRepository);
+            verifyNoInteractions(notificationSettingRepository, consentHistoryRepository, mailService);
         }
     }
 
@@ -255,6 +282,106 @@ class NotificationSettingServiceTests {
 
             verify(notificationSettingRepository).deleteByUser(user);
             verify(consentHistoryRepository).deleteByUser(user);
+        }
+    }
+
+    @Nested
+    @DisplayName("unsubscribe")
+    class UnsubscribeTests {
+
+        private static final String TOKEN = "unsubscribe-token";
+
+        @Test
+        @DisplayName("성공: 이메일 수신 동의만 철회하고 철회 이력과 결과 메일을 남긴다 (마케팅 동의는 유지)")
+        void withdrawsEmailOnly() {
+            NotificationSetting setting = buildSetting(true, true);
+            when(setting.getUser().getEmail()).thenReturn(EMAIL);
+            when(notificationSettingRepository.findByUnsubscribeToken(TOKEN)).thenReturn(Optional.of(setting));
+
+            notificationSettingService.unsubscribe(TOKEN);
+
+            assertFalse(setting.getEmailAgreed());
+            assertNull(setting.getEmailAgreedAt());
+            assertTrue(setting.getMarketingAgreed());
+            assertNotNull(setting.getMarketingAgreedAt());
+
+            List<ConsentHistory> histories = captureHistories(1);
+            assertSame(setting.getUser(), histories.get(0).getUser());
+            assertEquals(ConsentType.AD_EMAIL, histories.get(0).getConsentType());
+            assertFalse(histories.get(0).getAgreed());
+            assertEquals(ConsentSource.UNSUBSCRIBE_LINK, histories.get(0).getSource());
+            assertEquals(Map.of(ConsentType.AD_EMAIL, false), captureResultMailChanges());
+        }
+
+        @Test
+        @DisplayName("성공: 이미 철회한 상태면 아무것도 바꾸지 않고 이력과 메일도 남기지 않는다")
+        void alreadyWithdrawn() {
+            NotificationSetting setting = buildSetting(true, false);
+            when(notificationSettingRepository.findByUnsubscribeToken(TOKEN)).thenReturn(Optional.of(setting));
+
+            notificationSettingService.unsubscribe(TOKEN);
+
+            assertFalse(setting.getEmailAgreed());
+            verifyNoInteractions(consentHistoryRepository, mailService);
+        }
+
+        @Test
+        @DisplayName("실패: 토큰에 해당하는 설정이 없으면 NOT_FOUND, 이력과 메일을 남기지 않는다")
+        void invalidToken() {
+            when(notificationSettingRepository.findByUnsubscribeToken(TOKEN)).thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> notificationSettingService.unsubscribe(TOKEN));
+
+            assertEquals(ErrorCode.NOT_FOUND, exception.getErrorCode());
+            verifyNoInteractions(consentHistoryRepository, mailService);
+        }
+    }
+
+    @Nested
+    @DisplayName("sendConsentReconfirmNotices")
+    class SendConsentReconfirmNoticesTests {
+
+        private static final LocalDateTime RUN_AT = LocalDateTime.of(2026, 11, 6, 10, 0);
+
+        private NotificationSetting agreedSetting(String email, String nickname, String token) {
+            User user = mockUser();
+            when(user.getEmail()).thenReturn(email);
+            when(user.getNickname()).thenReturn(nickname);
+            NotificationSetting setting = NotificationSetting.builder().user(user).build();
+            setting.agreeEmail(true);
+            ReflectionTestUtils.setField(setting, "unsubscribeToken", token);
+            return setting;
+        }
+
+        @Test
+        @DisplayName("2년 전 시각을 기준으로 대상을 조회하고, 발송에 성공한 회원만 안내 일시를 기록한다")
+        void marksOnlySentTargets() {
+            NotificationSetting success = agreedSetting("a@test.com", "회원A", "token-a");
+            NotificationSetting failure = agreedSetting("b@test.com", "회원B", "token-b");
+            when(notificationSettingRepository.findReconfirmTargets(RUN_AT.minusYears(2)))
+                    .thenReturn(List.of(success, failure));
+            when(mailService.sendConsentReconfirmMessage("a@test.com", "회원A", success.getEmailAgreedAt(), "token-a"))
+                    .thenReturn(true);
+            when(mailService.sendConsentReconfirmMessage("b@test.com", "회원B", failure.getEmailAgreedAt(), "token-b"))
+                    .thenReturn(false);
+
+            int sent = notificationSettingService.sendConsentReconfirmNotices(RUN_AT);
+
+            assertEquals(1, sent);
+            assertEquals(RUN_AT, success.getConsentNotifiedAt());
+            assertNull(failure.getConsentNotifiedAt());
+        }
+
+        @Test
+        @DisplayName("대상이 없으면 0을 반환하고 메일을 보내지 않는다")
+        void noTargets() {
+            when(notificationSettingRepository.findReconfirmTargets(RUN_AT.minusYears(2))).thenReturn(List.of());
+
+            int sent = notificationSettingService.sendConsentReconfirmNotices(RUN_AT);
+
+            assertEquals(0, sent);
+            verifyNoInteractions(mailService);
         }
     }
 }
