@@ -5,6 +5,7 @@ import com.backend.crawler.dto.CrawlReport;
 import com.backend.crawler.dto.CrawlRunResponse;
 import com.backend.crawler.entity.CrawlStatus;
 import com.backend.crawler.service.CrawlerService;
+import com.backend.event.service.EventService;
 import com.backend.mail.service.MailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 
@@ -26,6 +29,7 @@ public class CrawlerScheduler {
             Set.of(CrawlStatus.FAILED, CrawlStatus.PARTIAL, CrawlStatus.EMPTY);
 
     private final CrawlerService crawlerService;
+    private final EventService eventService;
     private final MailService mailService;
 
     @Value("${app.crawler.alert-enabled:true}")
@@ -44,6 +48,16 @@ public class CrawlerScheduler {
             if (alertEnabled) {
                 mailService.sendCrawlErrorMessage(e);
             }
+        }
+        deactivateExpiredEvents();
+    }
+
+    private void deactivateExpiredEvents() {
+        try {
+            long count = eventService.deactivateExpiredEvents(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+            log.info("[CRAWL SCHEDULE] 만료 이벤트 비활성화 {}건", count);
+        } catch (Exception e) {
+            log.error("[CRAWL SCHEDULE] 만료 이벤트 비활성화 실패", e);
         }
     }
 

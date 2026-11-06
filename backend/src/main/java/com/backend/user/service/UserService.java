@@ -2,10 +2,12 @@ package com.backend.user.service;
 
 import com.backend.auth.service.AuthService;
 import com.backend.auth.service.CurrentUserService;
+import com.backend.brand.repository.BrandSubscriptionRepository;
 import com.backend.common.dto.UserRole;
 import com.backend.common.error.BusinessException;
 import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
+import com.backend.notification.service.NotificationSettingService;
 import com.backend.user.dto.*;
 import com.backend.user.entity.User;
 import com.backend.user.repository.UserRepository;
@@ -27,6 +29,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUserService;
     private final AuthService authService;
+    private final BrandSubscriptionRepository brandSubscriptionRepository;
+    private final NotificationSettingService notificationSettingService;
 
     @Transactional(readOnly = true)
     public boolean isExistEmail(String email){
@@ -103,8 +107,11 @@ public class UserService {
             throw new BusinessException(ErrorCode.PASSWORD_NOT_MATCHED);
         }
 
+        notificationSettingService.deleteConsents(user);
+
         authService.addBlackList(currentUserService.getTokenByUser(), currentUserService.getExpirationByUser());
 
+        brandSubscriptionRepository.deleteByUser(user);
         user.withdrawn();
     }
 
@@ -116,11 +123,11 @@ public class UserService {
         User user = null;
         if(request.id() == null){
             user = userRepository.findByEmailOrNickname(request.nickname())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         }
         else{
             user = userRepository.findById(request.id())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));;
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         }
         return GetMyPageResponse.from(user);
     }
@@ -131,7 +138,7 @@ public class UserService {
         User user = userRepository.findById(userID)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if(user.getRole() == UserRole.ADMIN){
-            new BusinessException(ErrorCode.INVALID_STATUS);
+            throw new BusinessException(ErrorCode.INVALID_STATUS);
         }
         if(request.status()){
             if(user.getUserStatus() != UserStatus.ACTIVE){

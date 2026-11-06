@@ -1,83 +1,54 @@
-import {useEffect, useState} from "react";
+import { useMemo, useState } from 'react';
 import {
-    getEvent,
     getMyComments,
     deleteComment as deleteCommentRequest
 } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 const COMMENTS_PER_PAGE = 10;
+
 const getCommentId = (comment) => comment?.commentId ? String(comment.commentId) : null;
 
-export function useUserComments({ user, }){
-    const [comments, setComments] = useState([]);
+const toCommentList = (data) => (Array.isArray(data) ? data : data?.comments || data?.content || []);
+
+export function useUserComments({ user }) {
+    const request = useMemo(() => (user ? () => getMyComments().then(toCommentList) : null), [user]);
+    const {
+        data: comments,
+        setData: setComments,
+        loading,
+        loadError,
+        reload,
+    } = useFetch(request, { initialData: [], fallbackMessage: '댓글을 불러오지 못했습니다.' });
     const [commentPage, setCommentPage] = useState(0);
     const [commentToDelete, setCommentToDelete] = useState(null);
-    const [eventTitles, setEventTitles] = useState({});
-
-    const currentCommentPage = Math.min(commentPage, Math.max(0, Math.ceil(comments.length / COMMENTS_PER_PAGE) - 1));
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadComments = async () => {
-            try {
-                const data = await getMyComments();
-                if (cancelled) return;
-
-                const serverComments = Array.isArray(data)
-                    ? data
-                    : data?.comments || data?.content || [];
-
-                setComments(serverComments);
-            } catch (requestError) {
-                if (cancelled) return;
-
-                setComments([]);
-                console.error(requestError);
-                throw(requestError);
-            }
-        };
-
-        loadComments();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [user]);
-
-    useEffect(() => {
-        let cancelled = false;
-        const eventIds = [
-            ...new Set(comments.map((comment) => comment.eventId).filter(Boolean)),
-        ];
-
-        if (!eventIds.length) return undefined;
-
-
-        Promise.all(eventIds.map(async (eventId) => {
-            try {
-                const event = await getEvent(eventId);
-                return [String(eventId), event.title || `이벤트 ${eventId}`];
-            } catch {
-                return [String(eventId), `이벤트 ${eventId}`];
-            }
-        })).then((entries) => {
-            if (!cancelled) {
-                setEventTitles(Object.fromEntries(entries));
-            }
-        });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [comments]);
-
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
     const commentPageCount = Math.ceil(comments.length / COMMENTS_PER_PAGE);
+    const currentCommentPage = Math.min(commentPage, Math.max(0, commentPageCount - 1));
+    const pageStart = currentCommentPage * COMMENTS_PER_PAGE;
+    const pagedComments = comments.slice(pageStart, pageStart + COMMENTS_PER_PAGE);
 
-    const deleteComment = async (comment) => {
-        const commentId = getCommentId(comment);
-        if (!commentId) return;
+    const getEventTitle = (comment) => comment.eventTitle || `이벤트 ${comment.eventId || ''}`;
 
+    const goPrevPage = () => setCommentPage(Math.max(0, currentCommentPage - 1));
+    const goNextPage = () => setCommentPage(Math.min(commentPageCount - 1, currentCommentPage + 1));
+
+    const openDelete = (comment) => {
+        setDeleteError('');
+        setCommentToDelete(comment);
+    };
+
+    const closeDelete = () => {
+        if (!deleting) setCommentToDelete(null);
+    };
+
+    const deleteComment = async () => {
+        const commentId = getCommentId(commentToDelete);
+        if (!commentId || deleting) return;
+
+        setDeleting(true);
+        setDeleteError('');
         try {
             await deleteCommentRequest(commentId);
             setComments((current) =>
@@ -87,24 +58,30 @@ export function useUserComments({ user, }){
                         : item
                 )
             );
-        } catch (requestError) {
-            console.error(requestError);
-            throw(requestError);
-        } finally {
             setCommentToDelete(null);
+        } catch (requestError) {
+            setDeleteError(requestError.message || '댓글을 삭제하지 못했습니다.');
+        } finally {
+            setDeleting(false);
         }
     };
 
     return {
-        COMMENTS_PER_PAGE,
-        comments,
-        deleteComment,
+        pagedComments,
+        pageStart,
+        loading,
+        loadError,
+        reload,
         currentCommentPage,
-        setCommentPage,
-        getCommentId,
-        commentToDelete,
-        setCommentToDelete,
         commentPageCount,
-        eventTitles,
-    }
+        goPrevPage,
+        goNextPage,
+        getEventTitle,
+        commentToDelete,
+        deleting,
+        deleteError,
+        openDelete,
+        closeDelete,
+        deleteComment,
+    };
 }

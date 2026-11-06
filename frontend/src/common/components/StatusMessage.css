@@ -1,0 +1,15 @@
+.status-message { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.status-message--page { padding: 90px 20px; border: 1px solid #eaeaea; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+.status-message--inline { padding: 28px 16px; }
+.status-title { margin: 6px 0 0; color: #2f3542; font-size: 22px; }
+.status-text { margin: 0; color: #747d8c; font-size: 14px; line-height: 1.6; }
+.status-icon { font-size: 56px; line-height: 1; }
+.status-spinner { width: 34px; height: 34px; border: 3px solid #ffd9dc; border-top-color: #ff4757; border-radius: 50%; animation: status-spin .8s linear infinite; }
+.status-retry { margin-top: 14px; padding: 12px 18px; border: 0; border-radius: 8px; color: #fff; background: #ff4757; cursor: pointer; font-size: 14px; font-weight: 700; }
+.status-retry:hover { background: #e84118; }
+.status-message--inline .status-title { font-size: 16px; }
+.status-message--inline .status-icon { font-size: 32px; }
+.status-message--inline .status-spinner { width: 24px; height: 24px; }
+.status-message--inline .status-retry { margin-top: 6px; padding: 8px 14px; font-size: 13px; }
+@keyframes status-spin { to { transform: rotate(360deg); } }
+@media (max-width: 650px) { .status-message--page { padding: 60px 16px; } }

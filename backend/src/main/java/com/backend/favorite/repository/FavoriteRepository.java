@@ -25,4 +25,17 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     ORDER BY f.id
 """)
     List<Long> findVisibleEventIdsByUser(@Param("user") User user);
+
+    @Query("""
+    SELECT e
+    FROM Favorite f
+    JOIN f.event e
+    JOIN FETCH e.brand b
+    LEFT JOIN FETCH e.eventCodes
+    WHERE f.user = :user
+      AND b.isActive = true
+      AND e.hidden = false
+    ORDER BY f.id
+""")
+    List<Event> findVisibleEventsByUser(@Param("user") User user);
 }

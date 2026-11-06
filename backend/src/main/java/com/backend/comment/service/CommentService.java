@@ -7,6 +7,7 @@ import com.backend.common.error.ErrorCode;
 import com.backend.common.log.CudLogging;
 import com.backend.event.dto.CreateComment;
 import com.backend.comment.dto.CommentResponse;
+import com.backend.comment.dto.MyCommentResponse;
 import com.backend.comment.dto.UpdateComment;
 import com.backend.comment.entity.Comment;
 import com.backend.comment.repository.CommentRepository;
@@ -33,15 +34,11 @@ public class CommentService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public List<CommentResponse> getMyCommentList(){
+    public List<MyCommentResponse> getMyCommentList() {
         User user = currentUserService.getRequiredUser();
-
-        List<Comment> eventCommentList = commentRepository.findByUser(user);
-        List<CommentResponse> commentList = new ArrayList<>();
-        for(Comment comment : eventCommentList){
-            commentList.add(CommentResponse.from(comment, user.getId()));
-        }
-        return commentList;
+        return commentRepository.findByUserWithEvent(user).stream()
+                .map(MyCommentResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

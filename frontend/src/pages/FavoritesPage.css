@@ -22,6 +22,6 @@
 .favorite-toggle .favorite-icon { display: block; width: 20px; height: 20px; fill: transparent; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .favorite-toggle.is-favorite .favorite-icon { fill: currentColor; }
 
-.favorites-message, .favorites-empty, .favorites-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
+.favorites-container .status-message, .favorites-empty, .favorites-error { margin-top: 24px; color: #747d8c; font-size: 14px; }
 .favorites-error { color: #e84118; }
 @media (max-width: 600px) { .favorites-container { width: min(100% - 28px, 900px); } .favorite-event-item { padding-right: 62px; } .favorite-toggle { right: 12px; width: 36px; height: 36px; } }

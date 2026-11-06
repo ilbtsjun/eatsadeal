@@ -1,48 +1,61 @@
-import { useUserComments } from '../hooks/useUserComments.js'
+import { useUserComments } from '../hooks/useUserComments.js';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
 import Modal from '@/common/components/Modal.jsx';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 
 export default function UserComments({ user, onOpenEvent }){
     const {
-        COMMENTS_PER_PAGE,
-        comments,
-        deleteComment,
+        pagedComments,
+        pageStart,
+        loading,
+        loadError,
+        reload,
         currentCommentPage,
-        setCommentPage,
-        getCommentId,
-        commentToDelete,
-        setCommentToDelete,
         commentPageCount,
-        eventTitles,
+        goPrevPage,
+        goNextPage,
+        getEventTitle,
+        commentToDelete,
+        deleting,
+        deleteError,
+        openDelete,
+        closeDelete,
+        deleteComment,
     } = useUserComments({ user });
 
     return(
         <>
             <section className="mypage-panel">
                 <h2>내가 작성한 댓글</h2>
-                {comments.length ? <>
-                    {comments.slice(
-                        currentCommentPage * COMMENTS_PER_PAGE,
-                        (currentCommentPage + 1) * COMMENTS_PER_PAGE)
-                        .map((comment, index) => {
-                        const number = currentCommentPage * COMMENTS_PER_PAGE + index + 1;
+                {loading ? (
+                    <StatusMessage type="loading" size="inline" message="댓글을 불러오는 중입니다." />
+                ) : loadError ? (
+                    <StatusMessage
+                        type="error"
+                        size="inline"
+                        title="댓글을 불러오지 못했어요"
+                        message={loadError}
+                        onRetry={reload}
+                    />
+                ) : pagedComments.length ? <>
+                    {pagedComments.map((comment, index) => {
                         const eventId = comment.eventId;
                         return <article className="my-comment"
-                                        key={getCommentId(comment) || `${eventId}-${comment.createdAt}`}>
+                                        key={comment.commentId ?? `${eventId}-${comment.createdAt}`}>
                             <div className="my-comment-meta">
-                                <span className="my-comment-number">{number}.</span>
+                                <span className="my-comment-number">{pageStart + index + 1}.</span>
                                 <span>{formatDateTime(comment.createdAt)}</span>
                                 { comment.status !== 'DELETED'
                                     && <button type="button"
-                                        onClick={() => setCommentToDelete(comment)}>삭제</button>
+                                        onClick={() => openDelete(comment)}>삭제</button>
                                 }
                             </div>
                             <button type="button"
                                     className="my-comment-event"
                                     onClick={() => eventId && onOpenEvent?.({
                                         id: eventId,
-                                        title: eventTitles[String(eventId)] || `이벤트 ${eventId}` })}>
-                                {eventTitles[String(eventId)] || `이벤트 ${eventId || ''}`}</button>
+                                        title: getEventTitle(comment) })}>
+                                {getEventTitle(comment)}</button>
                             <p>{comment.content || comment.comment}</p>
                         </article>;
                     })}
@@ -50,24 +63,27 @@ export default function UserComments({ user, onOpenEvent }){
                         && <div className="comment-pagination">
                             <button type="button"
                                     disabled={currentCommentPage === 0}
-                                    onClick={() => setCommentPage((page) => page - 1)}>이전</button>
+                                    onClick={goPrevPage}>이전</button>
                             <span>{currentCommentPage + 1} / {commentPageCount}</span>
                             <button type="button" disabled={currentCommentPage >= commentPageCount - 1}
-                                    onClick={() => setCommentPage((page) => page + 1)}>다음</button>
+                                    onClick={goNextPage}>다음</button>
                         </div>}
                 </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>
             {commentToDelete &&
-                <Modal backdropClassName="confirm-backdrop" onClose={() => setCommentToDelete(null)}>
+                <Modal backdropClassName="confirm-backdrop" onClose={closeDelete} locked={deleting}>
                     <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="my-comment-delete-title">
                         <h2 id="my-comment-delete-title">댓글 삭제</h2>
                         <p>이 댓글을 삭제하시겠습니까?</p>
+                        {deleteError && <p className="confirm-error" role="alert">{deleteError}</p>}
                         <div className="confirm-dialog-actions">
                             <button type="button"
                                     className="confirm-cancel"
-                                    onClick={() => setCommentToDelete(null)}>취소</button>
+                                    disabled={deleting}
+                                    onClick={closeDelete}>취소</button>
                             <button type="button"
                                     className="confirm-delete"
-                                    onClick={() => deleteComment(commentToDelete)}>삭제</button>
+                                    disabled={deleting}
+                                    onClick={deleteComment}>{deleting ? '삭제 중...' : '삭제'}</button>
                         </div>
                     </div>
                 </Modal>

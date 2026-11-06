@@ -1,3 +1,4 @@
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { useProfile } from '../hooks/useProfile.js';
 
 export default function Profile({ user, onUserUpdate }) {
@@ -5,6 +6,8 @@ export default function Profile({ user, onUserUpdate }) {
         profile,
         profileForm,
         profileLoading,
+        loadError,
+        reload,
         profileMessage,
         profileError,
         editingProfile,
@@ -18,7 +21,22 @@ export default function Profile({ user, onUserUpdate }) {
         return (
             <section className="mypage-panel">
                 <h2>내 정보</h2>
-                <p role="status">회원정보를 불러오는 중입니다.</p>
+                <StatusMessage type="loading" size="inline" message="회원정보를 불러오는 중입니다." />
+            </section>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <section className="mypage-panel">
+                <h2>내 정보</h2>
+                <StatusMessage
+                    type="error"
+                    size="inline"
+                    title="회원정보를 불러오지 못했어요"
+                    message={loadError}
+                    onRetry={reload}
+                />
             </section>
         );
     }

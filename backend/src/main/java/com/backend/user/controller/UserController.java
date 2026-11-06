@@ -1,8 +1,16 @@
 package com.backend.user.controller;
 
+import com.backend.brand.service.BrandSubscriptionService;
 import com.backend.common.dto.MsgResponse;
+import com.backend.event.dto.GetEventListResponse;
 import com.backend.favorite.service.FavoriteService;
-import com.backend.user.dto.*;
+import com.backend.notification.dto.GetConsentResponse;
+import com.backend.notification.dto.UpdateConsentRequest;
+import com.backend.notification.service.NotificationSettingService;
+import com.backend.user.dto.GetMyPageResponse;
+import com.backend.user.dto.QuitUser;
+import com.backend.user.dto.UpdateMyPage;
+import com.backend.user.dto.UpdatePassword;
 import com.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +28,8 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final FavoriteService favoriteService;
+    private final BrandSubscriptionService brandSubscriptionService;
+    private final NotificationSettingService notificationSettingService;
 
     @Operation(
             summary = "이메일 중복 확인",
@@ -90,5 +100,45 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public List<Long> getFavoriteList() {
         return favoriteService.getFavoriteList();
+    }
+
+    @Operation(
+            summary = "즐겨찾기한 이벤트 목록을 반환합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 즐겨찾기한 이벤트를 목록 카드 정보와 함께 반환합니다."
+    )
+    @GetMapping("/me/favorites/events")
+    @PreAuthorize("isAuthenticated()")
+    public List<GetEventListResponse> getFavoriteEventList() {
+        return favoriteService.getFavoriteEventList();
+    }
+
+    @Operation(
+            summary = "브랜드 구독 목록을 반환합니다.",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 유저의 브랜드 구독 목록을 반환합니다."
+    )
+    @GetMapping("/me/subscriptions")
+    @PreAuthorize("isAuthenticated()")
+    public List<Long> getBrandSubscriptionList() {
+        return brandSubscriptionService.getMySubscription();
+    }
+
+    @Operation(
+            summary = "내 동의여부와 시각을 반환",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 유저의 동의여부와 시각을 반환"
+    )
+    @GetMapping("/me/consents")
+    @PreAuthorize("isAuthenticated()")
+    public GetConsentResponse getMyConsents() {
+        return notificationSettingService.getMyConsents();
+    }
+
+    @Operation(
+            summary = "동의여부를 수정",
+            description = "JWT 토큰으로 로그인한 유저를 찾고, 광고성 정보 수신 동의와 이메일 수신 동의를 수정하며 변경된 항목은 이력에 저장"
+    )
+    @PatchMapping("/me/consents")
+    @PreAuthorize("isAuthenticated()")
+    public GetConsentResponse updateMyConsents(@Valid @RequestBody UpdateConsentRequest request) {
+        return notificationSettingService.updateConsents(request);
     }
 }

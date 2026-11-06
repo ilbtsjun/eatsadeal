@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
 import { useAdminDashboard } from '@/features/admin/hooks/useAdminDashboard.js';
 
@@ -12,19 +13,22 @@ function StatCard({ label, value, tone }) {
 }
 
 export default function DashboardOverview() {
-    const { dashboard, loading, error, loadDashboard } = useAdminDashboard();
+    const { dashboard, loading, loadError, reload } = useAdminDashboard();
 
     if (loading) {
-        return <p className="admin-empty">대시보드를 불러오는 중입니다...</p>;
+        return <StatusMessage type="loading" size="inline" message="대시보드를 불러오는 중입니다..." />;
     }
 
-    if (error || !dashboard) {
+    if (loadError || !dashboard) {
         return (
             <section className="admin-panel">
-                <p className="admin-empty">대시보드를 불러오지 못했습니다. {error}</p>
-                <div className="dashboard-retry">
-                    <button type="button" className="create-placeholder" onClick={loadDashboard}>다시 시도</button>
-                </div>
+                <StatusMessage
+                    type="error"
+                    size="inline"
+                    title="대시보드를 불러오지 못했어요"
+                    message={loadError}
+                    onRetry={reload}
+                />
             </section>
         );
     }
@@ -43,7 +47,7 @@ export default function DashboardOverview() {
                         <h2>이벤트</h2>
                         <p className="panel-description">지금 노출 중인 이벤트와 손볼 이벤트 수입니다.</p>
                     </div>
-                    <button type="button" className="create-placeholder" onClick={loadDashboard}>새로고침</button>
+                    <button type="button" className="create-placeholder" onClick={reload}>새로고침</button>
                 </div>
                 <div className="stat-grid">
                     <StatCard label="노출 중" value={events.visible} />

@@ -191,6 +191,12 @@ public class EventService {
         return missing.size();
     }
 
+    @Transactional
+    @CudLogging("만료 이벤트 비활성화")
+    public long deactivateExpiredEvents(LocalDateTime now) {
+        return eventRepository.deactivateExpiredEvents(now);
+    }
+
     @Transactional(readOnly = true)
     @QueryTrace("searchEvents")
     public Page<GetEventListResponse> searchEvents(EventSearchRequest request) {
@@ -207,7 +213,7 @@ public class EventService {
                 LocalDateTime.now(),
                 pageable
         );
-        return events.map(this::toListResponse);
+        return events.map(GetEventListResponse::from);
     }
 
     @Transactional
@@ -348,25 +354,6 @@ public class EventService {
             default -> Sort.by(Sort.Order.desc("startDate"), Sort.Order.desc("id"));
         };
         return PageRequest.of(safePage, safeSize, sortCondition);
-    }
-
-    private GetEventListResponse toListResponse(Event event) {
-        Brand brand = event.getBrand();
-        return new GetEventListResponse(
-                event.getId(),
-                event.getTitle(),
-                event.getDescription(),
-                event.getUrl(),
-                event.getImg(),
-                event.getStartDate(),
-                event.getEndDate(),
-                event.getViewCount(),
-                event.getIsActive(),
-                brand.getId(),
-                brand.getName(),
-                Set.copyOf(event.getEventCodes()),
-                event.isHidden()
-        );
     }
 
     private GetEventResponse toDetailResponse(User user, Event event) {

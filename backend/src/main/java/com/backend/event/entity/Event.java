@@ -56,6 +56,9 @@ public class Event {
     @Column(nullable = false)
     private boolean adminLocked = false;
 
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand", nullable = false)
     private Brand brand;
@@ -87,6 +90,7 @@ public class Event {
         this.startDate = startDate;
         this.endDate = endDate;
         this.viewCount = 0L;
+        this.createdAt = LocalDateTime.now();
         this.isActive = isActive;
         this.brand = brand;
         this.eventCodes = eventCodes == null

@@ -4,6 +4,7 @@ import com.backend.brand.dto.CreateBrand;
 import com.backend.brand.dto.GetBrandListResponse;
 import com.backend.brand.dto.GetBrandResponse;
 import com.backend.brand.dto.UpdateBrand;
+import com.backend.brand.service.BrandSubscriptionService;
 import com.backend.common.dto.MsgResponse;
 import com.backend.brand.service.BrandService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/brands")
 public class BrandController {
     private final BrandService brandService;
+    private final BrandSubscriptionService brandSubscriptionService;
 
     @Operation(
             summary = "브랜드 목록 조회",
@@ -87,5 +89,27 @@ public class BrandController {
     public MsgResponse activeBrand(@PathVariable Long brandId) {
         brandService.activeBrand(brandId);
         return new MsgResponse("브랜드가 활성화 되었습니다.", "200");
+    }
+
+    @Operation(
+            summary = "브랜드 구독",
+            description = "선택한 브랜드를 구독함"
+    )
+    @PostMapping("/{brandId}/subscription")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse subscribeBrand(@PathVariable Long brandId) {
+        brandSubscriptionService.subscribe(brandId);
+        return new MsgResponse("브랜드를 구독했습니다.", "200");
+    }
+
+    @Operation(
+            summary = "브랜드 구독 해제",
+            description = "선택한 브랜드의 구독을 해제함"
+    )
+    @DeleteMapping("/{brandId}/subscription")
+    @PreAuthorize("isAuthenticated()")
+    public MsgResponse unsubscribeBrand(@PathVariable Long brandId) {
+        brandSubscriptionService.unsubscribe(brandId);
+        return new MsgResponse("브랜드 구독을 해제했습니다.", "200");
     }
 }

@@ -1,29 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
 import { getAdminDashboard } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 export function useAdminDashboard() {
-    const [dashboard, setDashboard] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const { data: dashboard, loading, loadError, reload } = useFetch(getAdminDashboard, {
+        fallbackMessage: '대시보드를 불러오지 못했습니다.',
+    });
 
-    const fetchDashboard = useCallback(() => (
-        getAdminDashboard()
-            .then((data) => {
-                setDashboard(data);
-                setError('');
-            })
-            .catch((err) => setError(err.message))
-            .finally(() => setLoading(false))
-    ), []);
-
-    const loadDashboard = useCallback(() => {
-        setLoading(true);
-        return fetchDashboard();
-    }, [fetchDashboard]);
-
-    useEffect(() => {
-        fetchDashboard();
-    }, [fetchDashboard]);
-
-    return { dashboard, loading, error, loadDashboard };
+    return { dashboard, loading, loadError, reload };
 }

@@ -1,10 +1,11 @@
 import { useSearchParams } from 'react-router';
 
-const DEFAULTS = { category: 'all', eventCode: 'all', sort: 'latest', q: '', page: 1 };
+const DEFAULTS = { category: 'all', brand: 'all', eventCode: 'all', sort: 'latest', q: '', page: 1 };
 
 export function useEventSearchParams(){
     const [params, setParams] = useSearchParams();
     const category = params.get('category') ?? DEFAULTS.category;
+    const brand = params.get('brand') ?? DEFAULTS.brand;
     const eventCode = params.get('eventCode') ?? DEFAULTS.eventCode;
     const sort = params.get('sort') ?? DEFAULTS.sort;
     const keyword = params.get('q') ?? DEFAULTS.q;
@@ -26,6 +27,7 @@ export function useEventSearchParams(){
     };
     return{
         category,
+        brand,
         eventCode,
         sort,
         keyword,

@@ -67,7 +67,9 @@ public class SecurityConfig {
                                 "/api/auth/email-verification",
                                 "/api/auth/password-change",
                                 "/api/auth/password-verification",
-                                "/api/reports"
+                                "/api/reports",
+                                "/api/notifications/unsubscribe",
+                                "/api/notifications/unsubscribe/one-click"
                         ).permitAll()
 
                         // 공개 조회 API

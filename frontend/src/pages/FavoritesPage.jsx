@@ -1,4 +1,5 @@
 import Header from '@/common/components/Header';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './FavoritesPage.css';
 import { useFavoriteList } from '@/features/favorites/hooks/useFavoriteList.js';
 
@@ -6,10 +7,11 @@ export default function FavoritesPage({ user, onBack, onOpenEvent }) {
     const {
         favorites,
         loading,
-        error,
+        loadError,
         toggleError,
         pendingId,
         toggleFavorite,
+        reload,
     } = useFavoriteList(user);
 
     return (
@@ -20,9 +22,9 @@ export default function FavoritesPage({ user, onBack, onOpenEvent }) {
                 <h1>찜한 목록</h1>
                 <p className="favorites-intro">찜한 이벤트를 모아볼 수 있습니다.</p>
                 {toggleError && <p className="favorites-error" role="alert">{toggleError}</p>}
-                {loading && <p className="favorites-message">찜한 목록을 불러오는 중입니다...</p>}
-                {!loading && error && <p className="favorites-error">오류가 발생했습니다: {error}</p>}
-                {!loading && !error && (favorites.length ? (
+                {loading && <StatusMessage type="loading" message="찜한 목록을 불러오는 중입니다..." />}
+                {!loading && loadError && <StatusMessage type="error" title="찜한 목록을 불러오지 못했어요" message={loadError} onRetry={reload} />}
+                {!loading && !loadError && (favorites.length ? (
                     <div className="favorites-list">
                         {favorites.map((event) => (
                             <div className="favorite-event-row" key={event.id}>

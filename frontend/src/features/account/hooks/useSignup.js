@@ -12,6 +12,8 @@ const INITIAL_FORM = {
     birth: '',
 };
 
+const DUPLICATE_CODE = 'COMMON-003';
+
 export function useSignup({ onSignupSuccess }) {
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(INITIAL_FORM);
@@ -21,6 +23,7 @@ export function useSignup({ onSignupSuccess }) {
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
     const [nicknameMessage, setNicknameMessage] = useState('');
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
     const [loading, setLoading] = useState(false);
     const [authCode, setAuthCode] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
@@ -120,9 +123,39 @@ export function useSignup({ onSignupSuccess }) {
         setStep(2);
     };
 
+    const recheckDuplicates = async () => {
+        setStep(1);
+
+        try {
+            const [emailTaken, nicknameTaken] = await Promise.all([
+                checkEmailAvailability(form.email.trim()),
+                checkNicknameAvailability(form.nickname.trim()),
+            ]);
+
+            setEmailChecked(!emailTaken);
+            setShowLoginPrompt(emailTaken);
+            setEmailMessage(emailTaken ? '이미 가입된 이메일입니다.' : '사용 가능한 이메일입니다.');
+            setNicknameChecked(!nicknameTaken);
+            setNicknameMessage(nicknameTaken ? '이미 사용 중인 닉네임입니다.' : '사용 가능한 닉네임입니다.');
+            setError(emailTaken
+                ? '이미 가입된 이메일입니다.'
+                : nicknameTaken
+                    ? '이미 사용 중인 닉네임입니다.'
+                    : '이메일 또는 닉네임이 이미 사용 중입니다. 다시 시도해주세요.');
+        } catch {
+            setEmailChecked(false);
+            setNicknameChecked(false);
+            setEmailMessage('');
+            setNicknameMessage('');
+            setShowLoginPrompt(false);
+            setError('이메일 또는 닉네임이 이미 사용 중입니다. 중복확인을 다시 해주세요.');
+        }
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError('');
+        setNotice('');
         setLoading(true);
 
         try {
@@ -137,22 +170,13 @@ export function useSignup({ onSignupSuccess }) {
             });
 
             setStep(3);
-            setError('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
+            setNotice('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
         } catch (requestError) {
-            const message = `${requestError.message || ''} ${requestError.data?.msg || ''} ${requestError.data?.message || ''}`;
-
-            if (message.includes('이메일')) {
-                setStep(1);
-                setEmailChecked(false);
-                setEmailMessage('이미 가입된 이메일입니다.');
-                setShowLoginPrompt(true);
+            if (requestError.data?.code === DUPLICATE_CODE) {
+                await recheckDuplicates();
+                return;
             }
-
-            setError(
-                message.includes('이메일')
-                    ? '이미 가입된 이메일입니다.'
-                    : requestError.message || '회원가입에 실패했습니다.'
-            );
+            setError(requestError.message || '회원가입에 실패했습니다.');
         } finally {
             setLoading(false);
         }
@@ -186,6 +210,7 @@ export function useSignup({ onSignupSuccess }) {
         showLoginPrompt,
         nicknameMessage,
         error,
+        notice,
         loading,
         authCode,
         setAuthCode,

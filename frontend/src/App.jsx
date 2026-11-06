@@ -5,9 +5,10 @@ import LegalOverlay from './routes/LegalOverlay.jsx';
 import EventDetailRoute from './routes/EventDetailRoute.jsx';
 import LegalRoute from './routes/LegalRoute.jsx'
 import RequireAuth from './routes/RequireAuth.jsx'
-import { MyPageRoute, FavoritesRoute, AdminRoute } from './routes/AccountRoute.jsx'
+import { MyPageRoute, FavoritesRoute, BrandSubscriptionsRoute, AdminRoute } from './routes/AccountRoute.jsx'
 import MainRoute from './routes/MainRoute.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
+import UnsubscribePage from './pages/UnsubscribePage.jsx'
 
 export default function App() {
   return (
@@ -21,10 +22,12 @@ export default function App() {
           <Route path="/events/:eventId" element={<EventDetailRoute />} />
           <Route path="/terms" element={<LegalRoute kind="terms" />} />
           <Route path="/privacy" element={<LegalRoute kind="privacy" />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
           <Route element={<RequireAuth />}>
               <Route path="/mypage" element={<MyPageRoute />} />
               <Route path="/favorites" element={<FavoritesRoute />} />
+              <Route path="/subscriptions" element={<BrandSubscriptionsRoute />} />
               <Route path="/admin" element={<AdminRoute />} />
           </Route>
 

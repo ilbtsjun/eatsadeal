@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Header from '@/common/components/Header';
+import StatusMessage from '@/common/components/StatusMessage.jsx';
 import './AdminPage.css';
 import CrawlerManagement from '@/features/admin/components/CrawlerManagement.jsx';
 import AdminTabs from '@/features/admin/components/AdminTabs.jsx';
@@ -20,11 +21,13 @@ export default function AdminPage({ user, onBack }) {
       brands,
       categories,
       loading,
+      listError,
       message,
       setMessage,
       loadLists,
       form,
       setForm,
+      formError,
       confirmDelete,
       setConfirmDelete,
       deleteItem,
@@ -44,6 +47,7 @@ export default function AdminPage({ user, onBack }) {
       setUserNickname,
       userComments,
       commentsLoading,
+      commentsError,
       userMessage,
       suspendModal,
       suspendError,
@@ -60,12 +64,19 @@ export default function AdminPage({ user, onBack }) {
       crawlerLoading,
       runCrawler,
       latestRuns,
+      statusCounts,
       recentRuns,
       runsLoading,
+      runsError,
       loadRuns,
       classifyLoading,
       classifyEventCodes,
   } = useAdminCrawler(setMessage);
+
+  const changeTab = (nextTab) => {
+      setTab(nextTab);
+      if (nextTab === 'crawler') loadRuns();
+  };
 
   if (user?.role !== 'ADMIN') {
       return (
@@ -97,14 +108,14 @@ export default function AdminPage({ user, onBack }) {
                   <button type="button" onClick={loadLists}>새로고침</button>
               </div>
 
-              <AdminTabs tab={tab} onChange={setTab} />
+              <AdminTabs tab={tab} onChange={changeTab} />
 
               {message && <p className="admin-message" role="status">{message}</p>}
 
               {tab === 'dashboard' ? (
                   <DashboardOverview />
               ) : loading ? (
-                  <p className="admin-empty">목록을 불러오는 중입니다...</p>
+                  <StatusMessage type="loading" size="inline" message="목록을 불러오는 중입니다..." />
               ) : tab === 'user' ? (
                   <UserManagement
                       userNickname={userNickname}
@@ -114,6 +125,7 @@ export default function AdminPage({ user, onBack }) {
                       userMessage={userMessage}
                       userComments={userComments}
                       commentsLoading={commentsLoading}
+                      commentsError={commentsError}
                       onSuspend={() => openSuspendModal(false)}
                       onRelease={() => openSuspendModal(true)}
                   />
@@ -122,11 +134,21 @@ export default function AdminPage({ user, onBack }) {
                       crawlerLoading={crawlerLoading}
                       onRunCrawler={runCrawler}
                       latestRuns={latestRuns}
+                      statusCounts={statusCounts}
                       recentRuns={recentRuns}
                       runsLoading={runsLoading}
+                      runsError={runsError}
                       onLoadRuns={loadRuns}
                       classifyLoading={classifyLoading}
                       onClassifyEventCodes={classifyEventCodes}
+                  />
+              ) : listError ? (
+                  <StatusMessage
+                      type="error"
+                      size="inline"
+                      title="목록을 불러오지 못했어요"
+                      message={listError}
+                      onRetry={loadLists}
                   />
               ) : (
                   <CatalogManagement
@@ -143,6 +165,7 @@ export default function AdminPage({ user, onBack }) {
               <BrandCategoryFormModal
                   form={form}
                   categories={categories}
+                  formError={formError}
                   onClose={() => setForm(null)}
                   onSubmit={submitForm}
                   onToggleCategory={toggleCategory}
@@ -171,4 +194,4 @@ export default function AdminPage({ user, onBack }) {
           </main>
       </div>
   );
-}
+}

@@ -39,11 +39,14 @@ export function useAdminCatalog() {
     const [brands, setBrands] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [listError, setListError] = useState('');
     const [message, setMessage] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
     const {
         form,
         setForm,
+        formError,
+        setFormError,
         openCreate,
         openEdit,
         toggleCategory,
@@ -56,12 +59,13 @@ export function useAdminCatalog() {
                 setBrands(Array.isArray(brandData) ? brandData : []);
                 setCategories(Array.isArray(categoryData) ? categoryData : []);
             })
-            .catch((error) => setMessage(error.message))
+            .catch((error) => setListError(error.message))
             .finally(() => setLoading(false))
     ), []);
 
     const loadLists = useCallback(() => {
         setLoading(true);
+        setListError('');
         setMessage('');
         return fetchLists();
     }, [fetchLists]);
@@ -123,12 +127,12 @@ export function useAdminCatalog() {
         const img = form.img.trim();
 
         if (!name) {
-            setMessage('이름을 입력해주세요.');
+            setFormError('이름을 입력해주세요.');
             return;
         }
 
         if (!img) {
-            setMessage(
+            setFormError(
                 form.type === 'category'
                     ? '카테고리 이미지 URL을 입력해주세요.'
                     : '브랜드 이미지 URL을 입력해주세요.'
@@ -141,7 +145,7 @@ export function useAdminCatalog() {
                 const categoryIds = form.categoryIds;
 
                 if (!categoryIds.length) {
-                    setMessage('카테고리를 하나 이상 선택해주세요.');
+                    setFormError('카테고리를 하나 이상 선택해주세요.');
                     return;
                 }
 
@@ -162,7 +166,7 @@ export function useAdminCatalog() {
             await loadLists();
             setMessage('저장되었습니다.');
         } catch (error) {
-            setMessage(error.message);
+            setFormError(error.message);
         }
     };
 
@@ -170,11 +174,13 @@ export function useAdminCatalog() {
         brands,
         categories,
         loading,
+        listError,
         message,
         setMessage,
         loadLists,
         form,
         setForm,
+        formError,
         confirmDelete,
         setConfirmDelete,
         deleteItem,

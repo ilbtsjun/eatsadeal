@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { getUserInfo, getUserComments, suspendUser } from '@/api/index.js'
 
+const pickUser = (data) => (Array.isArray(data) ? data[0] : data) ?? null;
+
 export function useAdminUsers() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [userNickname, setUserNickname] = useState('');
     const [userComments, setUserComments] = useState([]);
     const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState('');
     const [userMessage, setUserMessage] = useState('');
     const [suspendModal, setSuspendModal] = useState(null);
     const [suspendError, setSuspendError] = useState('');
@@ -16,6 +19,7 @@ export function useAdminUsers() {
         setUserMessage('');
         setSelectedUser(null);
         setUserComments([]);
+        setCommentsError('');
 
         const keyword = userNickname.trim();
         if (!keyword) {
@@ -33,7 +37,7 @@ export function useAdminUsers() {
         for (const query of queries) {
             try {
                 const data = await getUserInfo(query);
-                result = Array.isArray(data) ? data[0] : data;
+                result = pickUser(data);
                 if (result) break;
             } catch (error) {
                 lastError = error;
@@ -52,7 +56,7 @@ export function useAdminUsers() {
             const comments = await getUserComments(result.id);
             setUserComments(Array.isArray(comments) ? comments : []);
         } catch (error) {
-            setUserMessage(`회원 정보는 조회했지만 댓글을 불러오지 못했습니다: ${error.message}`);
+            setCommentsError(error.message);
         } finally {
             setCommentsLoading(false);
         }
@@ -116,7 +120,8 @@ export function useAdminUsers() {
         try {
             await suspendUser(selectedUser.id, suspendTime, reason, release);
 
-            setSelectedUser(await getUserInfo(`id=${selectedUser.id}`));
+            const updatedUser = pickUser(await getUserInfo(`id=${selectedUser.id}`));
+            setSelectedUser((current) => updatedUser ?? current);
             setSuspendModal(null);
             setUserMessage(release ? '회원 정지가 해제되었습니다.' : '회원이 정지되었습니다.');
         } catch (error) {
@@ -132,6 +137,7 @@ export function useAdminUsers() {
         setUserNickname,
         userComments,
         commentsLoading,
+        commentsError,
         userMessage,
         suspendModal,
         suspendError,

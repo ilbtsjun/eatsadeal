@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,9 +38,14 @@ public class BrandService {
 
     @Transactional(readOnly = true)
     public List<GetBrandListResponse> getBrandList() {
+        Map<Long, List<Long>> categoryIdsByBrand = brandCategoryRepository.findAll().stream()
+                .collect(Collectors.groupingBy(bc -> bc.getBrand().getId(),
+                        Collectors.mapping(bc -> bc.getCategory().getId(), Collectors.toList())));
+
         return brandRepository.findAll(Sort.by(Sort.Direction.ASC, "name"))
                 .stream()
-                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getImg(), brand.getIsActive()))
+                .map(brand -> new GetBrandListResponse(brand.getId(), brand.getName(), brand.getUrl(), brand.getImg(),
+                        brand.getIsActive(), categoryIdsByBrand.getOrDefault(brand.getId(), List.of())))
                 .toList();
     }
 
