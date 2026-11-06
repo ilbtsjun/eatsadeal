@@ -87,11 +87,15 @@ class NotificationSettingServiceTests {
         return captor.getAllValues();
     }
 
+    private record ResultMail(Map<ConsentType, Boolean> changes, Map<ConsentType, Boolean> current) {
+    }
+
     @SuppressWarnings("unchecked")
-    private Map<ConsentType, Boolean> captureResultMailChanges() {
-        ArgumentCaptor<Map<ConsentType, Boolean>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(mailService).sendConsentResultMessage(eq(EMAIL), captor.capture(), any(LocalDateTime.class));
-        return captor.getValue();
+    private ResultMail captureResultMail() {
+        ArgumentCaptor<Map<ConsentType, Boolean>> changes = ArgumentCaptor.forClass(Map.class);
+        ArgumentCaptor<Map<ConsentType, Boolean>> current = ArgumentCaptor.forClass(Map.class);
+        verify(mailService).sendConsentResultMessage(eq(EMAIL), changes.capture(), current.capture(), any(LocalDateTime.class));
+        return new ResultMail(changes.getValue(), current.getValue());
     }
 
     private BusinessException givenNotLoggedIn() {
@@ -177,10 +181,11 @@ class NotificationSettingServiceTests {
                 assertNotNull(history.getCreatedAt());
             });
 
-            Map<ConsentType, Boolean> changes = captureResultMailChanges();
-            assertEquals(List.of(ConsentType.MARKETING_USE, ConsentType.AD_EMAIL), new ArrayList<>(changes.keySet()));
-            assertTrue(changes.get(ConsentType.MARKETING_USE));
-            assertTrue(changes.get(ConsentType.AD_EMAIL));
+            ResultMail mail = captureResultMail();
+            assertEquals(List.of(ConsentType.MARKETING_USE, ConsentType.AD_EMAIL), new ArrayList<>(mail.changes().keySet()));
+            assertTrue(mail.changes().get(ConsentType.MARKETING_USE));
+            assertTrue(mail.changes().get(ConsentType.AD_EMAIL));
+            assertEquals(Map.of(ConsentType.MARKETING_USE, true, ConsentType.AD_EMAIL, true), mail.current());
         }
 
         @Test
@@ -219,7 +224,9 @@ class NotificationSettingServiceTests {
             assertEquals(ConsentType.AD_EMAIL, histories.get(0).getConsentType());
             assertTrue(histories.get(0).getAgreed());
             assertEquals(ConsentSource.MYPAGE, histories.get(0).getSource());
-            assertEquals(Map.of(ConsentType.AD_EMAIL, true), captureResultMailChanges());
+            ResultMail mail = captureResultMail();
+            assertEquals(Map.of(ConsentType.AD_EMAIL, true), mail.changes());
+            assertEquals(Map.of(ConsentType.MARKETING_USE, true, ConsentType.AD_EMAIL, true), mail.current());
         }
 
         @Test
@@ -239,7 +246,9 @@ class NotificationSettingServiceTests {
 
             List<ConsentHistory> histories = captureHistories(2);
             histories.forEach(history -> assertFalse(history.getAgreed()));
-            assertEquals(Map.of(ConsentType.MARKETING_USE, false, ConsentType.AD_EMAIL, false), captureResultMailChanges());
+            ResultMail mail = captureResultMail();
+            assertEquals(Map.of(ConsentType.MARKETING_USE, false, ConsentType.AD_EMAIL, false), mail.changes());
+            assertEquals(Map.of(ConsentType.MARKETING_USE, false, ConsentType.AD_EMAIL, false), mail.current());
         }
 
         @Test
@@ -310,7 +319,9 @@ class NotificationSettingServiceTests {
             assertEquals(ConsentType.AD_EMAIL, histories.get(0).getConsentType());
             assertFalse(histories.get(0).getAgreed());
             assertEquals(ConsentSource.UNSUBSCRIBE_LINK, histories.get(0).getSource());
-            assertEquals(Map.of(ConsentType.AD_EMAIL, false), captureResultMailChanges());
+            ResultMail mail = captureResultMail();
+            assertEquals(Map.of(ConsentType.AD_EMAIL, false), mail.changes());
+            assertEquals(Map.of(ConsentType.MARKETING_USE, true, ConsentType.AD_EMAIL, false), mail.current());
         }
 
         @Test

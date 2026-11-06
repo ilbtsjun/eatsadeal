@@ -66,7 +66,7 @@ public class NotificationSettingService {
         }
 
         if (!changes.isEmpty()) {
-            mailService.sendConsentResultMessage(user.getEmail(), changes, LocalDateTime.now());
+            mailService.sendConsentResultMessage(user.getEmail(), changes, currentConsents(setting), LocalDateTime.now());
         }
 
         return GetConsentResponse.from(setting);
@@ -87,7 +87,7 @@ public class NotificationSettingService {
             setting.agreeEmail(false);
             saveHistory(setting.getUser(), ConsentType.AD_EMAIL, false, ConsentSource.UNSUBSCRIBE_LINK);
             mailService.sendConsentResultMessage(setting.getUser().getEmail(),
-                    Map.of(ConsentType.AD_EMAIL, false), LocalDateTime.now());
+                    Map.of(ConsentType.AD_EMAIL, false), currentConsents(setting), LocalDateTime.now());
         }
     }
 
@@ -106,6 +106,11 @@ public class NotificationSettingService {
         }
         log.info("[CONSENT RECONFIRM] 대상 {}명, 성공 {}, 실패 {}", targets.size(), sent, targets.size() - sent);
         return sent;
+    }
+
+    private Map<ConsentType, Boolean> currentConsents(NotificationSetting setting) {
+        return Map.of(ConsentType.MARKETING_USE, setting.getMarketingAgreed(),
+                ConsentType.AD_EMAIL, setting.getEmailAgreed());
     }
 
     private void saveHistory(User user, ConsentType type, Boolean agreed, ConsentSource source) {

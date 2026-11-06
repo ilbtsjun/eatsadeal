@@ -164,17 +164,31 @@ public class MailService {
 
     @Async
     @CudLogging("수신 동의 처리 결과 메일 송신")
-    public void sendConsentResultMessage(String email, Map<ConsentType, Boolean> changes, LocalDateTime processedAt) {
+    public void sendConsentResultMessage(String email, Map<ConsentType, Boolean> changes,
+                                         Map<ConsentType, Boolean> currentConsents, LocalDateTime processedAt) {
         String subject = "[EatsADeal] 광고성 정보 수신 동의 처리 결과 안내";
 
         StringBuilder body = new StringBuilder("<h3>광고성 정보 수신 동의 처리 결과를 알려드립니다.</h3>");
         body.append("<p><b>전송자:</b> EatsADeal<br>")
-                .append("<b>처리 일자:</b> ").append(processedAt.format(NOTICE_DATE)).append("</p><ul>");
+                .append("<b>처리 일자:</b> ").append(processedAt.format(NOTICE_DATE)).append("</p>");
+        body.append("<h4>변경 내역</h4><ul>");
         for (Map.Entry<ConsentType, Boolean> change : changes.entrySet()) {
             body.append("<li>").append(change.getKey().getTitle()).append(": ")
                     .append(change.getValue() ? "동의" : "철회").append("</li>");
         }
         body.append("</ul>");
+        body.append("<h4>현재 동의 상태</h4><ul>");
+        boolean allAgreed = true;
+        for (ConsentType type : ConsentType.values()) {
+            boolean agreed = Boolean.TRUE.equals(currentConsents.get(type));
+            allAgreed &= agreed;
+            body.append("<li>").append(type.getTitle()).append(": ")
+                    .append(agreed ? "동의함" : "동의하지 않음").append("</li>");
+        }
+        body.append("</ul>");
+        if (!allAgreed) {
+            body.append("<p>두 항목 모두 동의해야 구독 브랜드 알림 메일을 받을 수 있어요.</p>");
+        }
         appendConsentFooter(body);
 
         try {

@@ -311,20 +311,30 @@ class MailServiceTests {
             return changes;
         }
 
+        private Map<ConsentType, Boolean> current(boolean marketingAgreed, boolean emailAgreed) {
+            return Map.of(ConsentType.MARKETING_USE, marketingAgreed, ConsentType.AD_EMAIL, emailAgreed);
+        }
+
+        private String sendAndGetBody(Map<ConsentType, Boolean> changes, Map<ConsentType, Boolean> current) throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            mailService.sendConsentResultMessage(RECEIVER, changes, current, PROCESSED_AT);
+            return (String) captureSentMessage().getContent();
+        }
+
         @Test
         @DisplayName("성공: (광고) 없는 제목, 처리 일자, 항목별 동의/철회를 순서대로, 마이페이지 링크와 문의처를 담는다")
         void success() throws Exception {
             when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
 
-            mailService.sendConsentResultMessage(RECEIVER, changes(), PROCESSED_AT);
+            mailService.sendConsentResultMessage(RECEIVER, changes(), current(true, false), PROCESSED_AT);
 
             MimeMessage sent = captureSentMessage();
             assertEquals(RECEIVER, recipientOf(sent));
             assertEquals("[EatsADeal] 광고성 정보 수신 동의 처리 결과 안내", sent.getSubject());
             String body = (String) sent.getContent();
             assertTrue(body.contains("2026년 11월 6일"));
-            String marketing = ConsentType.MARKETING_USE.getTitle() + ": 동의";
-            String email = ConsentType.AD_EMAIL.getTitle() + ": 철회";
+            String marketing = "<li>" + ConsentType.MARKETING_USE.getTitle() + ": 동의</li>";
+            String email = "<li>" + ConsentType.AD_EMAIL.getTitle() + ": 철회</li>";
             assertTrue(body.contains(marketing));
             assertTrue(body.contains(email));
             assertTrue(body.indexOf(marketing) < body.indexOf(email), "변경 항목은 넘겨받은 순서대로 표시한다");
@@ -335,12 +345,38 @@ class MailServiceTests {
         }
 
         @Test
+        @DisplayName("현재 동의 상태를 두 항목 모두 순서대로 보여주고, 하나라도 미동의면 알림 메일 안내를 넣는다")
+        void showsCurrentConsentsWithNotice() throws Exception {
+            String body = sendAndGetBody(Map.of(ConsentType.MARKETING_USE, true), current(true, false));
+
+            String marketing = "<li>" + ConsentType.MARKETING_USE.getTitle() + ": 동의함</li>";
+            String email = "<li>" + ConsentType.AD_EMAIL.getTitle() + ": 동의하지 않음</li>";
+            assertTrue(body.contains("변경 내역"));
+            assertTrue(body.contains("현재 동의 상태"));
+            assertTrue(body.indexOf("변경 내역") < body.indexOf("현재 동의 상태"));
+            assertTrue(body.contains(marketing));
+            assertTrue(body.contains(email));
+            assertTrue(body.indexOf(marketing) < body.indexOf(email));
+            assertTrue(body.contains("두 항목 모두 동의해야 구독 브랜드 알림 메일을 받을 수 있어요."));
+        }
+
+        @Test
+        @DisplayName("두 항목 모두 동의 상태면 알림 메일 안내를 넣지 않는다")
+        void omitsNoticeWhenAllAgreed() throws Exception {
+            String body = sendAndGetBody(Map.of(ConsentType.AD_EMAIL, true), current(true, true));
+
+            assertTrue(body.contains("<li>" + ConsentType.MARKETING_USE.getTitle() + ": 동의함</li>"));
+            assertTrue(body.contains("<li>" + ConsentType.AD_EMAIL.getTitle() + ": 동의함</li>"));
+            assertFalse(body.contains("두 항목 모두 동의해야"));
+        }
+
+        @Test
         @DisplayName("발송 실패(MailException): 예외를 밖으로 던지지 않고 로그만 남긴다")
         void mailExceptionIsSwallowed() throws Exception {
             when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
             doThrow(new MailSendException("SMTP 서버 연결 실패")).when(javaMailSender).send(any(MimeMessage.class));
 
-            assertDoesNotThrow(() -> mailService.sendConsentResultMessage(RECEIVER, changes(), PROCESSED_AT));
+            assertDoesNotThrow(() -> mailService.sendConsentResultMessage(RECEIVER, changes(), current(true, false), PROCESSED_AT));
 
             verify(javaMailSender, times(1)).send(any(MimeMessage.class));
         }
