@@ -239,4 +239,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     boolean existsByUrlAndIdNot(String url, Long id);
 
     Optional<Event> findByUrl(String url);
+
+    @Query("""
+    SELECT e
+    FROM Event e
+    JOIN FETCH e.brand b
+    WHERE b.id IN :brandIds
+      AND b.isActive = true
+      AND e.isActive = true
+      AND e.hidden = false
+      AND (e.endDate IS NULL OR e.endDate >= :to)
+      AND (
+          (e.createdAt >= :from AND e.createdAt < :to)
+          OR (e.endDate >= :soonFrom AND e.endDate < :soonTo)
+      )
+    ORDER BY b.id, e.createdAt DESC
+""")
+    List<Event> findDigestEvents(@Param("brandIds") List<Long> brandIds,
+                                 @Param("from") LocalDateTime from,
+                                 @Param("to") LocalDateTime to,
+                                 @Param("soonFrom") LocalDateTime soonFrom,
+                                 @Param("soonTo") LocalDateTime soonTo);
 }
