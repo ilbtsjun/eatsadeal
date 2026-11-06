@@ -12,9 +12,11 @@ public record UpdateBrand(
         String name,
 
         @Schema(description = "브랜드 URL", example = "https://www.bhc.co.kr/main")
+        @Size(max = 255, message = "브랜드 URL은 255자 이하여야 합니다.")
         String url,
 
         @Schema(description = "브랜드 이미지 URL", example = "https://www.bhc.co.kr/_next/static/media/ico_logo_footer.643042c8.svg")
+        @Size(max = 255, message = "브랜드 이미지 URL은 255자 이하여야 합니다.")
         String img,
 
         @Schema(description = "카테고리 목록", example = "[]")

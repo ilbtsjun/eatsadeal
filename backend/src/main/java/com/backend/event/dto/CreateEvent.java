@@ -3,6 +3,7 @@ package com.backend.event.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -11,17 +12,21 @@ import java.util.Set;
 public record CreateEvent(
         @Schema(description = "이벤트 제목", example = "bhc 멤버십 헤택, 자주 먹을수록 커지는 혜택!")
         @NotBlank(message = "이벤트 제목은 필수입니다.")
+        @Size(max = 500, message = "이벤트 제목은 500자 이하여야 합니다.")
         String title,
 
         @Schema(description = "이벤트 내용", example = "null")
+        @Size(max = 255, message = "이벤트 내용은 255자 이하여야 합니다.")
         String description,
 
         @Schema(description = "이벤트 URL", example = "https://www.bhc.co.kr/event/currentEvent/30")
         @NotBlank(message = "이벤트 URL은 필수입니다.")
+        @Size(max = 700, message = "이벤트 URL은 700자 이하여야 합니다.")
         String url,
 
         @Schema(description = "이벤트 이미지 URL", example = "https://home-img.bhc.co.kr/bhc/event/20251112_101844_1d07470a.png")
         @NotBlank(message = "이미지 URL은 필수입니다.")
+        @Size(max = 1000, message = "이미지 URL은 1000자 이하여야 합니다.")
         String img,
 
         @Schema(description = "시작일", example = "2025-04-29T00:00:00")
