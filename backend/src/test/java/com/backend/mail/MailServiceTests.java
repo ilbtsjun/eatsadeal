@@ -202,6 +202,7 @@ class MailServiceTests {
         @BeforeEach
         void setUpSiteUrl() {
             ReflectionTestUtils.setField(mailService, "siteUrl", SITE_URL);
+            ReflectionTestUtils.setField(mailService, "reportRecipient", "report@eatsadeal.com");
         }
 
         private GetEventListResponse digestEvent(Long id, String brandName, String title, LocalDateTime endDate) {
@@ -234,6 +235,8 @@ class MailServiceTests {
             assertTrue(body.contains(SITE_URL + "/events/20"));
             assertTrue(body.contains("11/1 ~ 11/30"));
             assertTrue(body.contains(SITE_URL + "/subscriptions"));
+            assertTrue(body.contains("전송자: EatsADeal"));
+            assertTrue(body.contains("문의: report@eatsadeal.com"));
         }
 
         @Test

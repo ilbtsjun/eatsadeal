@@ -142,7 +142,7 @@ public class MailService {
                 .append("님이 구독한 브랜드의 이벤트 소식입니다.</h3>");
         appendDigestSection(body, "새 이벤트", digest.newEvents());
         appendDigestSection(body, "내일 마감", digest.endingSoonEvents());
-        body.append("<hr><p><a href=\"").append(siteUrl).append("/subscriptions\">구독 브랜드 관리</a></p>");
+        appendAdvertiserFooter(body);
 
         try {
             MimeMessage message = createMail(digest.email(), subject, body.toString());
@@ -171,6 +171,14 @@ public class MailService {
     private String formatPeriod(LocalDateTime start, LocalDateTime end) {
         String from = start == null ? "" : start.format(DIGEST_DATE);
         return from + " ~ " + (end == null ? "상시" : end.format(DIGEST_DATE));
+    }
+
+    private void appendAdvertiserFooter(StringBuilder body) {
+        body.append("<hr><p style=\"color:#747d8c;font-size:12px\">")
+                .append("본 메일은 광고성 정보 수신에 동의하신 분께 발송됩니다.<br>")
+                .append("전송자: EatsADeal | 문의: ").append(HtmlUtils.htmlEscape(reportRecipient)).append("<br>")
+                .append("<a href=\"").append(siteUrl).append("/subscriptions\">구독 브랜드 관리</a>")
+                .append("</p>");
     }
 
     public MimeMessage createMail(String mail, String title, String body) throws MessagingException {
