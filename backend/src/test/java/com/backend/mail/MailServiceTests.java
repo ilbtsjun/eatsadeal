@@ -1,6 +1,8 @@
 package com.backend.mail;
 
+import com.backend.event.dto.GetEventListResponse;
 import com.backend.mail.service.MailService;
+import com.backend.notification.dto.EventDigest;
 import jakarta.mail.Address;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
@@ -20,7 +22,10 @@ import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -185,6 +190,93 @@ class MailServiceTests {
             assertDoesNotThrow(() -> mailService.sendPasswordMessage(RECEIVER, CODE));
 
             verify(javaMailSender, never()).send(any(MimeMessage.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("sendEventDigestMessage")
+    class SendEventDigestMessageTests {
+
+        private static final String SITE_URL = "https://www.eatsadeal.kr";
+
+        @BeforeEach
+        void setUpSiteUrl() {
+            ReflectionTestUtils.setField(mailService, "siteUrl", SITE_URL);
+        }
+
+        private GetEventListResponse digestEvent(Long id, String brandName, String title, LocalDateTime endDate) {
+            return new GetEventListResponse(id, title, null, "https://event.url/" + id, "https://image.url/" + id + ".png",
+                    LocalDateTime.of(2026, 11, 1, 0, 0), endDate, 0L, true, 1L, brandName, Set.of(), false);
+        }
+
+        private EventDigest digest(List<GetEventListResponse> newEvents, List<GetEventListResponse> endingSoonEvents) {
+            return new EventDigest(1L, RECEIVER, "회원1", newEvents, endingSoonEvents);
+        }
+
+        @Test
+        @DisplayName("성공: (광고) 제목과 건수, 두 섹션, 상세·구독 관리 링크가 담긴 메일을 보내고 true를 반환한다")
+        void success() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            EventDigest digest = digest(
+                    List.of(digestEvent(10L, "BHC", "새 이벤트 제목", LocalDateTime.of(2026, 11, 30, 23, 59))),
+                    List.of(digestEvent(20L, "BHC", "마감 이벤트 제목", LocalDateTime.of(2026, 11, 7, 23, 59))));
+
+            boolean result = mailService.sendEventDigestMessage(digest);
+
+            assertTrue(result);
+            MimeMessage sent = captureSentMessage();
+            assertEquals(RECEIVER, recipientOf(sent));
+            assertEquals("(광고) [EatsADeal] 구독 브랜드 소식 2건", sent.getSubject());
+            String body = (String) sent.getContent();
+            assertTrue(body.contains("새 이벤트 1건"));
+            assertTrue(body.contains("내일 마감 1건"));
+            assertTrue(body.contains(SITE_URL + "/events/10"));
+            assertTrue(body.contains(SITE_URL + "/events/20"));
+            assertTrue(body.contains("11/1 ~ 11/30"));
+            assertTrue(body.contains(SITE_URL + "/subscriptions"));
+        }
+
+        @Test
+        @DisplayName("닉네임·브랜드명·제목은 HTML 이스케이프하고, 종료일이 없으면 상시로 표시한다")
+        void escapesHtmlAndShowsOngoing() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            EventDigest digest = new EventDigest(1L, RECEIVER, "<i>회원</i>",
+                    List.of(digestEvent(10L, "<b>BHC</b>", "1+1 & 반값", null)), List.of());
+
+            mailService.sendEventDigestMessage(digest);
+
+            String body = (String) captureSentMessage().getContent();
+            assertTrue(body.contains("&lt;i&gt;회원&lt;/i&gt;"));
+            assertTrue(body.contains("[&lt;b&gt;BHC&lt;/b&gt;]"));
+            assertTrue(body.contains("1+1 &amp; 반값"));
+            assertFalse(body.contains("<b>BHC</b>"));
+            assertTrue(body.contains("11/1 ~ 상시"));
+        }
+
+        @Test
+        @DisplayName("비어 있는 섹션은 본문에 넣지 않는다")
+        void omitsEmptySection() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+
+            mailService.sendEventDigestMessage(digest(
+                    List.of(digestEvent(10L, "BHC", "새 이벤트 제목", null)), List.of()));
+
+            String body = (String) captureSentMessage().getContent();
+            assertTrue(body.contains("새 이벤트 1건"));
+            assertFalse(body.contains("내일 마감"));
+        }
+
+        @Test
+        @DisplayName("발송 실패(MailException): 예외를 던지지 않고 false를 반환한다")
+        void mailExceptionReturnsFalse() throws Exception {
+            when(javaMailSender.createMimeMessage()).thenReturn(realMimeMessage());
+            doThrow(new MailSendException("SMTP 서버 연결 실패")).when(javaMailSender).send(any(MimeMessage.class));
+
+            boolean result = mailService.sendEventDigestMessage(digest(
+                    List.of(digestEvent(10L, "BHC", "새 이벤트 제목", null)), List.of()));
+
+            assertFalse(result);
+            verify(javaMailSender, times(1)).send(any(MimeMessage.class));
         }
     }
 }
