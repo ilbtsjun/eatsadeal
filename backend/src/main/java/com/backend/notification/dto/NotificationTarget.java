@@ -14,6 +14,9 @@ public record NotificationTarget(
         String nickname,
 
         @Schema(description = "구독 브랜드 ID", example = "1")
-        Long brandId
+        Long brandId,
+
+        @Schema(description = "동의 해제용 토큰", example = "111111111111111111111")
+        String unsubscribeToken
 ) {
 }

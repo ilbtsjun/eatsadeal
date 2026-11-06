@@ -16,6 +16,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -142,10 +144,13 @@ public class MailService {
                 .append("님이 구독한 브랜드의 이벤트 소식입니다.</h3>");
         appendDigestSection(body, "새 이벤트", digest.newEvents());
         appendDigestSection(body, "내일 마감", digest.endingSoonEvents());
-        appendAdvertiserFooter(body);
+        appendAdvertiserFooter(body, digest.unsubscribeToken());
 
         try {
             MimeMessage message = createMail(digest.email(), subject, body.toString());
+            String oneClickUrl = siteUrl + "/api/notifications/unsubscribe/one-click?token=" + encodeToken(digest.unsubscribeToken());
+            message.setHeader("List-Unsubscribe", "<" + oneClickUrl + ">");
+            message.setHeader("List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
             javaMailSender.send(message);
             return true;
         } catch (MailException | MessagingException e) {
@@ -173,12 +178,18 @@ public class MailService {
         return from + " ~ " + (end == null ? "상시" : end.format(DIGEST_DATE));
     }
 
-    private void appendAdvertiserFooter(StringBuilder body) {
+    private void appendAdvertiserFooter(StringBuilder body, String unsubscribeToken) {
         body.append("<hr><p style=\"color:#747d8c;font-size:12px\">")
                 .append("본 메일은 광고성 정보 수신에 동의하신 분께 발송됩니다.<br>")
                 .append("전송자: EatsADeal | 문의: ").append(HtmlUtils.htmlEscape(reportRecipient)).append("<br>")
-                .append("<a href=\"").append(siteUrl).append("/subscriptions\">구독 브랜드 관리</a>")
+                .append("<a href=\"").append(siteUrl).append("/subscriptions\">구독 브랜드 관리</a> | ")
+                .append("<a href=\"").append(siteUrl).append("/unsubscribe?token=").append(encodeToken(unsubscribeToken))
+                .append("\">수신거부</a>")
                 .append("</p>");
+    }
+
+    private String encodeToken(String token) {
+        return URLEncoder.encode(token, StandardCharsets.UTF_8);
     }
 
     public MimeMessage createMail(String mail, String title, String body) throws MessagingException {

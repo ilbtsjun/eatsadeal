@@ -31,7 +31,7 @@ public interface BrandSubscriptionRepository extends JpaRepository<BrandSubscrip
     void deleteByUser(@Param("user") User user);
 
     @Query("""
-    SELECT new com.backend.notification.dto.NotificationTarget(u.id, u.email, u.nickname, b.id)
+    SELECT new com.backend.notification.dto.NotificationTarget(u.id, u.email, u.nickname, b.id, ns.unsubscribeToken)
     FROM BrandSubscription bs
     JOIN bs.user u
     JOIN bs.brand b

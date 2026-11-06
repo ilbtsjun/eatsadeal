@@ -20,7 +20,10 @@ public record EventDigest(
         List<GetEventListResponse> newEvents,
 
         @Schema(description = "구독 브랜드의 마감 임박 이벤트 (내일 종료)")
-        List<GetEventListResponse> endingSoonEvents
+        List<GetEventListResponse> endingSoonEvents,
+
+        @Schema(description = "동의 해제용 토큰", example = "111111111111111111111")
+        String unsubscribeToken
 ) {
     public EventDigest {
         newEvents = List.copyOf(newEvents);

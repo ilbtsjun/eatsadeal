@@ -59,7 +59,7 @@ public class BrandNotificationService {
                 soonEvents.addAll(soonByBrand.getOrDefault(target.brandId(), List.of()));
             }
             NotificationTarget user = userTargets.get(0);
-            EventDigest digest = new EventDigest(user.userId(), user.email(), user.nickname(), newEvents, soonEvents);
+            EventDigest digest = new EventDigest(user.userId(), user.email(), user.nickname(), newEvents, soonEvents, user.unsubscribeToken());
             if (!digest.isEmpty()) {
                 digests.add(digest);
             }
