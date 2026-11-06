@@ -40,7 +40,7 @@ public class NotificationSettingService {
     public GetConsentResponse updateConsents(UpdateConsentRequest request) {
         User user = currentUserService.getRequiredUser();
 
-        notificationSettingRepository.insertIfAbsent(user.getId());
+        notificationSettingRepository.insertIfAbsent(user.getId(), NotificationSetting.newUnsubscribeToken());
         NotificationSetting setting = notificationSettingRepository.findByUserForUpdate(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 

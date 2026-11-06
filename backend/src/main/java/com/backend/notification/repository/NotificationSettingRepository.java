@@ -26,9 +26,9 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
 
     @Modifying
     @Query(value = """
-            INSERT INTO notification_setting (user_id, marketing_agreed, email_agreed, updated_at)
-            VALUES (:userId, 0, 0, NOW(6))
+            INSERT INTO notification_setting (user_id, marketing_agreed, email_agreed, updated_at, unsubscribe_token)
+            VALUES (:userId, 0, 0, NOW(6), :token)
             ON DUPLICATE KEY UPDATE id = id
             """, nativeQuery = true)
-    void insertIfAbsent(@Param("userId") Long userId);
+    void insertIfAbsent(@Param("userId") Long userId, @Param("token") String token);
 }

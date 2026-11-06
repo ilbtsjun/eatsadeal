@@ -7,13 +7,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 
 @Getter
 @Entity
 @Table(name = "notification_setting")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NotificationSetting {
+    private static final SecureRandom TOKEN_RANDOM = new SecureRandom();
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,10 +39,22 @@ public class NotificationSetting {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(nullable = false, unique = true, length = 64)
+    private String unsubscribeToken;
+
+    private LocalDateTime consentNotifiedAt;
+
     @Builder
     public NotificationSetting(User user) {
         this.user = user;
         this.updatedAt = LocalDateTime.now();
+        this.unsubscribeToken = newUnsubscribeToken();
+    }
+
+    public static String newUnsubscribeToken() {
+        byte[] bytes = new byte[32];
+        TOKEN_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     public void agreeMarketing(boolean agreed) {
