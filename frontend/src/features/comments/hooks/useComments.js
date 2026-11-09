@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useMemo, useState } from 'react';
 import {
     getListComments,
     createComment as requestCreateComment,
@@ -8,6 +8,7 @@ import {
     unhideComment,
 } from '@/api/index.js';
 import { getCommentId } from '../utils/commentTree.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 import { usePending } from '@/common/hooks/usePending.js';
 
 const COMMENT_ACTIONS = {
@@ -25,87 +26,60 @@ const COMMENT_ACTIONS = {
     },
 };
 
+const REFRESH_FAILED_MESSAGE = '저장되었지만 댓글 목록을 새로고침하지 못했습니다. 잠시 후 다시 시도해주세요.';
+
+const fetchComments = (eventId) =>
+    getListComments(eventId).then((data) => (Array.isArray(data) ? data : []));
+
 export function useComments(eventId, user, onLoginClick) {
-    const [comments, setComments] = useState([]);
-    const [commentLoading, setCommentLoading] = useState(true);
+    const request = useMemo(() => () => fetchComments(eventId), [eventId]);
+    const {
+        data: comments,
+        loading: commentLoading,
+        loadError,
+        reload,
+        refresh,
+    } = useFetch(request, { initialData: [], fallbackMessage: '댓글을 불러오지 못했습니다.' });
     const [commentText, setCommentText] = useState('');
-    const [commentError, setCommentError] = useState('');
+    const [writeError, setWriteError] = useState('');
     const [submitting, withSubmitting] = usePending();
+    const [editingId, setEditingId] = useState(null);
+    const [editText, setEditText] = useState('');
+    const [editError, setEditError] = useState('');
+    const [replyTargetId, setReplyTargetId] = useState(null);
+    const [replyText, setReplyText] = useState('');
     const [actionTarget, setActionTarget] = useState(null);
     const [actionError, setActionError] = useState('');
     const [actionRunning, withAction] = usePending();
-    const [editingId, setEditingId] = useState(null);
-    const [editText, setEditText] = useState('');
-    const [replyTargetId, setReplyTargetId] = useState(null);
-    const [replyText, setReplyText] = useState('');
-    const [prevEventId, setPrevEventId] = useState(eventId);
-
-    if (prevEventId !== eventId) {
-        setPrevEventId(eventId);
-        setCommentLoading(true);
-    }
 
     const isAdmin = user?.role === 'ADMIN';
 
-    const isMine = useCallback((comment) => (
-        Boolean(user) && (
-            comment.isMine === true
-            || (comment.userId != null && comment.userId === user.id)
-            || (comment.nickname != null && comment.nickname === user.nickname)
-        )
-    ), [user]);
+    const isMine = (comment) => Boolean(user) && comment.isMine === true;
 
-    const latestRequestId = useRef(0);
-
-    const loadComments = useCallback(() => {
-        const requestId = ++latestRequestId.current;
-        const isLatest = () => requestId === latestRequestId.current;
-
-        return getListComments(eventId)
-            .then((data) => {
-                if (isLatest()) {
-                    setComments(Array.isArray(data) ? data : []);
-                    setCommentError('');
-                }
-            })
-            .catch((error) => {
-                if (isLatest()) {
-                    setCommentError(error.message);
-                }
-            })
-            .finally(() => {
-                if (isLatest()) {
-                    setCommentLoading(false);
-                }
-            });
-    }, [eventId]);
-
-    useEffect(() => {
-        loadComments();
-
-        return () => {
-            latestRequestId.current += 1;
-        };
-    }, [loadComments]);
-
-    const createComment = async (content, parentId = null) => {
-        return withSubmitting(async () => {
-            try {
-                await requestCreateComment(eventId, content, parentId);
-                setCommentError('');
-                await loadComments();
-                return true;
-            } catch (error) {
-                setCommentError(error.message);
-                return false;
-            }
-        });
+    const refreshAfterWrite = async () => {
+        try {
+            await refresh();
+        } catch {
+            setWriteError(REFRESH_FAILED_MESSAGE);
+        }
     };
+
+    const createComment = (content, parentId = null) => withSubmitting(async () => {
+        setWriteError('');
+        try {
+            await requestCreateComment(eventId, content, parentId);
+        } catch (error) {
+            setWriteError(error.message);
+            return false;
+        }
+        await refreshAfterWrite();
+        return true;
+    });
 
     const handleCommentSubmit = async (event) => {
         event.preventDefault();
         const content = commentText.trim();
-        if (!user || !content || submitting) return;
+        if (!user || !content) return;
 
         if (await createComment(content)) setCommentText('');
     };
@@ -121,37 +95,46 @@ export function useComments(eventId, user, onLoginClick) {
         setReplyText('');
     };
 
+    const closeReply = () => {
+        setReplyTargetId(null);
+        setReplyText('');
+    };
+
     const handleReplySubmit = async (event, parentComment) => {
         event.preventDefault();
         const content = replyText.trim();
-        if (!user || !content || submitting) return;
+        if (!user || !content) return;
 
-        if (await createComment(content, getCommentId(parentComment))) {
-            setReplyTargetId(null);
-            setReplyText('');
-        }
+        if (await createComment(content, getCommentId(parentComment))) closeReply();
     };
 
     const openEdit = (comment) => {
         setReplyTargetId(null);
+        setEditError('');
         setEditingId(getCommentId(comment));
         setEditText(comment.content || comment.comment || '');
+    };
+
+    const closeEdit = () => {
+        setEditingId(null);
+        setEditError('');
     };
 
     const handleEditSubmit = async (event, comment) => {
         event.preventDefault();
         const content = editText.trim();
-        if (!content || submitting) return;
+        if (!content) return;
 
         await withSubmitting(async () => {
+            setEditError('');
             try {
                 await updateComment(getCommentId(comment), content);
-                setEditingId(null);
-                setCommentError('');
-                await loadComments();
             } catch (error) {
-                setCommentError(error.message);
+                setEditError(error.message);
+                return;
             }
+            setEditingId(null);
+            await refreshAfterWrite();
         });
     };
 
@@ -172,12 +155,12 @@ export function useComments(eventId, user, onLoginClick) {
         await withAction(async () => {
             try {
                 await COMMENT_ACTIONS[actionTarget.kind].request(actionTarget.id);
-                setActionTarget(null);
-                setCommentError('');
-                await loadComments();
             } catch (error) {
                 setActionError(error.message);
+                return;
             }
+            setActionTarget(null);
+            await refreshAfterWrite();
         });
     };
 
@@ -186,25 +169,27 @@ export function useComments(eventId, user, onLoginClick) {
     return {
         comments,
         commentLoading,
+        loadError,
+        reload,
         commentText,
         setCommentText,
-        commentError,
+        writeError,
         submitting,
         editingId,
-        setEditingId,
         editText,
         setEditText,
+        editError,
         replyTargetId,
-        setReplyTargetId,
         replyText,
         setReplyText,
         isAdmin,
         isMine,
-        loadComments,
         handleCommentSubmit,
         openReply,
+        closeReply,
         handleReplySubmit,
         openEdit,
+        closeEdit,
         handleEditSubmit,
         openAction,
         closeAction,
