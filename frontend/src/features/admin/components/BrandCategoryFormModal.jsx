@@ -10,6 +10,7 @@ export default function BrandCategoryFormModal({
                                                    onNameChange,
                                                    onUrlChange,
                                                    onImageChange,
+                                                   submitting,
                                                }) {
     if (!form) return null;
 
@@ -64,7 +65,9 @@ export default function BrandCategoryFormModal({
                     <input value={form.img} onChange={onImageChange} required />
                 </label>
                 {formError && <p className="admin-modal-error" role="alert">{formError}</p>}
-                <button className="modal-submit" type="submit">저장</button>
+                <button className="modal-submit" type="submit" disabled={submitting}>
+                    {submitting ? '저장 중...' : '저장'}
+                </button>
             </form>
         </Modal>
     );

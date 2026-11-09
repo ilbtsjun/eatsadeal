@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { getMyConsents, updateMyConsents } from '@/api/index.js';
 import { CONSENT_SOURCE } from '../constants/consentTexts.js';
 import { isConsentPromptDismissed, markConsentPromptDismissed } from '../utils/consentPromptStorage.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 const EMPTY_DRAFT = { marketingAgreed: false, emailAgreed: false };
 
 export function useConsentPrompt(user) {
     const [isOpen, setIsOpen] = useState(false);
     const [draft, setDraft] = useState(EMPTY_DRAFT);
-    const [saving, setSaving] = useState(false);
+    const [saving, withSaving] = usePending();
     const [error, setError] = useState('');
 
     const canSave = draft.marketingAgreed || draft.emailAgreed;
@@ -35,19 +36,18 @@ export function useConsentPrompt(user) {
     };
 
     const save = async () => {
-        if (saving || !canSave) return;
+        if (!canSave) return;
 
-        setSaving(true);
-        setError('');
+        await withSaving(async () => {
+            setError('');
 
-        try {
-            await updateMyConsents({ ...draft, source: CONSENT_SOURCE.SUBSCRIBE_POPUP });
-            setIsOpen(false);
-        } catch (requestError) {
-            setError(requestError.message || '동의 정보를 저장하지 못했습니다.');
-        } finally {
-            setSaving(false);
-        }
+            try {
+                await updateMyConsents({ ...draft, source: CONSENT_SOURCE.SUBSCRIBE_POPUP });
+                setIsOpen(false);
+            } catch (requestError) {
+                setError(requestError.message || '동의 정보를 저장하지 못했습니다.');
+            }
+        });
     };
 
     const dismiss = () => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { checkEmailAvailability, checkNicknameAvailability, signup, verifyEmail,} from '@/api/index.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 const INITIAL_FORM = {
     nickname: '',
@@ -24,7 +25,7 @@ export function useSignup({ onSignupSuccess }) {
     const [nicknameMessage, setNicknameMessage] = useState('');
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, withLoading] = usePending();
     const [authCode, setAuthCode] = useState('');
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -156,48 +157,44 @@ export function useSignup({ onSignupSuccess }) {
         event.preventDefault();
         setError('');
         setNotice('');
-        setLoading(true);
+        await withLoading(async () => {
+            try {
+                await signup({
+                    name: form.name.trim(),
+                    email: form.email.trim(),
+                    password: form.password,
+                    nickname: form.nickname.trim(),
+                    phoneNumber: form.phoneNumber.trim() || null,
+                    userGender: form.userGender || 'UNSPECIFIED',
+                    birth: form.birth || null,
+                });
 
-        try {
-            await signup({
-                name: form.name.trim(),
-                email: form.email.trim(),
-                password: form.password,
-                nickname: form.nickname.trim(),
-                phoneNumber: form.phoneNumber.trim() || null,
-                userGender: form.userGender || 'UNSPECIFIED',
-                birth: form.birth || null,
-            });
-
-            setStep(3);
-            setNotice('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
-        } catch (requestError) {
-            if (requestError.data?.code === DUPLICATE_CODE) {
-                await recheckDuplicates();
-                return;
+                setStep(3);
+                setNotice('인증번호가 이메일로 발송되었습니다. 인증번호를 입력해주세요.');
+            } catch (requestError) {
+                if (requestError.data?.code === DUPLICATE_CODE) {
+                    await recheckDuplicates();
+                    return;
+                }
+                setError(requestError.message || '회원가입에 실패했습니다.');
             }
-            setError(requestError.message || '회원가입에 실패했습니다.');
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     const handleVerify = async (event) => {
         event.preventDefault();
         setError('');
-        setLoading(true);
-
-        try {
-            await verifyEmail({
-                email: form.email.trim(),
-                inputCode: authCode.trim(),
-            });
-            onSignupSuccess?.();
-        } catch (requestError) {
-            setError(requestError.message || '이메일 인증에 실패했습니다.');
-        } finally {
-            setLoading(false);
-        }
+        await withLoading(async () => {
+            try {
+                await verifyEmail({
+                    email: form.email.trim(),
+                    inputCode: authCode.trim(),
+                });
+                onSignupSuccess?.();
+            } catch (requestError) {
+                setError(requestError.message || '이메일 인증에 실패했습니다.');
+            }
+        });
     };
 
     return {

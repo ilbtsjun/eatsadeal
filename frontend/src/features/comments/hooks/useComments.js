@@ -8,13 +8,14 @@ import {
     unhideComment,
 } from '@/api/index.js';
 import { getCommentId } from '../utils/commentTree.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 export function useComments(eventId, user, onLoginClick) {
     const [comments, setComments] = useState([]);
     const [commentLoading, setCommentLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
     const [commentError, setCommentError] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting, withSubmitting] = usePending();
     const [editingId, setEditingId] = useState(null);
     const [editText, setEditText] = useState('');
     const [replyTargetId, setReplyTargetId] = useState(null);
@@ -70,18 +71,17 @@ export function useComments(eventId, user, onLoginClick) {
     }, [loadComments]);
 
     const createComment = async (content, parentId = null) => {
-        setSubmitting(true);
-        try {
-            await requestCreateComment(eventId, content, parentId);
-            setCommentError('');
-            await loadComments();
-            return true;
-        } catch (error) {
-            setCommentError(error.message);
-            return false;
-        } finally {
-            setSubmitting(false);
-        }
+        return withSubmitting(async () => {
+            try {
+                await requestCreateComment(eventId, content, parentId);
+                setCommentError('');
+                await loadComments();
+                return true;
+            } catch (error) {
+                setCommentError(error.message);
+                return false;
+            }
+        });
     };
 
     const handleCommentSubmit = async (event) => {
@@ -125,17 +125,16 @@ export function useComments(eventId, user, onLoginClick) {
         const content = editText.trim();
         if (!content || submitting) return;
 
-        setSubmitting(true);
-        try {
-            await updateComment(getCommentId(comment), content);
-            setEditingId(null);
-            setCommentError('');
-            await loadComments();
-        } catch (error) {
-            setCommentError(error.message);
-        } finally {
-            setSubmitting(false);
-        }
+        await withSubmitting(async () => {
+            try {
+                await updateComment(getCommentId(comment), content);
+                setEditingId(null);
+                setCommentError('');
+                await loadComments();
+            } catch (error) {
+                setCommentError(error.message);
+            }
+        });
     };
 
     const deleteCommentAction = async (comment) => {
