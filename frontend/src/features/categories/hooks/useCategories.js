@@ -1,47 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
 import { getListBrands, getListCategories } from '@/api/index.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 const ALL = { id: 'all', name: '전체' };
 
+const INITIAL_FILTERS = { categories: [ALL], brands: [] };
+
+const toCategories = (data) => [
+    ALL,
+    ...(Array.isArray(data) ? data : [])
+        .filter((c) => c.id != null && c.name)
+        .map((c) => ({ id: String(c.id), name: c.name })),
+];
+
+const toBrands = (data) => (Array.isArray(data) ? data : [])
+    .filter((b) => b.id != null && b.name && b.isActive)
+    .map((b) => ({
+        id: String(b.id),
+        name: b.name,
+        categoryIds: (b.categoryIds ?? []).map(String),
+    }));
+
+const fetchFilters = () => Promise.all([
+    getListCategories().then(toCategories).catch(() => [ALL]),
+    getListBrands().then(toBrands).catch(() => []),
+]).then(([categories, brands]) => ({ categories, brands }));
+
 export function useCategories({ activeCategory = 'all', onCategoryChange, activeBrand = 'all', onBrandChange } = {}) {
-    const [categories, setCategories] = useState([ALL]);
-    const [brands, setBrands] = useState([]);
+    const { data: { categories, brands } } = useFetch(fetchFilters, { initialData: INITIAL_FILTERS });
     const [collapsedCategory, setCollapsedCategory] = useState(null);
     const brandListRef = useRef(null);
     const [brandScroll, setBrandScroll] = useState({ prev: false, next: false });
-
-    useEffect(() => {
-        let cancelled = false;
-
-        getListCategories()
-            .then((data) => {
-                if (cancelled) return;
-                const list = (Array.isArray(data) ? data : [])
-                    .filter((c) => c.id != null && c.name)
-                    .map((c) => ({ id: String(c.id), name: c.name }));
-                setCategories([ALL, ...list]);
-            })
-            .catch(() => {
-                if (!cancelled) setCategories([ALL]);
-            });
-
-        getListBrands()
-            .then((data) => {
-                if (cancelled) return;
-                setBrands((Array.isArray(data) ? data : [])
-                    .filter((b) => b.id != null && b.name && b.isActive)
-                    .map((b) => ({
-                        id: String(b.id),
-                        name: b.name,
-                        categoryIds: (b.categoryIds ?? []).map(String),
-                    })));
-            })
-            .catch(() => {
-                if (!cancelled) setBrands([]);
-            });
-
-        return () => { cancelled = true; };
-    }, []);
 
     useEffect(() => {
         const list = brandListRef.current;
