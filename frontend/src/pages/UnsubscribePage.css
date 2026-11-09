@@ -1,0 +1,9 @@
+.unsubscribe-page { min-height: 100vh; background: #f8f9fa; }
+.unsubscribe-card { display: grid; justify-items: center; gap: 10px; width: min(100% - 40px, 900px); margin: 30px auto; padding: 80px 20px; border: 1px solid #eaeaea; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.06); text-align: center; box-sizing: border-box; }
+.unsubscribe-card h1 { margin: 0; color: #2f3542; font-size: 22px; }
+.unsubscribe-card p { margin: 0; color: #747d8c; font-size: 14px; line-height: 1.6; }
+.unsubscribe-card .unsubscribe-error { color: #e84118; }
+.unsubscribe-button { margin-top: 14px; padding: 12px 22px; border: 0; border-radius: 8px; color: #fff; background: #ff4757; font-size: 14px; font-weight: 700; cursor: pointer; }
+.unsubscribe-button:hover:not(:disabled) { background: #e84118; }
+.unsubscribe-button:disabled { opacity: .6; cursor: default; }
+.unsubscribe-link { margin-top: 6px; color: #747d8c; font-size: 13px; }

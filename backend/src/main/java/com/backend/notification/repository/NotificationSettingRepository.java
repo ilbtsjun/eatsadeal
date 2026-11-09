@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -26,9 +28,21 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
 
     @Modifying
     @Query(value = """
-            INSERT INTO notification_setting (user_id, marketing_agreed, email_agreed, updated_at)
-            VALUES (:userId, 0, 0, NOW(6))
+            INSERT INTO notification_setting (user_id, marketing_agreed, email_agreed, updated_at, unsubscribe_token)
+            VALUES (:userId, 0, 0, NOW(6), :token)
             ON DUPLICATE KEY UPDATE id = id
             """, nativeQuery = true)
-    void insertIfAbsent(@Param("userId") Long userId);
+    void insertIfAbsent(@Param("userId") Long userId, @Param("token") String token);
+
+    Optional<NotificationSetting> findByUnsubscribeToken(String token);
+
+    @Query("""
+            SELECT ns FROM NotificationSetting ns
+            JOIN FETCH ns.user u
+            WHERE ns.emailAgreed = true
+              AND ns.emailAgreedAt <= :threshold
+              AND (ns.consentNotifiedAt IS NULL OR ns.consentNotifiedAt <= :threshold)
+              AND u.userStatus = com.backend.user.dto.UserStatus.ACTIVE
+            """)
+    List<NotificationSetting> findReconfirmTargets(@Param("threshold") LocalDateTime threshold);
 }

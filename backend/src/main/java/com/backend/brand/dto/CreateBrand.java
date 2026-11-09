@@ -14,10 +14,12 @@ public record CreateBrand(
 
         @Schema(description = "브랜드 URL", example = "https://www.bhc.co.kr")
         @NotBlank(message = "브랜드 URL은 필수입니다.")
+        @Size(max = 255, message = "브랜드 URL은 255자 이하여야 합니다.")
         String url,
 
         @Schema(description = "브랜드 이미지 URL", example = "https://www.bhc.co.kr/_next/static/media/ico_logo_footer.643042c8.svg")
         @NotBlank(message = "브랜드 이미지 URL은 필수입니다.")
+        @Size(max = 255, message = "브랜드 이미지 URL은 255자 이하여야 합니다.")
         String img,
 
         @Schema(description = "카테고리 목록", example = "[1]")

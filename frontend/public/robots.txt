@@ -5,6 +5,7 @@ Disallow: /mypage
 Disallow: /favorites
 Disallow: /login
 Disallow: /signup
+Disallow: /unsubscribe
 Disallow: /api/
 
 Sitemap: https://www.eatsadeal.kr/sitemap.xml
