@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { getUserInfo, getUserComments, suspendUser } from '@/api/index.js'
 import { usePending } from '@/common/hooks/usePending.js';
 
-const pickUser = (data) => (Array.isArray(data) ? data[0] : data) ?? null;
+const pickUser = (data) => data ?? null;
 
 export function useAdminUsers() {
     const [selectedUser, setSelectedUser] = useState(null);

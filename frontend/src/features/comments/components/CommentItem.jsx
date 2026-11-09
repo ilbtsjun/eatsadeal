@@ -45,7 +45,7 @@ export default function CommentItem({ comment, isReply = false, comments }) {
         <div className={classNames.join(' ')}>
             <div className="comment-meta">
                 <strong>
-                    {comment.nickname || comment.author || comment.userNickname || '익명'}
+                    {comment.nickname || '익명'}
                 </strong>
                 <span>{formatDateTime(comment.createdAt)}</span>
                 {hidden && isAdmin && (

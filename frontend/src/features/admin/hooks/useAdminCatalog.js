@@ -33,9 +33,6 @@ const CONFIRM_TEXT = {
     },
 };
 
-const isBrandActive = (brand) =>
-    Boolean(brand?.isActive ?? brand?.active ?? true);
-
 export function useAdminCatalog() {
     const [brands, setBrands] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -82,7 +79,7 @@ export function useAdminCatalog() {
 
     const toggleBrandActive = (brand) => {
         setConfirmDelete({
-            kind: isBrandActive(brand) ? 'deactivate' : 'activate',
+            kind: brand.isActive ? 'deactivate' : 'activate',
             type: 'brand',
             id: brand.id,
             name: brand.name,

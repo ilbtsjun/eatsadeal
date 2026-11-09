@@ -10,7 +10,7 @@ const COMMENTS_PER_PAGE = 10;
 
 const getCommentId = (comment) => comment?.commentId ? String(comment.commentId) : null;
 
-const toCommentList = (data) => (Array.isArray(data) ? data : data?.comments || data?.content || []);
+const toCommentList = (data) => (Array.isArray(data) ? data : []);
 
 export function useUserComments({ user }) {
     const request = useMemo(() => (user ? () => getMyComments().then(toCommentList) : null), [user]);
