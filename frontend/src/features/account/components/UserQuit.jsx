@@ -6,9 +6,8 @@ export default function UserQuit({ onLogout, onBack }){
     const{
         showQuitModal,
         quitPassword,
-        setQuitPassword,
+        updateQuitPassword,
         quitError,
-        setQuitError,
         quitLoading,
         quitDone,
         finishQuit,
@@ -41,10 +40,7 @@ export default function UserQuit({ onLogout, onBack }){
                                     <br />계속하려면 비밀번호를 입력해주세요.</p>
                                 <input className="confirm-input" type="password"
                                        value={quitPassword}
-                                       onChange={(event) => {
-                                           setQuitPassword(event.target.value);
-                                           setQuitError('');
-                                       }}
+                                       onChange={updateQuitPassword}
                                        placeholder="비밀번호"
                                        autoComplete="current-password"
                                        autoFocus disabled={quitLoading} />

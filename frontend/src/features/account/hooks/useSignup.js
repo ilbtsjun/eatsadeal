@@ -57,6 +57,26 @@ export function useSignup({ onSignupSuccess }) {
         setError('');
     };
 
+    const handleAgreeTerms = (event) => {
+        setAgreeTerms(event.target.checked);
+        setError('');
+    };
+
+    const handleAgreePrivacy = (event) => {
+        setAgreePrivacy(event.target.checked);
+        setError('');
+    };
+
+    const goToStep = (nextStep) => {
+        setError('');
+        setStep(nextStep);
+    };
+
+    const updateAuthCode = (event) => {
+        setAuthCode(event.target.value);
+        setError('');
+    };
+
     const handleEmailCheck = async () => {
         const email = form.email.trim();
 
@@ -199,7 +219,7 @@ export function useSignup({ onSignupSuccess }) {
 
     return {
         step,
-        setStep,
+        goToStep,
         form,
         emailChecked,
         nicknameChecked,
@@ -210,15 +230,14 @@ export function useSignup({ onSignupSuccess }) {
         notice,
         loading,
         authCode,
-        setAuthCode,
+        updateAuthCode,
         agreeTerms,
-        setError,
-        setAgreeTerms,
         agreePrivacy,
-        setAgreePrivacy,
         allAgreed,
         updateField,
         handleAgreeAll,
+        handleAgreeTerms,
+        handleAgreePrivacy,
         handleEmailCheck,
         handleNicknameCheck,
         handleNext,

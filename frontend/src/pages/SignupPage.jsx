@@ -9,7 +9,7 @@ export default function SignupPage({
                                      onOpenPrivacy }) {
   const {
     step,
-    setStep,
+    goToStep,
     form,
     emailChecked,
     nicknameChecked,
@@ -20,20 +20,19 @@ export default function SignupPage({
     notice,
     loading,
     authCode,
-    setAuthCode,
+    updateAuthCode,
     agreeTerms,
-    setAgreeTerms,
     agreePrivacy,
-    setAgreePrivacy,
     allAgreed,
     updateField,
     handleAgreeAll,
+    handleAgreeTerms,
+    handleAgreePrivacy,
     handleEmailCheck,
     handleNicknameCheck,
     handleNext,
     handleSubmit,
     handleVerify,
-    setError,
   } = useSignup({ onSignupSuccess });
 
   return (
@@ -93,7 +92,7 @@ export default function SignupPage({
                           id="agree-terms"
                           type="checkbox"
                           checked={agreeTerms}
-                          onChange={(event) => { setAgreeTerms(event.target.checked); setError(''); }}
+                          onChange={handleAgreeTerms}
                       />
                       <span><em className="agree-required">[필수]</em> 이용약관에 동의합니다</span>
                     </label>
@@ -106,7 +105,7 @@ export default function SignupPage({
                           id="agree-privacy"
                           type="checkbox"
                           checked={agreePrivacy}
-                          onChange={(event) => { setAgreePrivacy(event.target.checked); setError(''); }}
+                          onChange={handleAgreePrivacy}
                       />
                       <span><em className="agree-required">[필수]</em> 개인정보처리방침에 동의합니다</span>
                     </label>
@@ -137,18 +136,18 @@ export default function SignupPage({
 
                 {error && <p className="signup-error" role="alert">{error}</p>}
                 <div className="signup-step-buttons">
-                  <button type="button" className="signup-previous" onClick={() => setStep(1)}>이전</button>
+                  <button type="button" className="signup-previous" onClick={() => goToStep(1)}>이전</button>
                   <button type="submit" className="signup-submit" disabled={loading}>{loading ? '가입 중...' : '회원가입'}</button>
                 </div>
               </form>
           ) : (
               <form className="signup-form" onSubmit={handleVerify}>
                 <label htmlFor="signup-auth-code">이메일 인증번호</label>
-                <input id="signup-auth-code" value={authCode} onChange={(event) => setAuthCode(event.target.value)} placeholder="이메일로 받은 인증번호를 입력하세요" required />
+                <input id="signup-auth-code" value={authCode} onChange={updateAuthCode} placeholder="이메일로 받은 인증번호를 입력하세요" required />
                 {notice && <p className="signup-notice" role="status">{notice}</p>}
                 {error && <p className="signup-error" role="alert">{error}</p>}
                 <div className="signup-step-buttons">
-                  <button type="button" className="signup-previous" onClick={() => setStep(2)}>이전</button>
+                  <button type="button" className="signup-previous" onClick={() => goToStep(2)}>이전</button>
                   <button type="submit" className="signup-submit" disabled={loading}>{loading ? '인증 중...' : '인증하고 가입 완료'}</button>
                 </div>
               </form>

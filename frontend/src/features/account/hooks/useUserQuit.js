@@ -15,6 +15,11 @@ export function useUserQuit({ onLogout, onBack }){
         setShowQuitModal(true);
     };
 
+    const updateQuitPassword = (event) => {
+        setQuitPassword(event.target.value);
+        setQuitError('');
+    };
+
     const finishQuit = () => {
         onLogout?.();
         onBack?.();
@@ -54,9 +59,8 @@ export function useUserQuit({ onLogout, onBack }){
     return {
         showQuitModal,
         quitPassword,
-        setQuitPassword,
+        updateQuitPassword,
         quitError,
-        setQuitError,
         quitLoading,
         quitDone,
         finishQuit,

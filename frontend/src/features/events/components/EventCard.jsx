@@ -1,4 +1,5 @@
 import { getFallbackImage } from '@/common/utils/BrandUtil.js';
+import HeartIcon from '@/common/components/HeartIcon.jsx';
 import { calculateDDay } from '@/common/utils/DateUtil.js';
 import { getEventCodeName } from '../utils/eventDisplay.js';
 
@@ -45,7 +46,7 @@ export default function EventCard({ event, toggleFavorite, favoritePending = fal
                     toggleFavorite(event);
                 }}
             >
-                <svg className="favorite-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5.1-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.8A4.8 4.8 0 0 1 12 6.1a4.8 4.8 0 0 1 8.8 2.7Z" /></svg>
+                <HeartIcon />
             </button>
         </div>
     );

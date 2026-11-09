@@ -1,7 +1,7 @@
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { useProfile } from '../hooks/useProfile.js';
 
-export default function Profile({ user, onUserUpdate }) {
+export default function UserProfile({ user, onUserUpdate }) {
     const {
         profile,
         profileForm,
