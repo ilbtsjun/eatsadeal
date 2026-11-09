@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { getListEvents, getListFavoriteIds, setFavorite } from '@/api/index.js';
+import { useEffect, useMemo } from 'react';
+import { getListEvents, getListFavoriteIds } from '@/api/index.js';
 import { useFetch } from '@/common/hooks/useFetch.js';
+import { useFavoriteToggle } from '@/features/favorites/hooks/useFavoriteToggle.js';
 import { EVENT_CODE_NAMES } from '../utils/eventDisplay.js';
 
 const PAGE_SIZE = 20;
 const EMPTY_RESULT = { events: [], totalPages: 0, totalElements: 0 };
 
-export function useEventList({ activeCategory, activeBrand = 'all', activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange }) {
-    const [actionError, setActionError] = useState('');
+export function useEventList({ activeCategory, activeBrand = 'all', activeEventCode = 'all', activeSort, searchKeyword, page, user, onPageChange, onLoginClick }) {
 
     const request = useMemo(() => () => {
         const params = new URLSearchParams({
@@ -56,17 +56,19 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
         }
     }, [loading, totalPages, page, onPageChange]);
 
-    const toggleFavorite = async (event) => {
+    const {
+        pendingId,
+        toggleError,
+        toggleFavorite: toggleFavoriteRequest,
+    } = useFavoriteToggle();
+
+    const toggleFavorite = (event) => {
         if (!user) {
-            window.alert('찜하기 기능을 사용하려면 로그인해주세요.');
+            onLoginClick?.();
             return;
         }
 
-        const nextFavorite = !event.isFavorite;
-        setActionError('');
-
-        try {
-            await setFavorite(event.id, nextFavorite);
+        return toggleFavoriteRequest(event, (nextFavorite) => {
             setData((current) => ({
                 ...current,
                 events: current.events.map((item) => (
@@ -75,16 +77,15 @@ export function useEventList({ activeCategory, activeBrand = 'all', activeEventC
                         : item
                 )),
             }));
-        } catch (requestError) {
-            setActionError(requestError.message || '찜하기에 실패했습니다.');
-        }
+        });
     };
 
     return {
         events,
         loading,
         loadError,
-        actionError,
+        actionError: toggleError,
+        pendingId,
         totalPages,
         totalElements,
         toggleFavorite,

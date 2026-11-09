@@ -105,7 +105,7 @@
 
 .my-comment-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}.my-comment-meta button{padding:5px 9px;border:1px solid #ffd1d5;border-radius:6px;color:#e84118;background:#fff;cursor:pointer;font-size:12px}.my-comment-meta button:hover{background:#fff1f2}.mypage-panel + .mypage-panel{margin-top:20px}
 
-.mypage-form-actions{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:4px}.mypage-form-actions button{grid-column:auto;justify-self:auto;min-width:72px}.mypage-form-actions .secondary{color:#57606f;background:#f1f2f6}.confirm-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(31,35,43,.42)}.confirm-dialog{width:min(100%,360px);padding:24px;border-radius:16px;background:#fff;box-shadow:0 18px 60px rgba(0,0,0,.2)}.confirm-dialog h2{margin:0 0 10px;color:#2f3542;font-size:19px}.confirm-dialog p{margin:0;color:#57606f;font-size:14px;line-height:1.6}.confirm-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}.confirm-dialog-actions button{padding:9px 16px;border:0;border-radius:7px;cursor:pointer;font-weight:700}.confirm-cancel{color:#57606f;background:#f1f2f6}.confirm-delete{color:#fff;background:#e84118}.confirm-delete:hover{background:#c23616}
+.mypage-form-actions{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:4px}.mypage-form-actions button{grid-column:auto;justify-self:auto;min-width:72px}.mypage-form-actions .secondary{color:#57606f;background:#f1f2f6}
 
 .my-comment-number{min-width:24px;color:#2f3542;font-weight:700}.my-comment-event{display:block;margin:8px 0 0;padding:0;border:0;color:#3742fa;background:transparent;cursor:pointer;font-size:14px;font-weight:700;text-align:left}.my-comment-event:hover{text-decoration:underline}.comment-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:20px}.comment-pagination button{padding:7px 12px;border:1px solid #dfe4ea;border-radius:7px;background:#fff;color:#2f3542;cursor:pointer}.comment-pagination button:disabled{cursor:not-allowed;opacity:.45}.comment-pagination span{color:#57606f;font-size:13px}
 .favorite-list { display: grid; gap: 10px; }
@@ -130,13 +130,3 @@
     box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.12);
 }
 
-.confirm-error {
-    margin: 8px 0 0;
-    color: #e84118;
-    font-size: 13px;
-}
-
-.confirm-dialog-actions button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}

@@ -6,6 +6,7 @@ export function useUserQuit({ onLogout, onBack }){
     const [showQuitModal, setShowQuitModal] = useState(false);
     const [quitPassword, setQuitPassword] = useState('');
     const [quitError, setQuitError] = useState('');
+    const [quitDone, setQuitDone] = useState(false);
     const [quitLoading, withQuitLoading] = usePending();
 
     const openQuitModal = () => {
@@ -14,8 +15,17 @@ export function useUserQuit({ onLogout, onBack }){
         setShowQuitModal(true);
     };
 
+    const finishQuit = () => {
+        onLogout?.();
+        onBack?.();
+    };
+
     const closeQuitModal = () => {
         if (quitLoading) return;
+        if (quitDone) {
+            finishQuit();
+            return;
+        }
         setShowQuitModal(false);
         setQuitPassword('');
         setQuitError('');
@@ -34,10 +44,7 @@ export function useUserQuit({ onLogout, onBack }){
 
             try {
                 await deleteCurrentUser(quitPassword);
-                setShowQuitModal(false);
-                window.alert('회원탈퇴가 완료되었습니다.');
-                onLogout?.();
-                onBack?.();
+                setQuitDone(true);
             } catch (requestError) {
                 setQuitError(requestError.message || '회원탈퇴에 실패했습니다.');
             }
@@ -51,6 +58,8 @@ export function useUserQuit({ onLogout, onBack }){
         quitError,
         setQuitError,
         quitLoading,
+        quitDone,
+        finishQuit,
         openQuitModal,
         closeQuitModal,
         handleQuit

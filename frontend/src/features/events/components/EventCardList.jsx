@@ -13,12 +13,14 @@ export default function EventCardList({
                                           page = 0,
                                           onPageChange,
                                           onSelectEvent,
+                                          onLoginClick,
                                           user,
                                       }) {
     const { events,
         loading,
         loadError,
         actionError,
+        pendingId,
         totalPages,
         totalElements,
         toggleFavorite,
@@ -31,6 +33,7 @@ export default function EventCardList({
         page,
         user,
         onPageChange,
+        onLoginClick,
     });
 
     if (loading) return <StatusMessage type="loading" size="inline" message="이벤트 정보를 불러오는 중입니다..." />;
@@ -51,6 +54,7 @@ export default function EventCardList({
                             key={event.id}
                             event={event}
                             toggleFavorite={toggleFavorite}
+                            favoritePending={pendingId === event.id}
                             onSelectEvent={onSelectEvent}
                         />
                     ))}

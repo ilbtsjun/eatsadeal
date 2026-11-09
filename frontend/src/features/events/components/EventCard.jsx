@@ -2,7 +2,7 @@ import { getFallbackImage } from '@/common/utils/BrandUtil.js';
 import { calculateDDay } from '@/common/utils/DateUtil.js';
 import { getEventCodeName } from '../utils/eventDisplay.js';
 
-export default function EventCard({ event, toggleFavorite, onSelectEvent }) {
+export default function EventCard({ event, toggleFavorite, favoritePending = false, onSelectEvent }) {
     return (
         <div className={`event-card-wrapper ${event.hidden ? 'is-hidden' : ''}`}>
             <button type="button" className="event-card" onClick={() => onSelectEvent?.(event)}>
@@ -39,6 +39,7 @@ export default function EventCard({ event, toggleFavorite, onSelectEvent }) {
                 className={`card-favorite ${event.isFavorite ? 'is-favorite' : ''}`}
                 aria-label={event.isFavorite ? '찜 취소' : '찜하기'}
                 aria-pressed={Boolean(event.isFavorite)}
+                disabled={favoritePending}
                 onClick={(clickEvent) => {
                     clickEvent.stopPropagation();
                     toggleFavorite(event);

@@ -10,12 +10,30 @@ import {
 import { getCommentId } from '../utils/commentTree.js';
 import { usePending } from '@/common/hooks/usePending.js';
 
+const COMMENT_ACTIONS = {
+    delete: {
+        request: deleteComment,
+        dialog: { title: '댓글 삭제', message: '이 댓글을 삭제하시겠습니까?', confirmLabel: '삭제' },
+    },
+    hide: {
+        request: hideComment,
+        dialog: { title: '댓글 숨김', message: '이 댓글을 숨김 처리하시겠습니까?', confirmLabel: '숨김' },
+    },
+    unhide: {
+        request: unhideComment,
+        dialog: { title: '숨김 해제', message: '이 댓글의 숨김을 해제하시겠습니까?', confirmLabel: '해제' },
+    },
+};
+
 export function useComments(eventId, user, onLoginClick) {
     const [comments, setComments] = useState([]);
     const [commentLoading, setCommentLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
     const [commentError, setCommentError] = useState('');
     const [submitting, withSubmitting] = usePending();
+    const [actionTarget, setActionTarget] = useState(null);
+    const [actionError, setActionError] = useState('');
+    const [actionRunning, withAction] = usePending();
     const [editingId, setEditingId] = useState(null);
     const [editText, setEditText] = useState('');
     const [replyTargetId, setReplyTargetId] = useState(null);
@@ -137,44 +155,33 @@ export function useComments(eventId, user, onLoginClick) {
         });
     };
 
-    const deleteCommentAction = async (comment) => {
+    const openAction = (kind, comment) => {
         const id = getCommentId(comment);
-        if (!id || !window.confirm('이 댓글을 삭제하시겠습니까?')) return;
-
-        try {
-            await deleteComment(id);
-            setCommentError('');
-            await loadComments();
-        } catch (error) {
-            setCommentError(error.message);
-        }
+        if (!id || !COMMENT_ACTIONS[kind]) return;
+        setActionError('');
+        setActionTarget({ kind, id });
     };
 
-    const hideCommentAction = async (comment) => {
-        const id = getCommentId(comment);
-        if (!id || !window.confirm('이 댓글을 숨김 처리하시겠습니까?')) return;
-
-        try {
-            await hideComment(id);
-            setCommentError('');
-            await loadComments();
-        } catch (error) {
-            setCommentError(error.message);
-        }
+    const closeAction = () => {
+        if (!actionRunning) setActionTarget(null);
     };
 
-    const unhideCommentAction = async (comment) => {
-        const id = getCommentId(comment);
-        if (!id || !window.confirm('이 댓글의 숨김을 해제하시겠습니까?')) return;
+    const confirmAction = async () => {
+        if (!actionTarget) return;
 
-        try {
-            await unhideComment(id);
-            setCommentError('');
-            await loadComments();
-        } catch (error) {
-            setCommentError(error.message);
-        }
+        await withAction(async () => {
+            try {
+                await COMMENT_ACTIONS[actionTarget.kind].request(actionTarget.id);
+                setActionTarget(null);
+                setCommentError('');
+                await loadComments();
+            } catch (error) {
+                setActionError(error.message);
+            }
+        });
     };
+
+    const actionDialog = actionTarget ? COMMENT_ACTIONS[actionTarget.kind].dialog : null;
 
     return {
         comments,
@@ -199,8 +206,11 @@ export function useComments(eventId, user, onLoginClick) {
         handleReplySubmit,
         openEdit,
         handleEditSubmit,
-        deleteCommentAction,
-        hideCommentAction,
-        unhideCommentAction,
+        openAction,
+        closeAction,
+        confirmAction,
+        actionDialog,
+        actionError,
+        actionRunning,
     };
 }

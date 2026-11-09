@@ -1,6 +1,7 @@
 import { useComments } from '../hooks/useComments.js';
 import { buildCommentTree, getCommentId, isHiddenComment, isDeletedComment,} from '../utils/commentTree.js';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
+import ConfirmDialog from '@/common/components/ConfirmDialog.jsx';
 
 const COMMENT_MAX = 300;
 const SUPPORTS_REPLIES = false;
@@ -28,9 +29,12 @@ export default function CommentSection({ eventId, user, onLoginClick }) {
         handleReplySubmit,
         openEdit,
         handleEditSubmit,
-        deleteCommentAction,
-        hideCommentAction,
-        unhideCommentAction,
+        openAction,
+        closeAction,
+        confirmAction,
+        actionDialog,
+        actionError,
+        actionRunning,
     } = useComments(eventId, user, onLoginClick);
 
     const commentTree = buildCommentTree(comments);
@@ -121,7 +125,7 @@ export default function CommentSection({ eventId, user, onLoginClick }) {
                             <button
                                 type="button"
                                 className="comment-action-button comment-delete-button"
-                                onClick={() => deleteCommentAction(comment)}
+                                onClick={() => openAction('delete', comment)}
                             >
                                 삭제
                             </button>
@@ -130,7 +134,7 @@ export default function CommentSection({ eventId, user, onLoginClick }) {
                             <button
                                 type="button"
                                 className="comment-action-button comment-hide-button"
-                                onClick={() => hideCommentAction(comment)}
+                                onClick={() => openAction('hide', comment)}
                             >
                                 숨김
                             </button>
@@ -139,7 +143,7 @@ export default function CommentSection({ eventId, user, onLoginClick }) {
                             <button
                                 type="button"
                                 className="comment-action-button comment-unhide-button"
-                                onClick={() => unhideCommentAction(comment)}
+                                onClick={() => openAction('unhide', comment)}
                             >
                                 숨김 해제
                             </button>
@@ -229,6 +233,16 @@ export default function CommentSection({ eventId, user, onLoginClick }) {
                     ))
                 )}
             </div>
+
+            {actionDialog && (
+                <ConfirmDialog
+                    {...actionDialog}
+                    pending={actionRunning}
+                    error={actionError}
+                    onConfirm={confirmAction}
+                    onClose={closeAction}
+                />
+            )}
         </section>
     );
 }

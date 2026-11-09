@@ -113,3 +113,21 @@
     background: #f1f2f6;
     cursor: not-allowed;
 }
+
+.report-cancel-confirm {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border: 1px solid #ffd1d5;
+    border-radius: 10px;
+    background: #fff5f6;
+}
+
+.report-cancel-confirm p {
+    margin: 0;
+    color: #2f3542;
+    font-size: 14px;
+}
+
+.report-cancel-confirm .report-actions {
+    margin-top: 12px;
+}
