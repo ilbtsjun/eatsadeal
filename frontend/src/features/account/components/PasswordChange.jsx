@@ -7,6 +7,7 @@ export default function PasswordChange(){
         handlePasswordChange,
         passwordMessage,
         passwordError,
+        changingPassword,
     } = usePasswordChange();
 
     return (
@@ -48,7 +49,9 @@ export default function PasswordChange(){
                         {passwordError || passwordMessage}
                     </p>
                 )}
-                <button type="submit">비밀번호 변경</button>
+                <button type="submit" disabled={changingPassword}>
+                    {changingPassword ? '변경 중...' : '비밀번호 변경'}
+                </button>
             </form>
         </section>
     )

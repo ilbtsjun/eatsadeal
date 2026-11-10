@@ -1,11 +1,13 @@
 package com.backend.crawler.common;
 
 import com.backend.event.dto.CreateEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Slf4j
 public final class CrawlerUtil {
 
     public static final LocalDate OPEN_ENDED_DATE = LocalDate.of(2099, 12, 31);
@@ -49,6 +51,12 @@ public final class CrawlerUtil {
     public static CreateEvent event(String title, String url, String img,
                                     LocalDateTime startDate, LocalDateTime endDate,
                                     Long brandId, boolean isActive) {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            log.warn("[CRAWL DATE SWAP] url={} start={} end={}", url, startDate, endDate);
+            LocalDateTime swappedStart = startOfDay(endDate.toLocalDate());
+            endDate = endOfDay(startDate.toLocalDate());
+            startDate = swappedStart;
+        }
         return new CreateEvent(title, null, url, img, startDate, endDate, brandId, isActive, null);
     }
 }

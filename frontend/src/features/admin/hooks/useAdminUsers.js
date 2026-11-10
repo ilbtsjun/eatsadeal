@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { getUserInfo, getUserComments, suspendUser } from '@/api/index.js'
+import { usePending } from '@/common/hooks/usePending.js';
 
-const pickUser = (data) => (Array.isArray(data) ? data[0] : data) ?? null;
+const pickUser = (data) => data ?? null;
 
 export function useAdminUsers() {
     const [selectedUser, setSelectedUser] = useState(null);
@@ -12,7 +13,8 @@ export function useAdminUsers() {
     const [userMessage, setUserMessage] = useState('');
     const [suspendModal, setSuspendModal] = useState(null);
     const [suspendError, setSuspendError] = useState('');
-    const [suspendSubmitting, setSuspendSubmitting] = useState(false);
+    const [suspendSubmitting, withSuspendSubmitting] = usePending();
+    const [searching, withSearching] = usePending();
 
     const findUser = async (event) => {
         event.preventDefault();
@@ -31,35 +33,37 @@ export function useAdminUsers() {
             ? [`id=${keyword}`, `nickname=${encodeURIComponent(keyword)}`]
             : [`nickname=${encodeURIComponent(keyword)}`];
 
-        let result = null;
-        let lastError = null;
+        await withSearching(async () => {
+            let result = null;
+            let lastError = null;
 
-        for (const query of queries) {
-            try {
-                const data = await getUserInfo(query);
-                result = pickUser(data);
-                if (result) break;
-            } catch (error) {
-                lastError = error;
+            for (const query of queries) {
+                try {
+                    const data = await getUserInfo(query);
+                    result = pickUser(data);
+                    if (result) break;
+                } catch (error) {
+                    lastError = error;
+                }
             }
-        }
 
-        if (!result) {
-            setUserMessage(lastError?.message || '일치하는 회원이 없습니다.');
-            return;
-        }
+            if (!result) {
+                setUserMessage(lastError?.message || '일치하는 회원이 없습니다.');
+                return;
+            }
 
-        setSelectedUser(result);
-        setCommentsLoading(true);
+            setSelectedUser(result);
+            setCommentsLoading(true);
 
-        try {
-            const comments = await getUserComments(result.id);
-            setUserComments(Array.isArray(comments) ? comments : []);
-        } catch (error) {
-            setCommentsError(error.message);
-        } finally {
-            setCommentsLoading(false);
-        }
+            try {
+                const comments = await getUserComments(result.id);
+                setUserComments(Array.isArray(comments) ? comments : []);
+            } catch (error) {
+                setCommentsError(error.message);
+            } finally {
+                setCommentsLoading(false);
+            }
+        });
     };
 
     const openSuspendModal = (release) => {
@@ -114,27 +118,27 @@ export function useAdminUsers() {
             return;
         }
 
-        setSuspendSubmitting(true);
-        setSuspendError('');
+        await withSuspendSubmitting(async () => {
+            setSuspendError('');
 
-        try {
-            await suspendUser(selectedUser.id, suspendTime, reason, release);
+            try {
+                await suspendUser(selectedUser.id, suspendTime, reason, release);
 
-            const updatedUser = pickUser(await getUserInfo(`id=${selectedUser.id}`));
-            setSelectedUser((current) => updatedUser ?? current);
-            setSuspendModal(null);
-            setUserMessage(release ? '회원 정지가 해제되었습니다.' : '회원이 정지되었습니다.');
-        } catch (error) {
-            setSuspendError(error.message);
-        } finally {
-            setSuspendSubmitting(false);
-        }
+                const updatedUser = pickUser(await getUserInfo(`id=${selectedUser.id}`));
+                setSelectedUser((current) => updatedUser ?? current);
+                setSuspendModal(null);
+                setUserMessage(release ? '회원 정지가 해제되었습니다.' : '회원이 정지되었습니다.');
+            } catch (error) {
+                setSuspendError(error.message);
+            }
+        });
     };
 
     return {
         selectedUser,
         userNickname,
         setUserNickname,
+        searching,
         userComments,
         commentsLoading,
         commentsError,

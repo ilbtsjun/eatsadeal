@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function useFetch(request, { initialData = null, fallbackMessage = '정보를 불러오지 못했습니다.' } = {}) {
     const [data, setData] = useState(initialData);
@@ -7,6 +7,7 @@ export function useFetch(request, { initialData = null, fallbackMessage = '정�
     const [loadErrorStatus, setLoadErrorStatus] = useState(null);
     const [reloadKey, setReloadKey] = useState(0);
     const [prevRequest, setPrevRequest] = useState(() => request);
+    const requestRef = useRef(request);
 
     if (prevRequest !== request) {
         setPrevRequest(() => request);
@@ -14,6 +15,10 @@ export function useFetch(request, { initialData = null, fallbackMessage = '정�
         setLoadError('');
         setLoadErrorStatus(null);
     }
+
+    useEffect(() => {
+        requestRef.current = request;
+    }, [request]);
 
     useEffect(() => {
         if (!request) return undefined;
@@ -43,5 +48,11 @@ export function useFetch(request, { initialData = null, fallbackMessage = '정�
         setReloadKey((key) => key + 1);
     };
 
-    return { data, setData, loading, loadError, loadErrorStatus, reload };
+    const refresh = useCallback(async () => {
+        if (!request) return;
+        const result = await request();
+        if (requestRef.current === request) setData(result);
+    }, [request]);
+
+    return { data, setData, loading, loadError, loadErrorStatus, reload, refresh };
 }

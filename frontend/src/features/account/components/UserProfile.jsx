@@ -1,7 +1,7 @@
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 import { useProfile } from '../hooks/useProfile.js';
 
-export default function Profile({ user, onUserUpdate }) {
+export default function UserProfile({ user, onUserUpdate }) {
     const {
         profile,
         profileForm,
@@ -11,6 +11,7 @@ export default function Profile({ user, onUserUpdate }) {
         profileMessage,
         profileError,
         editingProfile,
+        savingProfile,
         updateForm,
         startEditingProfile,
         cancelEditingProfile,
@@ -118,11 +119,14 @@ export default function Profile({ user, onUserUpdate }) {
                     </label>
 
                     <div className="mypage-form-actions">
-                        <button type="submit">완료</button>
+                        <button type="submit" disabled={savingProfile}>
+                            {savingProfile ? '저장 중...' : '완료'}
+                        </button>
                         <button
                             type="button"
                             className="secondary"
                             onClick={cancelEditingProfile}
+                            disabled={savingProfile}
                         >
                             취소
                         </button>

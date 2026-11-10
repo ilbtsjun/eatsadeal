@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { login, getCurrentUser } from '@/api/index.js';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
 import { loginUser } from '@/auth/AuthUtil.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 function getLoginErrorMessage(error) {
     const data = error.response?.data ?? error.data ?? {};
@@ -44,42 +45,38 @@ export function useLogin({ onLogin }) {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, withLoading] = usePending();
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (loading) return;
-
         setError('');
-        setLoading(true);
+        await withLoading(async () => {
+            try {
+                const result = await login({
+                    id: id.trim(),
+                    password,
+                });
 
-        try {
-            const result = await login({
-                id: id.trim(),
-                password,
-            });
+                if (String(result.status) !== '200' || !result.token) {
+                    throw new Error(
+                        result.msg || '이메일 또는 비밀번호를 확인해주세요.',
+                    );
+                }
 
-            if (String(result.status) !== '200' || !result.token) {
-                throw new Error(
-                    result.msg || '이메일 또는 비밀번호를 확인해주세요.',
-                );
+                loginUser(result.token);
+
+                const user = await getCurrentUser();
+
+                onLogin({
+                    ...user,
+                    token: result.token,
+                });
+            } catch (requestError) {
+                console.error('로그인 요청 실패:', requestError);
+                setError(getLoginErrorMessage(requestError));
             }
-
-            loginUser(result.token);
-
-            const user = await getCurrentUser();
-
-            onLogin({
-                ...user,
-                token: result.token,
-            });
-        } catch (requestError) {
-            console.error('로그인 요청 실패:', requestError);
-            setError(getLoginErrorMessage(requestError));
-        } finally {
-            setLoading(false);
-        }
+        });
     };
 
     return {

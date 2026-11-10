@@ -26,10 +26,8 @@ export default function AdminPage({ user, onBack }) {
       setMessage,
       loadLists,
       form,
-      setForm,
       formError,
       confirmDelete,
-      setConfirmDelete,
       deleteItem,
       toggleBrandActive,
       confirmDeleteItem,
@@ -38,6 +36,9 @@ export default function AdminPage({ user, onBack }) {
       toggleCategory,
       updateFormField,
       submitForm,
+      processing,
+      closeForm,
+      closeConfirm,
     confirmTextMap
   } = useAdminCatalog();
 
@@ -53,6 +54,7 @@ export default function AdminPage({ user, onBack }) {
       suspendError,
       suspendSubmitting,
       findUser,
+      searching,
       openSuspendModal,
       closeSuspendModal,
       handleSuspendDaysChange,
@@ -121,6 +123,7 @@ export default function AdminPage({ user, onBack }) {
                       userNickname={userNickname}
                       onNicknameChange={setUserNickname}
                       onSearch={findUser}
+                      searching={searching}
                       selectedUser={selectedUser}
                       userMessage={userMessage}
                       userComments={userComments}
@@ -166,7 +169,8 @@ export default function AdminPage({ user, onBack }) {
                   form={form}
                   categories={categories}
                   formError={formError}
-                  onClose={() => setForm(null)}
+                  submitting={processing}
+                  onClose={closeForm}
                   onSubmit={submitForm}
                   onToggleCategory={toggleCategory}
                   onNameChange={(event) => updateFormField('name', event.target.value)}
@@ -188,7 +192,8 @@ export default function AdminPage({ user, onBack }) {
               <ConfirmActionModal
                   confirmDelete={confirmDelete}
                   confirmText={confirmText}
-                  onClose={() => setConfirmDelete(null)}
+                  processing={processing}
+                  onClose={closeConfirm}
                   onConfirm={confirmDeleteItem}
               />
           </main>

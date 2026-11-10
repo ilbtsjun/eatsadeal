@@ -12,7 +12,21 @@ function setMeta(selector, value) {
     }
 }
 
-export function usePageTitle(title, { description, path } = {}) {
+function setRobots(noindex) {
+    let element = document.head.querySelector('meta[name="robots"]');
+    if (!noindex) {
+        element?.remove();
+        return;
+    }
+    if (!element) {
+        element = document.createElement('meta');
+        element.setAttribute('name', 'robots');
+        document.head.appendChild(element);
+    }
+    element.setAttribute('content', 'noindex');
+}
+
+export function usePageTitle(title, { description, path, noindex = false } = {}) {
     useEffect(() => {
         const fullTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
         const fullDescription = description?.trim() || DEFAULT_DESCRIPTION;
@@ -24,5 +38,10 @@ export function usePageTitle(title, { description, path } = {}) {
         setMeta('meta[property="og:description"]', fullDescription);
         setMeta('meta[property="og:url"]', url);
         setMeta('link[rel="canonical"]', url);
-    }, [title, description, path]);
+        setRobots(noindex);
+
+        return () => {
+            if (noindex) setRobots(false);
+        };
+    }, [title, description, path, noindex]);
 }

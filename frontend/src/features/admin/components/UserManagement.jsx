@@ -6,6 +6,7 @@ export default function UserManagement({
                                            userNickname,
                                            onNicknameChange,
                                            onSearch,
+                                           searching,
                                            selectedUser,
                                            userMessage,
                                            userComments,
@@ -29,7 +30,7 @@ export default function UserManagement({
                            onNicknameChange(event.target.value)}
                        placeholder="회원 ID 또는 닉네임 입력"
                        required />
-                <button type="submit">조회</button>
+                <button type="submit" disabled={searching}>{searching ? '조회 중...' : '조회'}</button>
             </form>
             {userMessage && <p className="admin-message">{userMessage}</p>}
             {selectedUser && (

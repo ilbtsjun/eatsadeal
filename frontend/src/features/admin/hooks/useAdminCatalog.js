@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAdminCatalogForm } from './useAdminCatalogForm.js';
 import {
     getListCategories,
@@ -10,6 +10,8 @@ import {
     updateBrand,
     createCategory,
     updateCategory } from '@/api/index.js'
+import { usePending } from '@/common/hooks/usePending.js';
+import { useFetch } from '@/common/hooks/useFetch.js';
 
 const CONFIRM_TEXT = {
     delete: {
@@ -32,16 +34,26 @@ const CONFIRM_TEXT = {
     },
 };
 
-const isBrandActive = (brand) =>
-    Boolean(brand?.isActive ?? brand?.active ?? true);
+const EMPTY_CATALOG = { brands: [], categories: [] };
+
+const fetchCatalog = () =>
+    Promise.all([getListBrands(), getListCategories()])
+        .then(([brands, categories]) => ({
+            brands: Array.isArray(brands) ? brands : [],
+            categories: Array.isArray(categories) ? categories : [],
+        }));
 
 export function useAdminCatalog() {
-    const [brands, setBrands] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [listError, setListError] = useState('');
+    const {
+        data: { brands, categories },
+        loading,
+        loadError: listError,
+        reload,
+        refresh,
+    } = useFetch(fetchCatalog, { initialData: EMPTY_CATALOG, fallbackMessage: '목록을 불러오지 못했습니다.' });
     const [message, setMessage] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [processing, withProcessing] = usePending();
     const {
         form,
         setForm,
@@ -53,26 +65,19 @@ export function useAdminCatalog() {
         updateFormField,
     } = useAdminCatalogForm(setMessage);
 
-    const fetchLists = useCallback(() => (
-        Promise.all([getListBrands(), getListCategories()])
-            .then(([brandData, categoryData]) => {
-                setBrands(Array.isArray(brandData) ? brandData : []);
-                setCategories(Array.isArray(categoryData) ? categoryData : []);
-            })
-            .catch((error) => setListError(error.message))
-            .finally(() => setLoading(false))
-    ), []);
-
-    const loadLists = useCallback(() => {
-        setLoading(true);
-        setListError('');
+    const loadLists = () => {
         setMessage('');
-        return fetchLists();
-    }, [fetchLists]);
+        reload();
+    };
 
-    useEffect(() => {
-        fetchLists();
-    }, [fetchLists]);
+    const refreshAfterChange = async (successMessage) => {
+        try {
+            await refresh();
+            setMessage(successMessage);
+        } catch {
+            setMessage(`${successMessage} 목록을 새로고침하지 못했습니다.`);
+        }
+    };
 
     const deleteItem = (type, id, name) => {
         setConfirmDelete({ kind: 'delete', type, id, name });
@@ -80,42 +85,50 @@ export function useAdminCatalog() {
 
     const toggleBrandActive = (brand) => {
         setConfirmDelete({
-            kind: isBrandActive(brand) ? 'deactivate' : 'activate',
+            kind: brand.isActive ? 'deactivate' : 'activate',
             type: 'brand',
             id: brand.id,
             name: brand.name,
         });
     };
 
+    const closeForm = () => {
+        if (!processing) setForm(null);
+    };
+
+    const closeConfirm = () => {
+        if (!processing) setConfirmDelete(null);
+    };
+
     const confirmDeleteItem = async () => {
         if (!confirmDelete) return;
 
         const { kind, type, id, name } = confirmDelete;
-        setConfirmDelete(null);
+        await withProcessing(async () => {
+            try {
+                if (kind === 'activate' && type === 'brand') {
+                    await activateBrand(id);
+                } else if (kind === 'deactivate' && type === 'brand') {
+                    await deactivateBrand(id);
+                } else if (kind === 'delete' && type === 'category') {
+                    await deleteCategory(id);
+                } else {
+                    throw new Error('지원하지 않는 관리자 작업입니다.');
+                }
 
-        try {
-            if (kind === 'activate' && type === 'brand') {
-                await activateBrand(id);
-            } else if (kind === 'deactivate' && type === 'brand') {
-                await deactivateBrand(id);
-            } else if (kind === 'delete' && type === 'category') {
-                await deleteCategory(id);
-            } else {
-                throw new Error('지원하지 않는 관리자 작업입니다.');
+                if (kind === 'activate') {
+                    await refreshAfterChange(`${name ?? '브랜드'}가 활성화되었습니다.`);
+                } else if (kind === 'deactivate') {
+                    await refreshAfterChange(`${name ?? '브랜드'}가 정지되었습니다.`);
+                } else {
+                    await refreshAfterChange(`${type === 'brand' ? '브랜드' : '카테고리'}가 삭제되었습니다.`);
+                }
+            } catch (error) {
+                setMessage(error.message);
+            } finally {
+                setConfirmDelete(null);
             }
-
-            await loadLists();
-
-            if (kind === 'activate') {
-                setMessage(`${name ?? '브랜드'}가 활성화되었습니다.`);
-            } else if (kind === 'deactivate') {
-                setMessage(`${name ?? '브랜드'}가 정지되었습니다.`);
-            } else {
-                setMessage(`${type === 'brand' ? '브랜드' : '카테고리'}가 삭제되었습니다.`);
-            }
-        } catch (error) {
-            setMessage(error.message);
-        }
+        });
     };
 
     const submitForm = async (event) => {
@@ -140,34 +153,33 @@ export function useAdminCatalog() {
             return;
         }
 
-        try {
-            if (form.type === 'brand') {
-                const categoryIds = form.categoryIds;
+        if (form.type === 'brand' && !form.categoryIds.length) {
+            setFormError('카테고리를 하나 이상 선택해주세요.');
+            return;
+        }
 
-                if (!categoryIds.length) {
-                    setFormError('카테고리를 하나 이상 선택해주세요.');
-                    return;
+        await withProcessing(async () => {
+            try {
+                if (form.type === 'brand') {
+                    const body = { name, url: form.url.trim(), img, categoryIds: form.categoryIds };
+                    if(form.id)
+                        await updateBrand(form.id, body);
+                    else
+                        await createBrand(body);
+                } else {
+                    const body = form.id ? { img } : { name, img };
+                    if(form.id)
+                        await updateCategory(form.id, body);
+                    else
+                        await createCategory(body);
                 }
 
-                const body = { name, url: form.url.trim(), img, categoryIds };
-                if(form.id)
-                    await updateBrand(form.id, body);
-                else
-                    await createBrand(body);
-            } else {
-                const body = form.id ? { img } : { name, img };
-                if(form.id)
-                    await updateCategory(form.id, body);
-                else
-                    await createCategory(body);
+                setForm(null);
+                await refreshAfterChange('저장되었습니다.');
+            } catch (error) {
+                setFormError(error.message);
             }
-
-            setForm(null);
-            await loadLists();
-            setMessage('저장되었습니다.');
-        } catch (error) {
-            setFormError(error.message);
-        }
+        });
     };
 
     return {
@@ -179,10 +191,8 @@ export function useAdminCatalog() {
         setMessage,
         loadLists,
         form,
-        setForm,
         formError,
         confirmDelete,
-        setConfirmDelete,
         deleteItem,
         toggleBrandActive,
         confirmDeleteItem,
@@ -191,6 +201,9 @@ export function useAdminCatalog() {
         toggleCategory,
         updateFormField,
         submitForm,
+        processing,
+        closeForm,
+        closeConfirm,
         confirmTextMap: CONFIRM_TEXT
     };
 }

@@ -57,6 +57,7 @@ export function useEventDetail({ event, user, onLoginClick }) {
     usePageTitle(detailEvent?.title || '이벤트', {
         description: detailEvent?.description,
         path: `/events/${event.id}`,
+        noindex: loadErrorStatus === 404,
     });
 
     const handleShare = () => {
