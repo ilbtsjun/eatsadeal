@@ -46,7 +46,7 @@
 - `robots.txt`(관리자·마이페이지·API 제외), `sitemap.xml`(정적 페이지 + 노출 중인 이벤트 상세, 백엔드에서 생성)
 - Nginx가 index.html을 내보낼 때 canonical·og:url을 요청 주소(`/events/{id}`, `/terms`, `/privacy`, 그 외 `/`)로 치환해, JS 실행 전 HTML에서도 페이지마다 표준 주소가 맞도록 함 (`sub_filter`)
 - 없는 페이지·없는 이벤트(404)는 `noindex`로 색인 제외 (`usePageTitle`의 `noindex` 옵션)
-- 미리보기 봇(카카오톡, 페이스북, 슬랙, 네이버 등)이 `/events/{id}`에 오면 Nginx가 User-Agent로 구분해 백엔드가 만든 og HTML을 응답 (SPA라 봇이 JS를 실행하지 않아도 미리보기가 보이도록)
+- 이벤트 상세(`/events/{id}`)는 Nginx가 백엔드로 넘기고, 백엔드가 빌드된 index.html에 이벤트별 title·description·canonical·og 태그와 요약 본문(브랜드, 이벤트 종류, 기간, 원본 링크)을 채워 응답. 사람·검색엔진·미리보기 봇이 같은 HTML을 받아 JS 실행 전에도 페이지마다 내용이 다르고, React가 뜨면 실제 화면으로 바뀜. 없는 이벤트는 404 + noindex, 백엔드 장애 시에는 Nginx가 기본 index.html로 대신 응답
 
 **혜택 유형(EventCode) 분류**
 - 새 이벤트를 저장하거나 제목·이미지가 바뀐 이벤트를 갱신할 때만 분류 (내용이 같으면 다시 분류하지 않음, 관리자 잠금 이벤트 제외)
@@ -136,7 +136,7 @@ frontend/src
 | 관리자 | `GET /api/admin/dashboard`, `GET /api/admin/users`, `PATCH /api/admin/users/{id}/suspension`, `GET /api/admin/users/{id}/comments`, `PATCH /api/admin/comments/{id}/hide`, `/unhide` | 관리자 |
 | 제보 | `POST /api/reports` | 공개 (rate limit) |
 | 크롤링 | `POST /api/crawl`, `/api/crawl/{group 또는 brand}`, `GET /api/crawl/runs`, `/api/crawl/runs/latest` | 관리자 |
-| SEO | `GET /api/seo/sitemap.xml`(사이트에서는 `/sitemap.xml`), `GET /api/seo/events/{id}`(미리보기 봇용 og HTML) | 공개 |
+| SEO | `GET /api/seo/sitemap.xml`(사이트에서는 `/sitemap.xml`), `GET /api/seo/events/{id}`(이벤트 상세 HTML, 사이트에서는 `/events/{id}`) | 공개 |
 
 ## 배포
 
