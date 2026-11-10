@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { setEventHidden, setEventLock, updateEvent } from '@/api/index.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 const toInputValue = (value) => (value ? String(value).slice(0, 16) : '');
 const toRequestValue = (value) => (value ? `${value}:00` : null);
@@ -17,7 +18,7 @@ export function useEventEditForm({ event, onSaved }) {
         hidden: Boolean(event.hidden),
         adminLocked: true,
     });
-    const [saving, setSaving] = useState(false);
+    const [saving, withSaving] = usePending();
     const [error, setError] = useState('');
 
     const setField = (name) => (e) =>
@@ -34,31 +35,30 @@ export function useEventEditForm({ event, onSaved }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (saving) return;
-        setSaving(true);
-        setError('');
-        try {
-            await updateEvent(event.id, {
-                title: form.title.trim(),
-                description: form.description,
-                url: form.url.trim(),
-                img: form.img.trim(),
-                startDate: toRequestValue(form.startDate),
-                endDate: toRequestValue(form.endDate),
-                isActive: form.isActive,
-                eventCodes: form.eventCodes,
-            });
-            if (form.hidden !== Boolean(event.hidden)) {
-                await setEventHidden(event.id, form.hidden);
+        await withSaving(async () => {
+            setError('');
+            try {
+                await updateEvent(event.id, {
+                    title: form.title.trim(),
+                    description: form.description,
+                    url: form.url.trim(),
+                    img: form.img.trim(),
+                    startDate: toRequestValue(form.startDate),
+                    endDate: toRequestValue(form.endDate),
+                    isActive: form.isActive,
+                    eventCodes: form.eventCodes,
+                });
+                if (form.hidden !== Boolean(event.hidden)) {
+                    await setEventHidden(event.id, form.hidden);
+                }
+                if (!form.adminLocked) {
+                    await setEventLock(event.id, false);
+                }
+                onSaved();
+            } catch (err) {
+                setError(err.message || '이벤트를 수정하지 못했습니다.');
             }
-            if (!form.adminLocked) {
-                await setEventLock(event.id, false);
-            }
-            onSaved();
-        } catch (err) {
-            setError(err.message || '이벤트를 수정하지 못했습니다.');
-            setSaving(false);
-        }
+        });
     };
 
     return { form, saving, error, setField, setCheck, toggleCode, handleSubmit };

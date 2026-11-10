@@ -4,12 +4,13 @@ import {
     deleteComment as deleteCommentRequest
 } from '@/api/index.js';
 import { useFetch } from '@/common/hooks/useFetch.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 const COMMENTS_PER_PAGE = 10;
 
 const getCommentId = (comment) => comment?.commentId ? String(comment.commentId) : null;
 
-const toCommentList = (data) => (Array.isArray(data) ? data : data?.comments || data?.content || []);
+const toCommentList = (data) => (Array.isArray(data) ? data : []);
 
 export function useUserComments({ user }) {
     const request = useMemo(() => (user ? () => getMyComments().then(toCommentList) : null), [user]);
@@ -22,7 +23,7 @@ export function useUserComments({ user }) {
     } = useFetch(request, { initialData: [], fallbackMessage: '댓글을 불러오지 못했습니다.' });
     const [commentPage, setCommentPage] = useState(0);
     const [commentToDelete, setCommentToDelete] = useState(null);
-    const [deleting, setDeleting] = useState(false);
+    const [deleting, withDeleting] = usePending();
     const [deleteError, setDeleteError] = useState('');
     const commentPageCount = Math.ceil(comments.length / COMMENTS_PER_PAGE);
     const currentCommentPage = Math.min(commentPage, Math.max(0, commentPageCount - 1));
@@ -45,25 +46,24 @@ export function useUserComments({ user }) {
 
     const deleteComment = async () => {
         const commentId = getCommentId(commentToDelete);
-        if (!commentId || deleting) return;
+        if (!commentId) return;
 
-        setDeleting(true);
-        setDeleteError('');
-        try {
-            await deleteCommentRequest(commentId);
-            setComments((current) =>
-                current.map((item) =>
-                    getCommentId(item) === commentId
-                        ? { ...item, status: 'DELETED', content: '삭제된 댓글입니다.' }
-                        : item
-                )
-            );
-            setCommentToDelete(null);
-        } catch (requestError) {
-            setDeleteError(requestError.message || '댓글을 삭제하지 못했습니다.');
-        } finally {
-            setDeleting(false);
-        }
+        await withDeleting(async () => {
+            setDeleteError('');
+            try {
+                await deleteCommentRequest(commentId);
+                setComments((current) =>
+                    current.map((item) =>
+                        getCommentId(item) === commentId
+                            ? { ...item, status: 'DELETED', content: '삭제된 댓글입니다.' }
+                            : item
+                    )
+                );
+                setCommentToDelete(null);
+            } catch (requestError) {
+                setDeleteError(requestError.message || '댓글을 삭제하지 못했습니다.');
+            }
+        });
     };
 
     return {

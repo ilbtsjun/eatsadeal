@@ -1,6 +1,6 @@
 import { useUserComments } from '../hooks/useUserComments.js';
 import { formatDateTime } from '@/common/utils/DateUtil.js';
-import Modal from '@/common/components/Modal.jsx';
+import ConfirmDialog from '@/common/components/ConfirmDialog.jsx';
 import StatusMessage from '@/common/components/StatusMessage.jsx';
 
 export default function UserComments({ user, onOpenEvent }){
@@ -70,23 +70,16 @@ export default function UserComments({ user, onOpenEvent }){
                         </div>}
                 </> : <p className="mypage-empty">작성한 댓글이 없습니다.</p>}</section>
             {commentToDelete &&
-                <Modal backdropClassName="confirm-backdrop" onClose={closeDelete} locked={deleting}>
-                    <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="my-comment-delete-title">
-                        <h2 id="my-comment-delete-title">댓글 삭제</h2>
-                        <p>이 댓글을 삭제하시겠습니까?</p>
-                        {deleteError && <p className="confirm-error" role="alert">{deleteError}</p>}
-                        <div className="confirm-dialog-actions">
-                            <button type="button"
-                                    className="confirm-cancel"
-                                    disabled={deleting}
-                                    onClick={closeDelete}>취소</button>
-                            <button type="button"
-                                    className="confirm-delete"
-                                    disabled={deleting}
-                                    onClick={deleteComment}>{deleting ? '삭제 중...' : '삭제'}</button>
-                        </div>
-                    </div>
-                </Modal>
+                <ConfirmDialog
+                    title="댓글 삭제"
+                    message="이 댓글을 삭제하시겠습니까?"
+                    confirmLabel="삭제"
+                    pendingLabel="삭제 중..."
+                    pending={deleting}
+                    error={deleteError}
+                    onConfirm={deleteComment}
+                    onClose={closeDelete}
+                />
             }
         </>
     )

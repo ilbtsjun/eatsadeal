@@ -5,6 +5,7 @@ export default function ConfirmActionModal({
                                                confirmText,
                                                onClose,
                                                onConfirm,
+                                               processing,
                                            }) {
     if (!confirmDelete || !confirmText) return null;
 
@@ -18,13 +19,14 @@ export default function ConfirmActionModal({
                 <p><strong>{confirmDelete.name}</strong>{confirmText.question}</p>
                 {confirmText.note && <span>{confirmText.note}</span>}
                 <div className="confirm-actions">
-                    <button type="button" onClick={onClose}>취소</button>
+                    <button type="button" onClick={onClose} disabled={processing}>취소</button>
                     <button
                         type="button"
                         className={confirmDelete.kind === 'activate' ? 'primary-confirm' : 'danger-confirm'}
                         onClick={onConfirm}
+                        disabled={processing}
                     >
-                        {confirmText.button}
+                        {processing ? '처리 중...' : confirmText.button}
                     </button>
                 </div>
             </div>

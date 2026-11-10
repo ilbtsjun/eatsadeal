@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { updatePassword as updatePasswordRequest } from '@/api/index.js'
+import { usePending } from '@/common/hooks/usePending.js';
 
 const INITIAL_PASSWORD_FORM = {
     currentPassword: '',
@@ -11,6 +12,7 @@ export function usePasswordChange(){
     const [passwordForm, setPasswordForm] = useState(INITIAL_PASSWORD_FORM);
     const [passwordMessage, setPasswordMessage] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [changingPassword, withChangingPassword] = usePending();
 
     const updatePassword = async (event) => {
         event.preventDefault();
@@ -22,13 +24,15 @@ export function usePasswordChange(){
             return;
         }
 
-        try {
-            await updatePasswordRequest(passwordForm);
-            setPasswordForm({ ...INITIAL_PASSWORD_FORM });
-            setPasswordMessage('비밀번호가 변경되었습니다.');
-        } catch (requestError) {
-            setPasswordError(requestError.message || '비밀번호 변경에 실패했습니다.');
-        }
+        await withChangingPassword(async () => {
+            try {
+                await updatePasswordRequest(passwordForm);
+                setPasswordForm({ ...INITIAL_PASSWORD_FORM });
+                setPasswordMessage('비밀번호가 변경되었습니다.');
+            } catch (requestError) {
+                setPasswordError(requestError.message || '비밀번호 변경에 실패했습니다.');
+            }
+        });
     };
 
     const handlePasswordChange = (event) => {
@@ -44,5 +48,6 @@ export function usePasswordChange(){
         handlePasswordChange,
         passwordMessage,
         passwordError,
+        changingPassword,
     };
 }

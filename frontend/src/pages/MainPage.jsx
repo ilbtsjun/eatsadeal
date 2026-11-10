@@ -6,7 +6,7 @@ import FloatingButton from '@/features/reports/components/FloatingButton';
 import SiteFooter from '@/common/components/SiteFooter';
 import { useEventSearchParams } from '@/features/events/hooks/useEventSearchParams.js';
 
-export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPrivacy}) {
+export default function MainPage({ user, onSelectEvent, onLoginClick, onOpenTerms, onOpenPrivacy}) {
     const {
         category,
         brand,
@@ -47,6 +47,7 @@ export default function MainPage({ user, onSelectEvent, onOpenTerms, onOpenPriva
                 page={page}
                 onPageChange={(p, replace = false) => updateSearchParams({ page: p + 1 }, { keepPage: true, replace })}
                 onSelectEvent={onSelectEvent}
+                onLoginClick={onLoginClick}
                 user={user}
             />
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useReportForm } from '../hooks/useReportForm.js';
 import './ReportForm.css';
 
@@ -17,8 +18,13 @@ export default function ReportForm({ onCancel, onSubmitted }) {
         handleSubmit,
     } = useReportForm({ onSubmitted });
 
+    const [confirmingCancel, setConfirmingCancel] = useState(false);
+
     const handleCancel = () => {
-        if (hasInput && !window.confirm('작성 중인 내용이 사라집니다. 취소할까요?')) return;
+        if (hasInput) {
+            setConfirmingCancel(true);
+            return;
+        }
         onCancel?.();
     };
 
@@ -67,14 +73,28 @@ export default function ReportForm({ onCancel, onSubmitted }) {
 
             {error && <p className="report-error" role="alert">{error}</p>}
 
-            <div className="report-actions">
-                <button type="submit" className="report-btn report-btn-primary" disabled={submitting}>
-                    {submitting ? '보내는 중...' : '보내기'}
-                </button>
-                <button type="button" className="report-btn" onClick={handleCancel} disabled={submitting}>
-                    취소
-                </button>
-            </div>
+            {confirmingCancel ? (
+                <div className="report-cancel-confirm" role="alert">
+                    <p>작성 중인 내용이 사라집니다. 취소할까요?</p>
+                    <div className="report-actions">
+                        <button type="button" className="report-btn" onClick={() => setConfirmingCancel(false)}>
+                            계속 작성
+                        </button>
+                        <button type="button" className="report-btn report-btn-primary" onClick={() => onCancel?.()}>
+                            취소하기
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <div className="report-actions">
+                    <button type="submit" className="report-btn report-btn-primary" disabled={submitting}>
+                        {submitting ? '보내는 중...' : '보내기'}
+                    </button>
+                    <button type="button" className="report-btn" onClick={handleCancel} disabled={submitting}>
+                        취소
+                    </button>
+                </div>
+            )}
         </form>
     );
 }

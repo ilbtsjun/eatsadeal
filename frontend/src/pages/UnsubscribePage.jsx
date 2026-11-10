@@ -7,7 +7,7 @@ import './UnsubscribePage.css';
 export default function UnsubscribePage() {
     usePageTitle('수신거부');
     const [searchParams] = useSearchParams();
-    const { status, error, unsubscribe } = useUnsubscribe(searchParams.get('token')?.trim() || '');
+    const { status, error, submitting, unsubscribe } = useUnsubscribe(searchParams.get('token')?.trim() || '');
 
     return (
         <div className="unsubscribe-page">
@@ -25,14 +25,14 @@ export default function UnsubscribePage() {
                         <p>앞으로 광고성 이메일을 보내지 않아요.<br />처리 결과는 메일로 안내드려요.</p>
                     </>
                 )}
-                {(status === 'idle' || status === 'submitting') && (
+                {status === 'idle' && (
                     <>
                         <h1>광고성 이메일 수신을 거부할까요?</h1>
                         <p>구독 브랜드의 새 이벤트·마감 알림 메일을 더 이상 받지 않아요.<br />구독한 브랜드 목록은 그대로 유지돼요.</p>
                         {error && <p className="unsubscribe-error" role="alert">{error}</p>}
                         <button type="button" className="unsubscribe-button"
-                                onClick={unsubscribe} disabled={status === 'submitting'}>
-                            {status === 'submitting' ? '처리 중...' : '수신거부'}
+                                onClick={unsubscribe} disabled={submitting}>
+                            {submitting ? '처리 중...' : '수신거부'}
                         </button>
                     </>
                 )}

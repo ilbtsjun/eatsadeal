@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { createReport } from '@/api/index.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 export function useReportForm({ onSubmitted }) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const [submitting, withSubmitting] = usePending();
     const [error, setError] = useState('');
     const [done, setDone] = useState(false);
 
@@ -15,9 +16,6 @@ export function useReportForm({ onSubmitted }) {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        if (submitting)
-            return;
-
         const trimmedTitle = title.trim();
         const trimmedContent = content.trim();
         if (!trimmedTitle || !trimmedContent) {
@@ -25,17 +23,16 @@ export function useReportForm({ onSubmitted }) {
             return;
         }
 
-        setSubmitting(true);
-        setError('');
-        try {
-            await createReport({ title: trimmedTitle, content: trimmedContent });
-            setDone(true);
-            onSubmitted?.();
-        } catch (requestError) {
-            setError(requestError.message || '제보 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
-        } finally {
-            setSubmitting(false);
-        }
+        await withSubmitting(async () => {
+            setError('');
+            try {
+                await createReport({ title: trimmedTitle, content: trimmedContent });
+                setDone(true);
+                onSubmitted?.();
+            } catch (requestError) {
+                setError(requestError.message || '제보 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+            }
+        });
     };
 
     return {

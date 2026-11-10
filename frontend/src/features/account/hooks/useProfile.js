@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { getCurrentUser, updateCurrentUser, } from '@/api/index.js';
 import { useFetch } from '@/common/hooks/useFetch.js';
+import { usePending } from '@/common/hooks/usePending.js';
 
 const toProfileForm = (profile = {}) => ({
     nickname: profile.nickname || '',
@@ -23,6 +24,7 @@ export function useProfile({user, onUserUpdate}){
     const [editingProfile, setEditingProfile] = useState(false);
     const [profileMessage, setProfileMessage] = useState('');
     const [profileError, setProfileError] = useState('');
+    const [savingProfile, withSavingProfile] = usePending();
 
     if (formSource !== profile) {
         setFormSource(profile);
@@ -51,29 +53,31 @@ export function useProfile({user, onUserUpdate}){
 
     const updateProfile = async (event) => {
         event.preventDefault();
-        setProfileError('');
-        setProfileMessage('');
+        await withSavingProfile(async () => {
+            setProfileError('');
+            setProfileMessage('');
 
-        try {
-            await updateCurrentUser({
-                nickname: profileForm.nickname.trim(),
-                name: profileForm.name.trim(),
-                phoneNumber: profileForm.phoneNumber.trim(),
-                birth: profileForm.birth || null,
-            });
+            try {
+                await updateCurrentUser({
+                    nickname: profileForm.nickname.trim(),
+                    name: profileForm.name.trim(),
+                    phoneNumber: profileForm.phoneNumber.trim(),
+                    birth: profileForm.birth || null,
+                });
 
-            const saved = await getCurrentUser();
-            setProfile(saved);
+                const saved = await getCurrentUser();
+                setProfile(saved);
 
-            if (saved.nickname && saved.nickname !== user?.nickname) {
-                onUserUpdate?.({ nickname: saved.nickname });
+                if (saved.nickname && saved.nickname !== user?.nickname) {
+                    onUserUpdate?.({ nickname: saved.nickname });
+                }
+
+                setEditingProfile(false);
+                setProfileMessage('회원정보가 수정되었습니다.');
+            } catch (requestError) {
+                setProfileError(requestError.message || '회원정보 수정에 실패했습니다.');
             }
-
-            setEditingProfile(false);
-            setProfileMessage('회원정보가 수정되었습니다.');
-        } catch (requestError) {
-            setProfileError(requestError.message || '회원정보 수정에 실패했습니다.');
-        }
+        });
     };
     return { profile,
         profileForm,
@@ -83,6 +87,7 @@ export function useProfile({user, onUserUpdate}){
         profileMessage,
         profileError,
         editingProfile,
+        savingProfile,
         updateForm,
         startEditingProfile,
         cancelEditingProfile,

@@ -12,9 +12,6 @@ export default function CatalogManagement({
     const isBrand = tab === 'brand';
     const items = isBrand ? brands : categories;
 
-    const isBrandActive = (brand) =>
-        Boolean(brand?.isActive ?? brand?.active ?? true);
-
     return (
         <section className="admin-panel">
             <div className="panel-heading">
@@ -39,7 +36,7 @@ export default function CatalogManagement({
                     <p className="admin-empty">등록된 정보가 없습니다.</p>
                 ) : (
                     items.map((item) => {
-                        const active = !isBrand || isBrandActive(item);
+                        const active = !isBrand || item.isActive;
 
                         return (
                             <div
