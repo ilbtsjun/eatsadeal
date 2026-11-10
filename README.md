@@ -44,6 +44,8 @@
 **검색 노출 (SEO)**
 - 페이지별 `<title>`, description, canonical, og 태그를 화면 이동 때마다 갱신 (`usePageTitle`)
 - `robots.txt`(관리자·마이페이지·API 제외), `sitemap.xml`(정적 페이지 + 노출 중인 이벤트 상세, 백엔드에서 생성)
+- Nginx가 index.html을 내보낼 때 canonical·og:url을 요청 주소(`/events/{id}`, `/terms`, `/privacy`, 그 외 `/`)로 치환해, JS 실행 전 HTML에서도 페이지마다 표준 주소가 맞도록 함 (`sub_filter`)
+- 없는 페이지·없는 이벤트(404)는 `noindex`로 색인 제외 (`usePageTitle`의 `noindex` 옵션)
 - 미리보기 봇(카카오톡, 페이스북, 슬랙, 네이버 등)이 `/events/{id}`에 오면 Nginx가 User-Agent로 구분해 백엔드가 만든 og HTML을 응답 (SPA라 봇이 JS를 실행하지 않아도 미리보기가 보이도록)
 
 **혜택 유형(EventCode) 분류**
