@@ -4,7 +4,7 @@ import { usePageTitle } from '@/common/hooks/usePageTitle.js';
 import './NotFoundPage.css';
 
 export default function NotFoundPage() {
-    usePageTitle('페이지를 찾을 수 없음');
+    usePageTitle('페이지를 찾을 수 없음', { noindex: true });
     return (
         <div className="notfound-page">
             <Header />
