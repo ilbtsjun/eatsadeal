@@ -58,6 +58,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AI_ENABLED: ${AI_ENABLED:-true}
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-200}
+      APP_NOTIFICATION_SCHEDULE_ENABLED: ${NOTIFICATION_SCHEDULE_ENABLED:-true}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - backend-logs:/app/logs
