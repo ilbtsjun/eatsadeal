@@ -1,7 +1,7 @@
 import { useLogin } from '@/features/account/hooks/useLogin.js';
 import './LoginPage.css';
 
-export default function LoginPage({ onLogin, onBack, onSignupClick }) {
+export default function LoginPage({ onLogin, onBack, onSignupClick, notice, onPasswordResetClick }) {
   const {
     id,
     setId,
@@ -25,6 +25,8 @@ export default function LoginPage({ onLogin, onBack, onSignupClick }) {
             할인 정보를 저장하고 더 편리하게 이용해보세요.
           </p>
 
+          {notice && <p className="login-notice" role="status">{notice}</p>}
+
           <form onSubmit={handleSubmit} className="login-form">
             <label htmlFor="login-id">이메일</label>
             <input
@@ -46,6 +48,10 @@ export default function LoginPage({ onLogin, onBack, onSignupClick }) {
                 autoComplete="current-password"
                 required
             />
+
+            <button type="button" className="login-find" onClick={onPasswordResetClick}>
+              비밀번호를 잊으셨나요?
+            </button>
 
             {error && <p className="login-error" role="alert">{error}</p>}
 

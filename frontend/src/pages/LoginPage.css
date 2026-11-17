@@ -31,3 +31,5 @@
 .reset-step-buttons .login-submit { flex: 1; }
 .reset-previous { flex: 0 0 90px; margin-top: 12px; border: 1px solid #dfe4ea; border-radius: 9px; color: #747d8c; background: #fff; cursor: pointer; font-weight: 700; }
 .login-submit:disabled { background: #ffa5ad; cursor: default; }
+.login-find { justify-self: end; padding: 0; border: 0; color: #747d8c; background: transparent; cursor: pointer; font-size: 12px; }
+.login-find:hover { color: #ff4757; text-decoration: underline; }
