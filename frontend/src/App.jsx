@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router';
 import LoginRoute from './routes/LoginRoute.jsx';
 import SignupRoute from './routes/SignupRoute.jsx';
+import PasswordResetRoute from './routes/PasswordResetRoute.jsx';
 import LegalOverlay from './routes/LegalOverlay.jsx';
 import EventDetailRoute from './routes/EventDetailRoute.jsx';
 import LegalRoute from './routes/LegalRoute.jsx'
@@ -15,6 +16,7 @@ export default function App() {
       <Routes>
           <Route path="/" element={<MainRoute />} />
           <Route path="/login" element={<LoginRoute />} />
+          <Route path="/password-reset" element={<PasswordResetRoute />} />
           <Route path="/signup" element={<SignupRoute />}>
               <Route path="terms" element={<LegalOverlay kind="terms" />} />
               <Route path="privacy" element={<LegalOverlay kind="privacy" />} />

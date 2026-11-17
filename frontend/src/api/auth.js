@@ -12,3 +12,5 @@ export const checkNicknameAvailability = (nickname) => api.get(
         { skipAuth: true }
     );
 export const logout = () => api.post('/api/auth/logout');
+export const requestPasswordReset = (request) => api.post('/api/auth/password-change', request, { skipAuth: true });
+export const confirmPasswordReset = (request) => api.post('/api/auth/password-verification', request, { skipAuth: true });

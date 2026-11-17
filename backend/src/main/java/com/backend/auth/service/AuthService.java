@@ -201,7 +201,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_FAILED, "인증번호가 일치하지 않습니다.");
         }
 
-        User user = userRepository.findByEmailOrNickname(request.email())
+        User user = userRepository.findByEmailOrNickname(email)
                         .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_FAILED, "인증번호가 만료되었거나 유효하지 않습니다."));
 
         user.updatePassword(passwordEncoder.encode(request.changePassword()));

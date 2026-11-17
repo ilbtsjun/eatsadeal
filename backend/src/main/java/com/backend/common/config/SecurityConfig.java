@@ -87,6 +87,9 @@ public class SecurityConfig {
                                 "/api/seo/**"
                         ).permitAll()
 
+                        // 이벤트 상세(/events/{id})가 /api/seo로 넘어오므로 HEAD 요청도 공개
+                        .requestMatchers(HttpMethod.HEAD, "/api/seo/**").permitAll()
+
                         .requestMatchers(
                                 "/api/crawl/**"
                         ).hasRole("ADMIN")
