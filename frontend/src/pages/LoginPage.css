@@ -16,3 +16,18 @@
 
 .signup-guide { margin: 24px 0 0; color: #747d8c; text-align: center; font-size: 13px; }
 .signup-guide button { padding: 0; border: 0; color: #ff4757; background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+
+.login-notice { margin-top: 6px; color: #20bf6b; font-size: 13px; }
+.login-notice:empty, .login-error:empty { display: none; }
+.reset-progress { display: flex; align-items: center; gap: 10px; margin: 25px 0 0; color: #a4b0be; font-size: 12px; font-weight: 700; }
+.reset-progress span.active { color: #ff4757; }
+.reset-progress i { width: 30px; height: 1px; background: #dfe4ea; }
+.reset-code-row { display: flex; gap: 8px; }
+.reset-code-row input { flex: 1; min-width: 0; }
+.reset-resend { flex: 0 0 auto; padding: 0 12px; border: 1px solid #ff4757; border-radius: 9px; color: #ff4757; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; }
+.reset-resend:hover { color: #fff; background: #ff4757; }
+.reset-resend:disabled { border-color: #dfe4ea; color: #a4b0be; background: #fff; cursor: default; }
+.reset-step-buttons { display: flex; gap: 8px; }
+.reset-step-buttons .login-submit { flex: 1; }
+.reset-previous { flex: 0 0 90px; margin-top: 12px; border: 1px solid #dfe4ea; border-radius: 9px; color: #747d8c; background: #fff; cursor: pointer; font-weight: 700; }
+.login-submit:disabled { background: #ffa5ad; cursor: default; }
