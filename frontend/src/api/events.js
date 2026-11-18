@@ -12,3 +12,4 @@ export const getHighlight = () => api.get('/api/events?page=0&size=1&sort=popula
 export const updateEvent = (id, body) => api.patch(`/api/events/${id}`, body);
 export const setEventHidden = (id, hidden) => api.patch(`/api/events/${id}/hidden`, { hidden });
 export const setEventLock = (id, adminLocked) => api.patch(`/api/events/${id}/lock`, { adminLocked });
+export const deactivateEvent = (id) => api.del(`/api/events/${id}`);

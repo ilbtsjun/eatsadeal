@@ -5,6 +5,7 @@ export default function EventDetailInfo({
     detailEvent,
     isAdmin,
     onEdit,
+    onDeactivate,
     isSubscribed,
     subscribeDisabled,
     onToggleSubscribe,
@@ -41,6 +42,17 @@ export default function EventDetailInfo({
                     >
                         이벤트 수정
                     </button>
+                    {detailEvent?.isActive === false ? (
+                        <span className="detail-admin-badge">종료</span>
+                    ) : (
+                        <button
+                            type="button"
+                            className="detail-edit-button"
+                            onClick={onDeactivate}
+                        >
+                            이벤트 종료
+                        </button>
+                    )}
                     {detailEvent?.hidden && (
                         <span className="detail-admin-badge">숨김</span>
                     )}
