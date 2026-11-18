@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import Header from '@/common/components/Header';
 import StatusMessage from '@/common/components/StatusMessage.jsx';
+import ConfirmDialog from '@/common/components/ConfirmDialog.jsx';
 import './EventDetailPage.css';
 import CommentSection from '@/features/comments/components/CommentSection.jsx';
 import EventEditModal from '@/features/events/components/EventEditModal.jsx';
 import EventDetailImage from '@/features/events/components/EventDetailImage.jsx';
 import EventDetailInfo from '@/features/events/components/EventDetailInfo.jsx';
 import { useEventDetail } from '@/features/events/hooks/useEventDetail.js';
+import { useEventDeactivate } from '@/features/events/hooks/useEventDeactivate.js';
 import ConsentModal from '@/features/notifications/components/ConsentModal.jsx';
 import NotFoundPage from '@/pages/NotFoundPage.jsx';
 
@@ -31,6 +33,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
     } = useEventDetail({ event, user, onLoginClick });
 
     const [editing, setEditing] = useState(false);
+    const deactivate = useEventDeactivate({ eventId: event.id, onDone: reload });
     const isAdmin = user?.role === 'ADMIN';
 
     const renderStatus = (content) => (
@@ -94,6 +97,7 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                         detailEvent={detailEvent}
                         isAdmin={isAdmin}
                         onEdit={() => setEditing(true)}
+                        onDeactivate={deactivate.open}
                         isSubscribed={isSubscribed}
                         subscribeDisabled={subscribeDisabled}
                         onToggleSubscribe={handleToggleSubscribe}
@@ -112,6 +116,19 @@ export default function EventDetailPage({ event, user, onLoginClick, onBack }) {
                             setEditing(false);
                             reload();
                         }}
+                    />
+                )}
+
+                {deactivate.confirmOpen && (
+                    <ConfirmDialog
+                        title="이벤트를 종료할까요?"
+                        message="종료하면 목록에서 사라지고, 크롤러가 덮어쓰지 않도록 잠금이 켜집니다."
+                        confirmLabel="종료"
+                        pendingLabel="종료 중..."
+                        pending={deactivate.pending}
+                        error={deactivate.error}
+                        onConfirm={deactivate.confirm}
+                        onClose={deactivate.close}
                     />
                 )}
 
